@@ -2,26 +2,123 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              x:Class="NexusMonitor.UI.Views.OptimizationView"
-             x:DataType="vm:OptimizationViewModel">
+             x:DataType="vm:OptimizationViewModel"
+             x:CompileBindings="False">
 
-  <StackPanel Margin="24" Spacing="16">
-    <TextBlock Text="Optimization"
-               FontSize="20" FontWeight="SemiBold"
-               Foreground="{StaticResource TextPrimaryBrush}"/>
-    <Border Padding="24"
-            Background="{StaticResource BgElevatedBrush}"
-            BorderBrush="{StaticResource GlassBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="12">
-        <TextBlock Text="ProBalance Automation"
-                   FontSize="15" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
-        <TextBlock Text="CPU priority balancing, process rules, memory trimmer — coming in Phase 5"
-                   FontSize="13"
-                   Foreground="{StaticResource TextSecondaryBrush}"/>
-      </StackPanel>
+  <DockPanel>
+
+    <!-- Header -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left"
+                   Text="Optimization"
+                   FontSize="18" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,16,0"/>
+        <Button DockPanel.Dock="Right"
+                Classes="nx-btn"
+                Command="{Binding NormalizePrioritiesCommand}"
+                ToolTip.Tip="Reset all non-system processes to Normal priority">
+          <TextBlock Text="⚡ Normalize Priorities" FontSize="12"/>
+        </Button>
+      </DockPanel>
     </Border>
-  </StackPanel>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom"
+            Padding="16,6"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,1,0,0">
+      <TextBlock Text="{Binding LastAction}"
+                 FontSize="11"
+                 Foreground="{StaticResource TextSecondaryBrush}"/>
+    </Border>
+
+    <!-- Content -->
+    <ScrollViewer Padding="16">
+      <StackPanel Spacing="16">
+
+        <!-- Top CPU consumers -->
+        <Border Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Top CPU Consumers"
+                       FontSize="13" FontWeight="Medium"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <ItemsControl ItemsSource="{Binding TopCpu}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,80,80" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Name}"
+                               FontSize="12"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding CpuDisplay}"
+                               FontSize="12"
+                               Foreground="{StaticResource AccentBlueBrush}"
+                               HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding MemDisplay}"
+                               FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- Top memory consumers -->
+        <Border Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Top Memory Consumers"
+                       FontSize="13" FontWeight="Medium"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <ItemsControl ItemsSource="{Binding TopMemory}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,80,80" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Name}"
+                               FontSize="12"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding CpuDisplay}"
+                               FontSize="12"
+                               Foreground="{StaticResource AccentBlueBrush}"
+                               HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding MemDisplay}"
+                               FontSize="12"
+                               Foreground="{StaticResource ColorSuccessBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
 
 </UserControl>
