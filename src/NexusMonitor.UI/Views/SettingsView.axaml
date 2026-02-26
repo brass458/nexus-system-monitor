@@ -23,8 +23,12 @@
                      Foreground="{StaticResource TextSecondaryBrush}"
                      VerticalAlignment="Center"/>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-            <ToggleButton Classes="nx-toggle" Content="Dark" IsChecked="True"/>
-            <ToggleButton Classes="nx-toggle" Content="Light"/>
+            <ToggleButton Classes="nx-toggle"
+                          Content="Dark"
+                          IsChecked="{Binding IsDarkTheme}"/>
+            <ToggleButton Classes="nx-toggle"
+                          Content="Light"
+                          IsChecked="{Binding IsDarkTheme, Converter={x:Static BoolConverters.Not}}"/>
           </StackPanel>
         </Grid>
         <Grid ColumnDefinitions="*,Auto">
@@ -49,7 +53,7 @@
       <StackPanel Spacing="4">
         <TextBlock Text="Nexus Monitor" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
-        <TextBlock Text="Version 0.1.0 — Phase 1 (UI Foundation)"
+        <TextBlock Text="Version 0.1.0 — Phase 3 (Polish &amp; Settings)"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
         <TextBlock Text="MIT License · Open Source · Cross-Platform"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0"/>

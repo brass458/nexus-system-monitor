@@ -1,9 +1,11 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Mock;
+using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
@@ -23,6 +25,9 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         Services = BuildServices();
+
+        var saved = Services.GetRequiredService<SettingsService>();
+        RequestedThemeVariant = saved.Current.IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -60,6 +65,9 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MockStartupProvider>();
 #endif
+
+        // ── Services ───────────────────────────────────────────────────────────
+        services.AddSingleton<SettingsService>();
 
         // ── ViewModels ─────────────────────────────────────────────────────────
         // Singletons: NavItem.GetOrCreate() caches the first-resolved instance for the
