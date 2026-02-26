@@ -83,7 +83,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             TotalPercent       = Math.Round(total, 1),
             CorePercents       = corePercents,
             FrequencyMhz       = SampleCpuFrequencyMhz(),
-            TemperatureCelsius = 0,   // requires OHM / NVML; future phase
+            TemperatureCelsius = SampleCpuTemperatureC(),
             LogicalCores       = _logicalCores,
             PhysicalCores      = _physicalCores,
             ModelName          = _cpuModel,
@@ -319,6 +319,30 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             using var key = Registry.LocalMachine.OpenSubKey(
                 @"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
             return System.Convert.ToDouble(key?.GetValue("~MHz") ?? 0);
+        }
+        catch { return 0; }
+    }
+
+    /// <summary>
+    /// Reads CPU temperature from ACPI thermal zones via WMI root\wmi.
+    /// Returns the maximum zone temperature in Celsius, or 0 if unavailable.
+    /// </summary>
+    private static double SampleCpuTemperatureC()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                @"root\wmi",
+                "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+            double max = 0;
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                // CurrentTemperature is in tenths of Kelvin
+                double tempK = Convert.ToDouble(obj["CurrentTemperature"]);
+                double tempC = (tempK - 2732.0) / 10.0;
+                if (tempC > max) max = tempC;
+            }
+            return max < 1.0 ? 0 : Math.Round(max, 1);
         }
         catch { return 0; }
     }
