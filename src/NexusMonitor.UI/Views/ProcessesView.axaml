@@ -1,0 +1,387 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:conv="using:NexusMonitor.UI.Converters"
+             xmlns:models="using:NexusMonitor.Core.Models"
+             x:Class="NexusMonitor.UI.Views.ProcessesView"
+             x:DataType="vm:ProcessesViewModel"
+             x:CompileBindings="False">
+
+  <UserControl.Resources>
+    <conv:ProcessCategoryToBrushConverter x:Key="CategoryBrush" />
+    <conv:ProcessCategoryToBgBrushConverter x:Key="CategoryBgBrush" />
+    <conv:BytesFormatConverter x:Key="BytesFmt" />
+    <conv:CpuHeatBrushConverter x:Key="CpuHeat" />
+    <conv:NullToBoolConverter x:Key="NullToBool" />
+  </UserControl.Resources>
+
+  <DockPanel>
+
+    <!-- ===== TOOLBAR ===== -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+
+        <!-- Search -->
+        <Border Grid.Column="0"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerMD}"
+                MaxWidth="320"
+                HorizontalAlignment="Left">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Text="&#x1F50D;"
+                       FontSize="13"
+                       Margin="10,0,6,0"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextTertiaryBrush}"/>
+            <TextBox Grid.Column="1"
+                     Classes="nx-input"
+                     Text="{Binding SearchText}"
+                     Watermark="Search processes…"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Padding="0,6"/>
+          </Grid>
+        </Border>
+
+        <!-- View toggle -->
+        <ToggleButton Grid.Column="1"
+                      Classes="nx-toggle"
+                      Margin="8,0"
+                      IsChecked="{Binding IsSimplifiedView}"
+                      ToolTip.Tip="Toggle simplified view">
+          <TextBlock Text="Simplified" FontSize="11"/>
+        </ToggleButton>
+
+        <!-- Kill button -->
+        <Button Grid.Column="2"
+                Classes="nx-btn"
+                Margin="4,0"
+                Command="{Binding KillProcessCommand}"
+                IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBool}}"
+                ToolTip.Tip="End process">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource ColorDangerBrush}"/>
+            <TextBlock Text="End" FontSize="12"/>
+          </StackPanel>
+        </Button>
+
+        <!-- More actions -->
+        <Button Grid.Column="3"
+                Classes="nx-btn"
+                Margin="4,0"
+                ToolTip.Tip="More actions">
+          <TextBlock Text="⋮" FontSize="14"/>
+        </Button>
+
+      </Grid>
+    </Border>
+
+    <!-- ===== STATUS BAR ===== -->
+    <Border DockPanel.Dock="Bottom"
+            Padding="16,6"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,1,0,0">
+      <DockPanel>
+
+        <!-- Error message — right-aligned, hidden when empty -->
+        <TextBlock DockPanel.Dock="Right"
+                   Text="{Binding LastError}"
+                   IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   FontSize="11"
+                   Foreground="{StaticResource ColorDangerBrush}"
+                   VerticalAlignment="Center"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="24">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Processes:"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="{Binding TotalProcessCount}"
+                       FontSize="11"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       FontWeight="Medium"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Threads:"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="{Binding TotalThreadCount}"
+                       FontSize="11"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       FontWeight="Medium"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="CPU:"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="{Binding TotalCpuPercent, StringFormat='{}{0:F1}%'}"
+                       FontSize="11"
+                       Foreground="{StaticResource AccentBlueBrush}"
+                       FontWeight="Medium"/>
+          </StackPanel>
+        </StackPanel>
+
+      </DockPanel>
+    </Border>
+
+    <!-- ===== MAIN CONTENT: list + details side panel ===== -->
+    <Grid ColumnDefinitions="*,Auto,280">
+
+      <!-- ── PROCESS LIST ── -->
+      <DataGrid Grid.Column="0"
+                Classes="nx-grid"
+                ItemsSource="{Binding Processes}"
+                SelectedItem="{Binding SelectedProcess}"
+                CanUserSortColumns="True"
+                CanUserResizeColumns="True"
+                CanUserReorderColumns="True"
+                SelectionMode="Single"
+                AutoGenerateColumns="False"
+                Margin="0">
+
+        <DataGrid.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="End Process" Command="{Binding KillProcessCommand}">
+              <MenuItem.Icon>
+                <TextBlock Text="✕" Foreground="{StaticResource ColorDangerBrush}"/>
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="End Process Tree" Command="{Binding KillProcessTreeCommand}"/>
+            <Separator/>
+            <MenuItem Header="Suspend" Command="{Binding SuspendProcessCommand}"/>
+            <MenuItem Header="Resume"  Command="{Binding ResumeProcessCommand}"/>
+            <Separator/>
+            <MenuItem Header="Set Priority">
+              <MenuItem Header="Idle"/>
+              <MenuItem Header="Below Normal"/>
+              <MenuItem Header="Normal"/>
+              <MenuItem Header="Above Normal"/>
+              <MenuItem Header="High"/>
+              <MenuItem Header="Real Time"/>
+            </MenuItem>
+            <MenuItem Header="Set CPU Affinity…"/>
+            <Separator/>
+            <MenuItem Header="Open File Location"/>
+            <MenuItem Header="Search Online"/>
+            <Separator/>
+            <MenuItem Header="Properties"/>
+            <MenuItem Header="Create Dump File…"/>
+          </ContextMenu>
+        </DataGrid.ContextMenu>
+
+        <DataGrid.Columns>
+
+          <DataGridTemplateColumn Header="Name" Width="220" SortMemberPath="Name">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <Grid ColumnDefinitions="4,Auto,*" Margin="4,0">
+                  <Rectangle Grid.Column="0"
+                              Width="3" Height="14"
+                              RadiusX="1.5" RadiusY="1.5"
+                              VerticalAlignment="Center"
+                              Fill="{Binding Category, Converter={StaticResource CategoryBrush}}"/>
+                  <TextBlock Grid.Column="2"
+                              Text="{Binding Name}"
+                              Margin="8,0,0,0"
+                              VerticalAlignment="Center"
+                              FontSize="12"
+                              Foreground="{Binding Category, Converter={StaticResource CategoryBrush}}"
+                              TextTrimming="CharacterEllipsis"/>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <DataGridTextColumn Header="PID"
+                              Binding="{Binding Pid}"
+                              Width="64"
+                              IsReadOnly="True"/>
+
+          <DataGridTemplateColumn Header="CPU" Width="80" SortMemberPath="CpuPercent">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <Grid Margin="6,0" RowDefinitions="Auto,3">
+                  <TextBlock Grid.Row="0"
+                              Text="{Binding CpuDisplay}"
+                              FontSize="11"
+                              HorizontalAlignment="Right"
+                              Foreground="{Binding CpuPercent, Converter={StaticResource CpuHeat}}"/>
+                  <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                    <Rectangle Grid.Column="0"
+                                Height="2" RadiusX="1" RadiusY="1"
+                                HorizontalAlignment="Stretch"
+                                Fill="{StaticResource BgHoverBrush}"/>
+                    <Rectangle Grid.Column="0"
+                                Height="2" RadiusX="1" RadiusY="1"
+                                HorizontalAlignment="Left"
+                                Width="{Binding CpuPercent}"
+                                MaxWidth="68"
+                                Fill="{Binding CpuPercent, Converter={StaticResource CpuHeat}}"/>
+                  </Grid>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <DataGridTemplateColumn Header="Memory" Width="90" SortMemberPath="WorkingSetBytes">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <TextBlock Text="{Binding WorkingSetBytes, Converter={StaticResource BytesFmt}}"
+                            FontSize="11"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,8,0"
+                            Foreground="{StaticResource TextSecondaryBrush}"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <DataGridTemplateColumn Header="I/O" Width="140" SortMemberPath="IoReadBytesPerSec">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <TextBlock Text="{Binding IoDisplay}"
+                            FontSize="10"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,8,0"
+                            Foreground="{StaticResource TextTertiaryBrush}"
+                            TextTrimming="CharacterEllipsis"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <DataGridTextColumn Header="Threads"
+                              Binding="{Binding ThreadCount}"
+                              Width="70"
+                              IsReadOnly="True"/>
+
+          <DataGridTextColumn Header="Handles"
+                              Binding="{Binding HandleCount}"
+                              Width="70"
+                              IsReadOnly="True"/>
+
+          <DataGridTextColumn Header="User"
+                              Binding="{Binding UserName}"
+                              Width="90"
+                              IsReadOnly="True"/>
+
+          <DataGridTextColumn Header="Description"
+                              Binding="{Binding Description}"
+                              Width="*"
+                              IsReadOnly="True"/>
+
+        </DataGrid.Columns>
+
+      </DataGrid>
+
+      <!-- ── SPLITTER ── -->
+      <GridSplitter Grid.Column="1"
+                    Width="1"
+                    Background="{StaticResource BorderSubtleBrush}"
+                    ResizeDirection="Columns"
+                    IsVisible="{Binding SelectedDetails, Converter={StaticResource NullToBool}}"/>
+
+      <!-- ── DETAILS SIDE PANEL ── -->
+      <Border Grid.Column="2"
+              Background="{StaticResource BgSecondaryBrush}"
+              IsVisible="{Binding SelectedDetails, Converter={StaticResource NullToBool}}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="0"
+                      DataContext="{Binding SelectedDetails}"
+                      Margin="14,12">
+
+            <!-- Header: process name + PID -->
+            <TextBlock Text="{Binding Name}"
+                       FontSize="15" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       Margin="0,0,0,2"/>
+            <TextBlock FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,12">
+              <Run Text="PID "/>
+              <Run Text="{Binding Pid}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="  ·  PPID "/>
+              <Run Text="{Binding ParentPid}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+            </TextBlock>
+
+            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
+
+            <!-- Section: Identity -->
+            <TextBlock Text="IDENTITY" FontSize="9" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,12">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="User"     Classes="detail-label"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding User}"      Classes="detail-value"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="State"    Classes="detail-label"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding State}"     Classes="detail-value"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Category" Classes="detail-label"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Category}"  Classes="detail-value"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Started"  Classes="detail-label"/>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StartTime}" Classes="detail-value"/>
+            </Grid>
+
+            <!-- Section: Performance -->
+            <TextBlock Text="PERFORMANCE" FontSize="9" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU"         Classes="detail-label"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CpuPercent}"   Classes="detail-value" Foreground="{StaticResource AccentBlueBrush}"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Threads"     Classes="detail-label"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Threads}"      Classes="detail-value"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Handles"     Classes="detail-label"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Handles}"      Classes="detail-value"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Working Set" Classes="detail-label"/>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding WorkingSet}"   Classes="detail-value"/>
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Private"     Classes="detail-label"/>
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding PrivateBytes}" Classes="detail-value"/>
+              <TextBlock Grid.Row="5" Grid.Column="0" Text="Virtual"     Classes="detail-label"/>
+              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VirtualBytes}" Classes="detail-value"/>
+            </Grid>
+
+            <!-- Section: I/O -->
+            <TextBlock Text="DISK I/O" FontSize="9" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Read"  Classes="detail-label"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ReadRate}"  Classes="detail-value"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Write" Classes="detail-label"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WriteRate}" Classes="detail-value"/>
+            </Grid>
+
+            <!-- Section: Image -->
+            <TextBlock Text="IMAGE" FontSize="9" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+
+            <TextBlock Text="{Binding Description}"
+                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+            <TextBlock Text="{Binding ImagePath}"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+            <TextBlock Text="{Binding CommandLine}"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,6"
+                       FontStyle="Italic"/>
+
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+    </Grid>
+
+  </DockPanel>
+</UserControl>

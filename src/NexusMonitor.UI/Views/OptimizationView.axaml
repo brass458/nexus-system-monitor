@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             x:Class="NexusMonitor.UI.Views.OptimizationView"
+             x:DataType="vm:OptimizationViewModel">
+
+  <StackPanel Margin="24" Spacing="16">
+    <TextBlock Text="Optimization"
+               FontSize="20" FontWeight="SemiBold"
+               Foreground="{StaticResource TextPrimaryBrush}"/>
+    <Border Padding="24"
+            Background="{StaticResource BgElevatedBrush}"
+            BorderBrush="{StaticResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="ProBalance Automation"
+                   FontSize="15" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <TextBlock Text="CPU priority balancing, process rules, memory trimmer — coming in Phase 5"
+                   FontSize="13"
+                   Foreground="{StaticResource TextSecondaryBrush}"/>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+
+</UserControl>

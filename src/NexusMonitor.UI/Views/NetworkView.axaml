@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             x:Class="NexusMonitor.UI.Views.NetworkView"
+             x:DataType="vm:NetworkViewModel"
+             x:CompileBindings="False">
+
+  <DockPanel>
+
+    <!-- Toolbar -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left"
+                   Text="Network Connections"
+                   FontSize="18" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,16,0"/>
+        <TextBox DockPanel.Dock="Right"
+                 Classes="nx-input"
+                 Text="{Binding SearchText}"
+                 Watermark="Search address, port, process…"
+                 Width="260"
+                 VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom"
+            Padding="16,6"
+            Background="{StaticResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,1,0,0">
+      <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
+                 FontSize="11"
+                 Foreground="{StaticResource TextSecondaryBrush}"/>
+    </Border>
+
+    <!-- Connection table -->
+    <DataGrid Classes="nx-grid"
+              ItemsSource="{Binding Connections}"
+              AutoGenerateColumns="False"
+              CanUserSortColumns="True"
+              CanUserResizeColumns="True"
+              IsReadOnly="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Protocol"       Binding="{Binding Protocol}"      Width="80"  IsReadOnly="True"/>
+        <DataGridTextColumn Header="Local Address"  Binding="{Binding LocalAddress}"  Width="140" IsReadOnly="True"/>
+        <DataGridTextColumn Header="Local Port"     Binding="{Binding LocalPort}"     Width="80"  IsReadOnly="True"/>
+        <DataGridTextColumn Header="Remote Address" Binding="{Binding RemoteAddress}" Width="140" IsReadOnly="True"/>
+        <DataGridTextColumn Header="Remote Port"    Binding="{Binding RemotePort}"    Width="80"  IsReadOnly="True"/>
+        <DataGridTextColumn Header="State"          Binding="{Binding State}"         Width="120" IsReadOnly="True"/>
+        <DataGridTextColumn Header="PID"            Binding="{Binding ProcessId}"     Width="60"  IsReadOnly="True"/>
+        <DataGridTextColumn Header="Process"        Binding="{Binding ProcessName}"   Width="*"   IsReadOnly="True"/>
+      </DataGrid.Columns>
+    </DataGrid>
+
+  </DockPanel>
+
+</UserControl>

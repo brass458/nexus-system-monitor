@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Only use the macos TFM when actually running on macOS -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('osx'))">net8.0-macos</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('osx'))">net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>NexusMonitor.Platform.MacOS</AssemblyName>
+    <RootNamespace>NexusMonitor.Platform.MacOS</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <ProjectReference Include="..\NexusMonitor.Core\NexusMonitor.Core.csproj" />
+  </ItemGroup>
+</Project>
