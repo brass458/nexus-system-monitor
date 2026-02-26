@@ -41,6 +41,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     // GPU
     private PerformanceCounter[] _gpuEngineCounters = [];
+    private PerformanceCounter[]? _gpuMemCounters;
     private string _gpuName       = string.Empty;
     private long   _gpuTotalVram  = 0;
 
@@ -306,6 +307,18 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             _gpuEngineCounters = counters.ToArray();
         }
         catch { _gpuEngineCounters = []; }
+
+        // GPU dedicated memory usage (Windows 10+, works on NVIDIA/AMD/Intel)
+        try
+        {
+            var memCat = new PerformanceCounterCategory("GPU Adapter Memory");
+            _gpuMemCounters = memCat.GetInstanceNames()
+                .Select(inst => new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", inst))
+                .ToArray();
+            // Warm up — first read always returns 0
+            foreach (var c in _gpuMemCounters) c.NextValue();
+        }
+        catch { _gpuMemCounters = null; }
     }
 
     /// <summary>
@@ -369,7 +382,9 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 Name                      = _gpuName,
                 UsagePercent              = Math.Round(usage, 1),
                 DedicatedMemoryTotalBytes = _gpuTotalVram,
-                DedicatedMemoryUsedBytes  = 0,   // requires D3DKMT / NVML — future phase
+                DedicatedMemoryUsedBytes  = _gpuMemCounters is { Length: > 0 }
+                    ? (long)_gpuMemCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
+                    : 0,
                 TemperatureCelsius        = 0,   // requires NVML / sensor — future phase
             }
         ];
@@ -405,5 +420,6 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         _netSend?.Dispose();
         _netRecv?.Dispose();
         foreach (var c in _gpuEngineCounters) c?.Dispose();
+        if (_gpuMemCounters != null) foreach (var c in _gpuMemCounters) c?.Dispose();
     }
 }
