@@ -72,7 +72,9 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
     private SystemMetrics BuildMetrics()
     {
         // Available memory: free pages × page size
-        var freePages     = (long)SysctlInt("vm.page_free_count");
+        // Cast through uint first — vm.page_free_count is an unsigned 32-bit value;
+        // treating it as signed would give a negative result when the count exceeds 2 GB of pages.
+        var freePages     = (long)(uint)SysctlInt("vm.page_free_count");
         var availableBytes = freePages * _pageSize;
         var usedBytes      = _totalMemBytes > 0
             ? Math.Max(0L, _totalMemBytes - availableBytes)

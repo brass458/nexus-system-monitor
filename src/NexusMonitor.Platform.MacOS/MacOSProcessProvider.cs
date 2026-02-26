@@ -20,7 +20,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     // ── Snapshot ───────────────────────────────────────────────────────────────
     public Task<IReadOnlyList<ProcessInfo>> GetProcessesAsync(CancellationToken ct = default) =>
-        Task.FromResult((IReadOnlyList<ProcessInfo>)Snapshot());
+        Task.Run<IReadOnlyList<ProcessInfo>>(() => Snapshot(), ct);
 
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
@@ -140,23 +140,23 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     public Task KillProcessAsync(int pid, bool killTree = false, CancellationToken ct = default) =>
         Task.Run(() =>
         {
-            var p = Process.GetProcessById(pid);
+            using var p = Process.GetProcessById(pid);
             p.Kill(killTree);
         }, ct);
 
     public Task SuspendProcessAsync(int pid, CancellationToken ct = default) =>
-        throw new PlatformNotSupportedException("Process suspend is not supported on macOS via managed APIs.");
+        Task.FromException(new PlatformNotSupportedException("Process suspend is not supported on macOS via managed APIs."));
 
     public Task ResumeProcessAsync(int pid, CancellationToken ct = default) =>
-        throw new PlatformNotSupportedException("Process resume is not supported on macOS via managed APIs.");
+        Task.FromException(new PlatformNotSupportedException("Process resume is not supported on macOS via managed APIs."));
 
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
-        throw new PlatformNotSupportedException("CPU affinity is not supported on macOS.");
+        Task.FromException(new PlatformNotSupportedException("CPU affinity is not supported on macOS."));
 
     public Task SetPriorityAsync(int pid, ProcessPriority priority, CancellationToken ct = default) =>
         Task.Run(() =>
         {
-            var p = Process.GetProcessById(pid);
+            using var p = Process.GetProcessById(pid);
             p.PriorityClass = priority switch
             {
                 ProcessPriority.Idle        => ProcessPriorityClass.Idle,

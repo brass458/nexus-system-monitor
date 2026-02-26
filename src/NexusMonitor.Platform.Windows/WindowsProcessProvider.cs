@@ -533,7 +533,8 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 nint pebBase;
                 try
                 {
-                    NtDll.NtQueryInformationProcess(hProc, NtDll.PROCESSINFOCLASS.ProcessBasicInformation, pbiBuffer, (uint)pbiSize, out _);
+                    int status = NtDll.NtQueryInformationProcess(hProc, NtDll.PROCESSINFOCLASS.ProcessBasicInformation, pbiBuffer, (uint)pbiSize, out _);
+                    if (status != NtDll.STATUS_SUCCESS) return result;
                     var pbi = Marshal.PtrToStructure<PROCESS_BASIC_INFORMATION>(pbiBuffer);
                     pebBase = pbi.PebBaseAddress;
                 }
@@ -555,16 +556,22 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 if (!Kernel32.ReadProcessMemory(hProc, processParamsPtr + 0x3F0, sizeBuf, 8, out _)) return result;
                 ulong envSize = BitConverter.ToUInt64(sizeBuf, 0);
 
-                // 5. Clamp to 1 MB safety guard
-                int readSize = (int)Math.Min(envSize, (ulong)(1 * 1024 * 1024));
+                // 5. Sanity-check the size: offset 0x3F0 may be garbage on older Windows;
+                //    fall back to 32 KB if value is 0 or unreasonably large (> 512 KB).
+                const ulong MaxEnvBytes    = 512 * 1024;
+                const int   FallbackBytes  = 32  * 1024;
+                int readSize = (envSize == 0 || envSize > MaxEnvBytes)
+                    ? FallbackBytes
+                    : (int)envSize;
                 if (readSize < 2) return result;
 
                 // 6. Read env block
                 var envBuffer = new byte[readSize];
-                if (!Kernel32.ReadProcessMemory(hProc, envPtr, envBuffer, (nuint)readSize, out _)) return result;
+                if (!Kernel32.ReadProcessMemory(hProc, envPtr, envBuffer, (nuint)readSize, out nuint bytesRead)) return result;
 
                 // 7. Parse UTF-16LE "KEY=VALUE\0" pairs; stop at double-null
-                string block = System.Text.Encoding.Unicode.GetString(envBuffer);
+                int actualBytes = (int)Math.Min(bytesRead, (nuint)readSize);
+                string block = System.Text.Encoding.Unicode.GetString(envBuffer, 0, actualBytes);
                 int i = 0;
                 while (i < block.Length)
                 {
