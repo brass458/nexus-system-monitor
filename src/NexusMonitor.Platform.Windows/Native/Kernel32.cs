@@ -12,6 +12,7 @@ internal static partial class Kernel32
     public const uint TH32CS_SNAPMODULE  = 0x00000008;
     public const uint TH32CS_SNAPMODULE32= 0x00000010;
     public const uint TH32CS_SNAPALL     = 0x0000000F;
+    public const uint TH32CS_SNAPTHREAD  = 0x00000004;
     public static readonly nint INVALID_HANDLE_VALUE = new(-1);
 
     [LibraryImport(Dll, SetLastError = true)]
@@ -32,6 +33,14 @@ internal static partial class Kernel32
     [LibraryImport(Dll, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool Module32NextW(nint hSnapshot, ref MODULEENTRY32 lpme);
+
+    [LibraryImport(Dll, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool Thread32First(nint hSnapshot, ref THREADENTRY32 lpte);
+
+    [LibraryImport(Dll, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool Thread32Next(nint hSnapshot, ref THREADENTRY32 lpte);
 
     // ─── Process Control ─────────────────────────────────────────────────────
 
@@ -78,6 +87,15 @@ internal static partial class Kernel32
     public const uint ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000;
     public const uint HIGH_PRIORITY_CLASS         = 0x00000080;
     public const uint REALTIME_PRIORITY_CLASS     = 0x00000100;
+
+    [LibraryImport(Dll, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ReadProcessMemory(
+        nint hProcess,
+        nint lpBaseAddress,
+        [Out] byte[] lpBuffer,
+        nuint nSize,
+        out nuint lpNumberOfBytesRead);
 
     // ─── Memory ──────────────────────────────────────────────────────────────
 

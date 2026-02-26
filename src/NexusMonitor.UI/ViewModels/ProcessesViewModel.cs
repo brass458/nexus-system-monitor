@@ -50,6 +50,12 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private IReadOnlyList<ModuleInfo> _processModules = [];
 
+    [ObservableProperty]
+    private IReadOnlyList<ThreadInfo> _processThreads = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<EnvironmentEntry> _processEnvironment = [];
+
     public ProcessesViewModel(IProcessProvider processProvider)
     {
         _processProvider = processProvider;
@@ -208,8 +214,14 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
         ProcessModules = [];
+        ProcessThreads = [];
+        ProcessEnvironment = [];
         if (value is not null)
+        {
             _ = LoadModulesAsync(value.Pid);
+            _ = LoadThreadsAsync(value.Pid);
+            _ = LoadEnvironmentAsync(value.Pid);
+        }
     }
 
     private async Task LoadModulesAsync(int pid)
@@ -230,6 +242,50 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             {
                 if (SelectedProcess?.Pid == pid)
                     ProcessModules = [];
+            });
+        }
+    }
+
+    private async Task LoadThreadsAsync(int pid)
+    {
+        try
+        {
+            var threads = await _processProvider.GetThreadsAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessThreads = threads;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessThreads = [];
+            });
+        }
+    }
+
+    private async Task LoadEnvironmentAsync(int pid)
+    {
+        try
+        {
+            var env = await _processProvider.GetEnvironmentAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessEnvironment = env;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessEnvironment = [];
             });
         }
     }

@@ -13,6 +13,8 @@ public interface IProcessProvider
     Task SetPriorityAsync(int pid, ProcessPriority priority, CancellationToken ct = default);
     Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default);
     Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default);
+    Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(int pid, CancellationToken ct = default);
+    Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default);
 }
 
 public enum ProcessPriority { Idle, BelowNormal, Normal, AboveNormal, High, RealTime }

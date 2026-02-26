@@ -43,6 +43,20 @@ internal unsafe struct MODULEENTRY32
     public readonly string ExePath { get { fixed (char* p = _szExePath) return new string(p).TrimEnd('\0'); } }
 }
 
+// ─── Thread Enumeration ───────────────────────────────────────────────────────
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct THREADENTRY32
+{
+    public uint dwSize;
+    public uint cntUsage;
+    public uint th32ThreadID;
+    public uint th32OwnerProcessID;
+    public int  tpBasePri;
+    public int  tpDeltaPri;
+    public uint dwFlags;
+}
+
 // ─── NtQueryInformationProcess — ProcessBasicInformation ─────────────────────
 
 [StructLayout(LayoutKind.Sequential)]
