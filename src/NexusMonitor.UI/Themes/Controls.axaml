@@ -120,22 +120,47 @@
   </Style>
 
   <!-- ===== CONTEXT MENU ===== -->
+  <!--
+    IMPORTANT: Background must NOT reference any DynamicResource brush that gets
+    scaled by the glass-opacity system (e.g. BgElevatedBrush). When glass opacity
+    is low those brushes become nearly transparent, making the menu invisible and
+    causing text to overlap the table rows underneath.
+    We use a hardcoded gradient with a high alpha floor (~94% opaque) instead.
+  -->
   <Style Selector="ContextMenu">
-    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="BorderBrush" Value="#50FFFFFF" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="Padding" Value="4" />
+    <Setter Property="Padding" Value="5" />
+    <Setter Property="Background">
+      <Setter.Value>
+        <!-- Glossy top-lit gradient: slightly lighter at top, darker at bottom -->
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#F0252528" Offset="0.0"/>
+          <GradientStop Color="#F0141416" Offset="1.0"/>
+        </LinearGradientBrush>
+      </Setter.Value>
+    </Setter>
   </Style>
   <Style Selector="MenuItem">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="Padding" Value="10,7" />
     <Setter Property="FontSize" Value="12" />
+    <Setter Property="CornerRadius" Value="7" />
+  </Style>
+  <Style Selector="MenuItem:pointerover /template/ Border#root">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+    <Setter Property="CornerRadius" Value="7" />
   </Style>
   <Style Selector="MenuItem:pointerover">
-    <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
     <Setter Property="Foreground" Value="White" />
+  </Style>
+  <!-- Separator styling -->
+  <Style Selector="Separator">
+    <Setter Property="Background" Value="#30FFFFFF" />
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Margin" Value="8,3" />
   </Style>
 
   <!-- ===== TOGGLE BUTTON ===== -->

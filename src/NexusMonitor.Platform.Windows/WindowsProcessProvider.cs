@@ -481,6 +481,33 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         }, ct);
     }
 
+    public Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(int pid, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            var result = new List<ThreadInfo>();
+            // TH32CS_SNAPTHREAD ignores the pid parameter — capture all threads, filter by owner
+            nint snap = Kernel32.CreateToolhelp32Snapshot(Kernel32.TH32CS_SNAPTHREAD, 0);
+            if (snap == Kernel32.INVALID_HANDLE_VALUE) return (IReadOnlyList<ThreadInfo>)result;
+            try
+            {
+                var te = new THREADENTRY32 { dwSize = (uint)Marshal.SizeOf<THREADENTRY32>() };
+                if (Kernel32.Thread32First(snap, ref te))
+                    do
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        if ((int)te.th32OwnerProcessID == pid)
+                            result.Add(new ThreadInfo((int)te.th32ThreadID, pid, te.tpBasePri));
+                    }
+                    while (Kernel32.Thread32Next(snap, ref te));
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { }
+            finally { Kernel32.CloseHandle(snap); }
+            return (IReadOnlyList<ThreadInfo>)result;
+        }, ct);
+    }
+
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
         Task.Run(() =>
         {
@@ -489,6 +516,79 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             try   { Kernel32.SetProcessAffinityMask(h, (nint)affinityMask); }
             finally { Kernel32.CloseHandle(h); }
         }, ct);
+
+    public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            var result = new List<EnvironmentEntry>();
+            nint hProc = Kernel32.OpenProcess(
+                Kernel32.PROCESS_QUERY_INFORMATION | Kernel32.PROCESS_VM_READ, false, (uint)pid);
+            if (hProc == nint.Zero) return (IReadOnlyList<EnvironmentEntry>)result;
+            try
+            {
+                // 1. PEB base address via NtQueryInformationProcess
+                int pbiSize = Marshal.SizeOf<PROCESS_BASIC_INFORMATION>();
+                nint pbiBuffer = Marshal.AllocHGlobal(pbiSize);
+                nint pebBase;
+                try
+                {
+                    int status = NtDll.NtQueryInformationProcess(hProc, NtDll.PROCESSINFOCLASS.ProcessBasicInformation, pbiBuffer, (uint)pbiSize, out _);
+                    if (status != NtDll.STATUS_SUCCESS) return result;
+                    var pbi = Marshal.PtrToStructure<PROCESS_BASIC_INFORMATION>(pbiBuffer);
+                    pebBase = pbi.PebBaseAddress;
+                }
+                finally { Marshal.FreeHGlobal(pbiBuffer); }
+                if (pebBase == nint.Zero) return result;
+
+                var ptrBuf = new byte[8];
+
+                // 2. ProcessParameters pointer at PEB+0x20 (x64)
+                if (!Kernel32.ReadProcessMemory(hProc, pebBase + 0x20, ptrBuf, 8, out _)) return result;
+                nint processParamsPtr = (nint)BitConverter.ToInt64(ptrBuf, 0);
+
+                // 3. Environment pointer at ProcessParameters+0x80
+                if (!Kernel32.ReadProcessMemory(hProc, processParamsPtr + 0x80, ptrBuf, 8, out _)) return result;
+                nint envPtr = (nint)BitConverter.ToInt64(ptrBuf, 0);
+
+                // 4. EnvironmentSize at ProcessParameters+0x3F0 (Windows 10+)
+                var sizeBuf = new byte[8];
+                if (!Kernel32.ReadProcessMemory(hProc, processParamsPtr + 0x3F0, sizeBuf, 8, out _)) return result;
+                ulong envSize = BitConverter.ToUInt64(sizeBuf, 0);
+
+                // 5. Sanity-check the size: offset 0x3F0 may be garbage on older Windows;
+                //    fall back to 32 KB if value is 0 or unreasonably large (> 512 KB).
+                const ulong MaxEnvBytes    = 512 * 1024;
+                const int   FallbackBytes  = 32  * 1024;
+                int readSize = (envSize == 0 || envSize > MaxEnvBytes)
+                    ? FallbackBytes
+                    : (int)envSize;
+                if (readSize < 2) return result;
+
+                // 6. Read env block
+                var envBuffer = new byte[readSize];
+                if (!Kernel32.ReadProcessMemory(hProc, envPtr, envBuffer, (nuint)readSize, out nuint bytesRead)) return result;
+
+                // 7. Parse UTF-16LE "KEY=VALUE\0" pairs; stop at double-null
+                int actualBytes = (int)Math.Min(bytesRead, (nuint)readSize);
+                string block = System.Text.Encoding.Unicode.GetString(envBuffer, 0, actualBytes);
+                int i = 0;
+                while (i < block.Length)
+                {
+                    int nullPos = block.IndexOf('\0', i);
+                    if (nullPos <= i) break;
+                    string entry = block[i..nullPos];
+                    int eq = entry.IndexOf('=');
+                    if (eq > 0)
+                        result.Add(new EnvironmentEntry(entry[..eq], entry[(eq + 1)..]));
+                    i = nullPos + 1;
+                }
+            }
+            catch { }
+            finally { Kernel32.CloseHandle(hProc); }
+            return (IReadOnlyList<EnvironmentEntry>)result;
+        }, ct);
+    }
 
     public void Dispose()
     {

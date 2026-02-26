@@ -1,0 +1,21 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# NuGet
+*.nupkg
+packages/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.DotSettings.user
+
+# App data (settings persist here at runtime, not in source control)
+appsettings.local.json

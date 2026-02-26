@@ -2,8 +2,11 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.UI.Messages;
+using NexusMonitor.UI.Helpers;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -124,6 +127,22 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { LastError = $"Restart failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private void GoToProcess()
+    {
+        if (SelectedService?.ProcessId is int pid and > 0)
+            WeakReferenceMessenger.Default.Send(new NavigateToProcessMessage(pid));
+    }
+
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        var raw = SelectedService?.BinaryPath ?? string.Empty;
+        // BinaryPath may be quoted: "C:\path\to\exe.exe" args...
+        var exe = raw.StartsWith('"') ? raw[1..].Split('"')[0] : raw.Split(' ')[0];
+        ShellHelper.OpenFileLocation(exe);
     }
 
     public void Dispose()

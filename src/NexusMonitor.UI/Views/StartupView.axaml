@@ -92,6 +92,15 @@
                 CanUserSortColumns="True"
                 CanUserResizeColumns="True"
                 IsReadOnly="True">
+        <DataGrid.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="Enable"             Command="{Binding EnableItemCommand}"/>
+            <MenuItem Header="Disable"            Command="{Binding DisableItemCommand}"/>
+            <Separator/>
+            <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
+            <MenuItem Header="Open Registry Key"  Command="{Binding OpenRegistryKeyCommand}"/>
+          </ContextMenu>
+        </DataGrid.ContextMenu>
         <DataGrid.Columns>
 
           <!-- Status badge -->

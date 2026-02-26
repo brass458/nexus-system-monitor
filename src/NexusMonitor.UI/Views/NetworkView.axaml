@@ -49,10 +49,19 @@
     <!-- Connection table -->
     <DataGrid Classes="nx-grid"
               ItemsSource="{Binding Connections}"
+              SelectedItem="{Binding SelectedConnection}"
               AutoGenerateColumns="False"
               CanUserSortColumns="True"
               CanUserResizeColumns="True"
               IsReadOnly="True">
+      <DataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="Copy Local Address"  Command="{Binding CopyLocalAddressCommand}"/>
+          <MenuItem Header="Copy Remote Address" Command="{Binding CopyRemoteAddressCommand}"/>
+          <Separator/>
+          <MenuItem Header="Go to Process" Command="{Binding GoToProcessCommand}"/>
+        </ContextMenu>
+      </DataGrid.ContextMenu>
       <DataGrid.Columns>
         <DataGridTextColumn Header="Protocol"       Binding="{Binding Protocol}"      Width="80"  IsReadOnly="True"/>
         <DataGridTextColumn Header="Local Address"  Binding="{Binding LocalAddress}"  Width="140" IsReadOnly="True"/>

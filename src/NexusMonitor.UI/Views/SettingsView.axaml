@@ -4,25 +4,60 @@
              x:Class="NexusMonitor.UI.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
+  <UserControl.Resources>
+    <!-- Minimal control theme for circular colour-swatch buttons -->
+    <ControlTheme x:Key="SwatchTheme" TargetType="Button">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Width="{TemplateBinding Width}"
+                  Height="{TemplateBinding Height}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Background="{TemplateBinding Background}"
+                  Cursor="Hand"
+                  Opacity="{TemplateBinding Opacity}">
+            <Border.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.1"/>
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:pointerover">
+        <Setter Property="Opacity" Value="0.75"/>
+      </Style>
+      <Style Selector="^:pressed">
+        <Setter Property="Opacity" Value="0.5"/>
+      </Style>
+    </ControlTheme>
+  </UserControl.Resources>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="24" Spacing="16">
     <TextBlock Text="Settings"
                FontSize="20" FontWeight="SemiBold"
                Foreground="{StaticResource TextPrimaryBrush}"/>
 
+    <!-- ===== APPEARANCE ===== -->
     <Border Padding="20"
-            Background="{StaticResource BgElevatedBrush}"
-            BorderBrush="{StaticResource GlassBorderBrush}"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="16">
+      <StackPanel Spacing="14">
         <TextBlock Text="Appearance" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
+
+        <!-- Dark / Light theme toggle -->
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Text="Theme" FontSize="13"
-                     Foreground="{StaticResource TextSecondaryBrush}"
-                     VerticalAlignment="Center"/>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Theme" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Affects window chrome, text, and card backgrounds"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <ToggleButton Classes="nx-toggle"
                           Content="Dark"
                           IsChecked="{Binding IsDarkTheme}"/>
@@ -32,29 +67,367 @@
                           Command="{Binding SetLightThemeCommand}"/>
           </StackPanel>
         </Grid>
+
+        <!-- Update Interval -->
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Text="Update interval" FontSize="13"
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Metrics Update Interval" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Polling rate for all views and the overlay widget"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.UpdateIntervalLabels}"
+                    SelectedIndex="{Binding UpdateIntervalIndex}"/>
+        </Grid>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== TYPOGRAPHY ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="14">
+        <TextBlock Text="Typography" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Font family picker -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Font Family" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Applied to all windows and the overlay widget"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
+                    MaxDropDownHeight="260"
+                    ItemsSource="{x:Static vm:SettingsViewModel.SystemFonts}"
+                    SelectedItem="{Binding FontFamily}"/>
+        </Grid>
+
+        <!-- Current font preview -->
+        <Border Padding="12,8"
+                Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="8">
+          <TextBlock Text="The quick brown fox jumps over the lazy dog  0123456789"
+                     FontSize="12"
+                     FontFamily="{Binding FontFamily}"
                      Foreground="{StaticResource TextSecondaryBrush}"
-                     VerticalAlignment="Center"/>
-          <ComboBox Grid.Column="1" Width="120">
-            <ComboBoxItem Content="0.5 seconds"/>
-            <ComboBoxItem Content="1 second" IsSelected="True"/>
-            <ComboBoxItem Content="2 seconds"/>
-            <ComboBoxItem Content="5 seconds"/>
-          </ComboBox>
+                     TextTrimming="CharacterEllipsis"/>
+        </Border>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== ACCENT COLORS ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="14">
+        <TextBlock Text="Accent Colors" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Primary accent palette -->
+        <TextBlock Text="PRIMARY ACCENT" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
+        <TextBlock Text="Affects: buttons, chart lines, active nav item, toggle state, selections"
+                   FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
+
+        <!-- Row of accent swatches with live accent-color mini-preview beside each -->
+        <WrapPanel Orientation="Horizontal">
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#0A84FF"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#0A84FF"
+                  ToolTip.Tip="Blue"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#BF5AF2"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#BF5AF2"
+                  ToolTip.Tip="Purple"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF375F"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF375F"
+                  ToolTip.Tip="Pink"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF9F0A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF9F0A"
+                  ToolTip.Tip="Orange"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FFD60A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FFD60A"
+                  ToolTip.Tip="Yellow"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#34C759"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#34C759"
+                  ToolTip.Tip="Green"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#5AC8FA"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#5AC8FA"
+                  ToolTip.Tip="Teal"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF453A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF453A"
+                  ToolTip.Tip="Red"/>
+        </WrapPanel>
+
+        <!-- Live preview row showing what the selected accent changes -->
+        <Border Padding="12,8"
+                Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="8">
+          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
+              <Border Width="10" Height="10" CornerRadius="5"
+                      Background="{DynamicResource AccentBlueBrush}"
+                      VerticalAlignment="Center"/>
+              <TextBlock Text="Buttons" FontSize="10"
+                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
+              <Border Width="10" Height="10" CornerRadius="2"
+                      Background="{DynamicResource AccentBlueDimBrush}"
+                      BorderBrush="{DynamicResource AccentBlueBrush}"
+                      BorderThickness="1"
+                      VerticalAlignment="Center"/>
+              <TextBlock Text="Selections" FontSize="10"
+                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
+              <Border Width="28" Height="10" CornerRadius="5"
+                      Background="{DynamicResource AccentBlueBrush}"
+                      VerticalAlignment="Center"/>
+              <TextBlock Text="Nav" FontSize="10"
+                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="Aa" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource AccentBlueBrush}"
+                         VerticalAlignment="Center"/>
+              <TextBlock Text="Links" FontSize="10"
+                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+          </WrapPanel>
+        </Border>
+
+        <!-- Text accent sub-theme -->
+        <TextBlock Text="TEXT ACCENT" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
+        <TextBlock Text="Separate color for highlighted text, links, and active labels. Leave empty to derive from primary accent."
+                   FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap" Margin="0,0,0,4"/>
+        <WrapPanel Orientation="Horizontal">
+          <!-- Same swatches as primary, setting text accent instead -->
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="Transparent"
+                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  ToolTip.Tip="Derive from Primary (default)">
+            <Button.Styles>
+              <Style Selector="Button">
+                <Setter Property="BorderThickness" Value="1"/>
+              </Style>
+            </Button.Styles>
+          </Button>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#0A84FF"
+                  CommandParameter="#0A84FF" ToolTip.Tip="Blue"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#BF5AF2"
+                  CommandParameter="#BF5AF2" ToolTip.Tip="Purple"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#FF375F"
+                  CommandParameter="#FF375F" ToolTip.Tip="Pink"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#FF9F0A"
+                  CommandParameter="#FF9F0A" ToolTip.Tip="Orange"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#34C759"
+                  CommandParameter="#34C759" ToolTip.Tip="Green"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#5AC8FA"
+                  CommandParameter="#5AC8FA" ToolTip.Tip="Teal"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#FF453A"
+                  CommandParameter="#FF453A" ToolTip.Tip="Red"/>
+        </WrapPanel>
+        <!-- Text accent preview -->
+        <TextBlock FontSize="11" Margin="0,2,0,0">
+          <Run Text="Sample text — " Foreground="{StaticResource TextSecondaryBrush}"/>
+          <Run Text="highlighted text uses TextAccent"
+               Foreground="{DynamicResource TextAccentBrush}"
+               FontWeight="SemiBold"/>
+        </TextBlock>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== LIQUID GLASS ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="14">
+        <TextBlock Text="Liquid Glass" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Main glass toggle -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Liquid Glass Effect" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Full-window refraction with specular rim lights and OS backdrop blur"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsGlassEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Glass Opacity slider -->
+        <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="2">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Glass Opacity" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Grid.Column="1" Text="{Binding GlassOpacity, StringFormat='{}{0:P0}'}"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+          </Grid>
+          <Slider Minimum="0.0" Maximum="1.0" Value="{Binding GlassOpacity}"
+                  TickFrequency="0.05" IsSnapToTickEnabled="True"
+                  Margin="0,2,0,0"/>
+          <TextBlock Text="0% = fully see-through  ·  100% = solid"
+                     FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                     Margin="0,0,0,4"/>
+        </StackPanel>
+
+        <!-- Backdrop blur mode -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGlassEnabled}">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Backdrop Blur Mode" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Acrylic: Win 10/11  ·  Mica: Win 11+  ·  Blur: legacy"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.BackdropModes}"
+                    SelectedItem="{Binding BackdropBlurMode}"/>
+        </Grid>
+
+        <!-- Specular highlights sub-section -->
+        <TextBlock Text="SPECULAR HIGHLIGHTS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+        <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="Specular Rim Lights" FontSize="13"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="3-layer white edge glow (wash + sharp rim + prismatic shimmer)"
+                         FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                         TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsSpecularEnabled}"
+                          VerticalAlignment="Center"/>
+          </Grid>
+          <StackPanel IsEnabled="{Binding IsSpecularEnabled}" Spacing="2">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Intensity" FontSize="12"
+                         Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Grid.Column="1" Text="{Binding SpecularIntensity, StringFormat='{}{0:P0}'}"
+                         FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+            </Grid>
+            <Slider Minimum="0.0" Maximum="1.0" Value="{Binding SpecularIntensity}"
+                    TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    Margin="0,2,0,4"/>
+          </StackPanel>
+        </StackPanel>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== DESKTOP OVERLAY ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Desktop Overlay" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Floating Monitor Widget" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Always-on-top overlay — CPU, RAM, network, GPU. Mirrors main glass settings."
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding ShowOverlayWidget}"
+                        VerticalAlignment="Center"/>
         </Grid>
       </StackPanel>
     </Border>
 
+    <!-- ===== SYSTEM TRAY ===== -->
     <Border Padding="20"
-            Background="{StaticResource BgElevatedBrush}"
-            BorderBrush="{StaticResource GlassBorderBrush}"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="14">
+        <TextBlock Text="System Tray" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Close behaviour -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="When Pressing the Close Button" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Default action when you click the × button on the main window"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.CloseActionLabels}"
+                    SelectedIndex="{Binding CloseActionIndex}"/>
+        </Grid>
+
+        <!-- Hide widget on minimize -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Hide Widget When Minimizing to Tray" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Hides the desktop overlay widget when the app goes to tray"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding HideWidgetOnMinimize}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <TextBlock Text="Tip: Right-click the tray icon for quick access to Show / Widget / Exit"
+                   FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap"/>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== ABOUT ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="4">
         <TextBlock Text="Nexus Monitor" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
-        <TextBlock Text="Version 0.1.0 — Phase 3 (Polish &amp; Settings)"
+        <TextBlock Text="Version 0.1.0 — Phase 6 (Per-Device Performance + Liquid Glass)"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
         <TextBlock Text="MIT License · Open Source · Cross-Platform"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0"/>
@@ -62,5 +435,6 @@
     </Border>
 
   </StackPanel>
+  </ScrollViewer>
 
 </UserControl>

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
@@ -8,6 +9,8 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Services;
+using NexusMonitor.UI.Messages;
 using Avalonia.Threading;
 using ReactiveUI;
 
@@ -29,6 +32,7 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISystemMetricsProvider _metricsProvider;
     private IDisposable? _subscription;
+    private int _initialIntervalMs = 1000;
     private const int HistoryLength = 60;
 
     // CPU
@@ -74,10 +78,17 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _gpuMemTotalGb;
     [ObservableProperty] private string _gpuName = string.Empty;
 
-    public PerformanceViewModel(ISystemMetricsProvider metricsProvider)
+    // ── Device sidebar ────────────────────────────────────────────────────────────
+    public ObservableCollection<PerfDeviceViewModel> Devices { get; } = new();
+    [ObservableProperty] private PerfDeviceViewModel? _selectedDevice;
+    private CpuDeviceViewModel?    _cpuDevice;
+    private MemoryDeviceViewModel? _memDevice;
+
+    public PerformanceViewModel(ISystemMetricsProvider metricsProvider, SettingsService settings)
     {
         _metricsProvider = metricsProvider;
         Title = "Performance";
+        _initialIntervalMs = settings.Current.UpdateIntervalMs;
 
         var sharedXAxes = new Axis[]
         {
@@ -149,10 +160,19 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             }
         ];
 
-        _subscription = _metricsProvider
-            .GetMetricsStream(TimeSpan.FromSeconds(1))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(Update);
+        StartMetricsStream(TimeSpan.FromMilliseconds(_initialIntervalMs));
+
+        WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() => StartMetricsStream(msg.Interval)));
+
+        // Populate sidebar devices
+        var overview = new OverviewDeviceViewModel();
+        _cpuDevice   = new CpuDeviceViewModel(string.Empty);
+        _memDevice   = new MemoryDeviceViewModel();
+        Devices.Add(overview);
+        Devices.Add(_cpuDevice);
+        Devices.Add(_memDevice);
+        SelectedDevice = overview;
     }
 
     // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.
@@ -217,6 +237,19 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             GpuMemTotalGb = Math.Round(m.Gpus[0].DedicatedMemoryTotalBytes  / 1e9, 1);
             GpuName       = m.Gpus[0].Name;
         }
+
+        // Update CPU device name when model is known
+        if (_cpuDevice is not null && m.Cpu.ModelName.Length > 0)
+            _cpuDevice.SetModelName(m.Cpu.ModelName);
+
+        // Update all device VMs
+        foreach (var dev in Devices)
+            dev.Update(m);
+
+        // Sync dynamic devices (add new, remove stale)
+        SyncDiskDevices(m.Disks);
+        SyncNetworkDevices(m.NetworkAdapters);
+        SyncGpuDevices(m.Gpus);
     }
 
     private static void Push(ObservableCollection<ObservableValue> col, double value)
@@ -225,5 +258,59 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
         col.Add(new ObservableValue(value));
     }
 
-    public void Dispose() => _subscription?.Dispose();
+    private void SyncDiskDevices(IReadOnlyList<DiskMetrics> disks)
+    {
+        var activeIndexes = new HashSet<int>(disks.Select(d => d.DiskIndex));
+        // Add new
+        foreach (var d in disks)
+            if (!Devices.OfType<DiskDeviceViewModel>().Any(x => x.DiskIndex == d.DiskIndex))
+                Devices.Add(new DiskDeviceViewModel(d));
+        // Remove stale
+        foreach (var dev in Devices.OfType<DiskDeviceViewModel>()
+                                    .Where(x => !activeIndexes.Contains(x.DiskIndex))
+                                    .ToList())
+            Devices.Remove(dev);
+    }
+
+    private void SyncNetworkDevices(IReadOnlyList<NetworkAdapterMetrics> adapters)
+    {
+        var activeKeys = new HashSet<string>(adapters.Select(n => n.Name.Length > 0 ? n.Name : n.Description));
+        foreach (var n in adapters)
+        {
+            string key = n.Name.Length > 0 ? n.Name : n.Description;
+            if (!Devices.OfType<NetworkDeviceViewModel>().Any(x => x.AdapterName == key))
+                Devices.Add(new NetworkDeviceViewModel(n));
+        }
+        foreach (var dev in Devices.OfType<NetworkDeviceViewModel>()
+                                    .Where(x => !activeKeys.Contains(x.AdapterName))
+                                    .ToList())
+            Devices.Remove(dev);
+    }
+
+    private void SyncGpuDevices(IReadOnlyList<GpuMetrics> gpus)
+    {
+        var activeNames = new HashSet<string>(gpus.Select(g => g.Name));
+        foreach (var g in gpus)
+            if (!Devices.OfType<GpuDeviceViewModel>().Any(x => x.DeviceName == g.Name))
+                Devices.Add(new GpuDeviceViewModel(g));
+        foreach (var dev in Devices.OfType<GpuDeviceViewModel>()
+                                    .Where(x => !activeNames.Contains(x.DeviceName))
+                                    .ToList())
+            Devices.Remove(dev);
+    }
+
+    private void StartMetricsStream(TimeSpan interval)
+    {
+        _subscription?.Dispose();
+        _subscription = _metricsProvider
+            .GetMetricsStream(interval)
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(Update);
+    }
+
+    public void Dispose()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _subscription?.Dispose();
+    }
 }

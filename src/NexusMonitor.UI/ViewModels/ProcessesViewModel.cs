@@ -3,10 +3,13 @@ using System.ComponentModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using Avalonia.Threading;
 using ReactiveUI;
+using NexusMonitor.UI.Messages;
+using NexusMonitor.UI.Helpers;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -50,11 +53,24 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private IReadOnlyList<ModuleInfo> _processModules = [];
 
+    [ObservableProperty]
+    private IReadOnlyList<ThreadInfo> _processThreads = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<EnvironmentEntry> _processEnvironment = [];
+
     public ProcessesViewModel(IProcessProvider processProvider)
     {
         _processProvider = processProvider;
         Title = "Processes";
         StartMonitoring();
+
+        WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_allRows.TryGetValue(msg.Pid, out var row))
+                    SelectedProcess = row;
+            }));
     }
 
     private void StartMonitoring()
@@ -199,6 +215,20 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { LastError = $"Set priority failed: {ex.Message}"; }
     }
 
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        ShellHelper.OpenFileLocation(SelectedProcess?.ImagePath ?? string.Empty);
+    }
+
+    [RelayCommand]
+    private void SearchOnline()
+    {
+        var name = SelectedProcess?.Name ?? string.Empty;
+        if (name.Length > 0)
+            ShellHelper.OpenUrl($"https://www.google.com/search?q={Uri.EscapeDataString(name + " process")}");
+    }
+
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
@@ -208,8 +238,14 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
         ProcessModules = [];
+        ProcessThreads = [];
+        ProcessEnvironment = [];
         if (value is not null)
+        {
             _ = LoadModulesAsync(value.Pid);
+            _ = LoadThreadsAsync(value.Pid);
+            _ = LoadEnvironmentAsync(value.Pid);
+        }
     }
 
     private async Task LoadModulesAsync(int pid)
@@ -234,6 +270,50 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task LoadThreadsAsync(int pid)
+    {
+        try
+        {
+            var threads = await _processProvider.GetThreadsAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessThreads = threads;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessThreads = [];
+            });
+        }
+    }
+
+    private async Task LoadEnvironmentAsync(int pid)
+    {
+        try
+        {
+            var env = await _processProvider.GetEnvironmentAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessEnvironment = env;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessEnvironment = [];
+            });
+        }
+    }
+
     public void Dispose()
     {
         _cts.Cancel();
@@ -241,6 +321,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         _subscription?.Dispose();
         (SelectedDetails as IDisposable)?.Dispose();
         _allRows.Clear();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }
 

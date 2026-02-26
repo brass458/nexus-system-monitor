@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexusMonitor.UI.ViewModels"
+        xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+        x:Class="NexusMonitor.UI.Views.OverlayWindow"
+        x:DataType="vm:OverlayViewModel"
+        x:CompileBindings="False"
+        SystemDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        Width="240"
+        Height="188"
+        CanResize="True">
+
+  <!-- Outer panel holds glass background + specular layers stacked together -->
+  <Panel>
+
+    <!-- Glass surface border -->
+    <Border Background="{DynamicResource OverlayBgBrush}"
+            BorderBrush="#40FFFFFF"
+            BorderThickness="1"
+            CornerRadius="14"
+            BoxShadow="inset 0 1 3 0 #18FFFFFF, 0 4 24 0 #60000000"
+            Padding="14,12"
+            PointerPressed="OnDrag">
+      <StackPanel Spacing="8">
+
+        <!-- CPU row: label + sparkline + value -->
+        <Grid ColumnDefinitions="34,*,48">
+          <TextBlock Grid.Column="0"
+                     Text="CPU"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#80FFFFFF"
+                     VerticalAlignment="Center"/>
+          <lvc:CartesianChart Grid.Column="1"
+                              Series="{Binding CpuSeries}"
+                              XAxes="{Binding CpuXAxes}"
+                              YAxes="{Binding CpuYAxes}"
+                              Height="26"
+                              Background="Transparent"
+                              AnimationsSpeed="0:0:0"
+                              ZoomMode="None"
+                              EasingFunction="{x:Null}"/>
+          <TextBlock Grid.Column="2"
+                     Text="{Binding CpuDisplay}"
+                     FontSize="13" FontWeight="Bold"
+                     Foreground="#E0FFFFFF"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- RAM row: label + value on same line, then progress bar below -->
+        <StackPanel Spacing="3">
+          <Grid ColumnDefinitions="34,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="RAM"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#80FFFFFF"
+                       VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding MemDisplay}"
+                       FontSize="10"
+                       Foreground="#AAFFFFFF"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"/>
+          </Grid>
+          <ProgressBar Value="{Binding MemPercent}"
+                       Minimum="0" Maximum="100"
+                       Height="4"
+                       Margin="34,0,0,0"/>
+        </StackPanel>
+
+        <!-- Network rows -->
+        <Grid ColumnDefinitions="34,*">
+          <TextBlock Grid.Column="0"
+                     Text="NET"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#80FFFFFF"
+                     VerticalAlignment="Top"/>
+          <StackPanel Grid.Column="1" Spacing="2">
+            <TextBlock Text="{Binding NetRecvDisplay}"
+                       FontSize="10"
+                       Foreground="#BF5AF2"/>
+            <TextBlock Text="{Binding NetSendDisplay}"
+                       FontSize="10"
+                       Foreground="#FF453A"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- GPU row (hidden when no GPU) -->
+        <Grid ColumnDefinitions="34,*,48"
+              IsVisible="{Binding HasGpu}">
+          <TextBlock Grid.Column="0"
+                     Text="GPU"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#80FFFFFF"
+                     VerticalAlignment="Center"/>
+          <TextBlock Grid.Column="2"
+                     Text="{Binding GpuDisplay}"
+                     FontSize="13" FontWeight="Bold"
+                     Foreground="#FFD60A"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Center"/>
+        </Grid>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ── Liquid Glass specular stack (pointer-transparent) ── -->
+
+    <!-- Layer 1: Broad soft wash -->
+    <Border IsHitTestVisible="False"
+            CornerRadius="14"
+            ClipToBounds="True"
+            Opacity="{DynamicResource GlassSpecularOpacity}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#50FFFFFF" Offset="0"/>
+          <GradientStop Color="#18FFFFFF" Offset="0.4"/>
+          <GradientStop Color="#00FFFFFF" Offset="0.8"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <!-- Layer 2: Sharp top rim line -->
+    <Border IsHitTestVisible="False"
+            CornerRadius="14,14,0,0"
+            Height="5"
+            VerticalAlignment="Top"
+            Opacity="{DynamicResource GlassSpecularOpacity}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#D0FFFFFF" Offset="0"/>
+          <GradientStop Color="#50FFFFFF" Offset="0.5"/>
+          <GradientStop Color="#00FFFFFF" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <!-- Layer 3: Prismatic shimmer -->
+    <Border IsHitTestVisible="False"
+            CornerRadius="14"
+            ClipToBounds="True"
+            Opacity="{DynamicResource GlassSpecularOpacity}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+          <GradientStop Color="#0CFF8888" Offset="0.0"/>
+          <GradientStop Color="#06FFFFFF" Offset="0.33"/>
+          <GradientStop Color="#0C88FFFF" Offset="0.66"/>
+          <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+  </Panel>
+
+</Window>
