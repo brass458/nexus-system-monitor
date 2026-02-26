@@ -7,6 +7,7 @@ using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Mock;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
+using NexusMonitor.UI.Views;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
 #elif MACOS
@@ -37,6 +38,15 @@ public class App : Application
             {
                 DataContext = Services.GetRequiredService<MainViewModel>()
             };
+
+            // Overlay widget: create the window and wire the Settings toggle
+            var overlayVm = Services.GetRequiredService<OverlayViewModel>();
+            var overlayWin = new OverlayWindow { DataContext = overlayVm };
+            Services.GetRequiredService<SettingsViewModel>().OverlayWindow = overlayWin;
+
+            // Show immediately if the user left it enabled last session
+            if (Services.GetRequiredService<SettingsService>().Current.ShowOverlayWidget)
+                overlayWin.Show();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -83,6 +93,7 @@ public class App : Application
         services.AddSingleton<NetworkViewModel>();
         services.AddSingleton<OptimizationViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<OverlayViewModel>();
 
         return services.BuildServiceProvider();
     }

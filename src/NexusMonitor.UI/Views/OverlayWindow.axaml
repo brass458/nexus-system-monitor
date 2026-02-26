@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexusMonitor.UI.ViewModels"
+        xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+        x:Class="NexusMonitor.UI.Views.OverlayWindow"
+        x:DataType="vm:OverlayViewModel"
+        x:CompileBindings="False"
+        SystemDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        Width="230"
+        Height="168"
+        CanResize="True">
+
+  <Border Background="#CC050508"
+          BorderBrush="#28FFFFFF"
+          BorderThickness="1"
+          CornerRadius="14"
+          Padding="14,10"
+          PointerPressed="OnDrag">
+    <StackPanel Spacing="7">
+
+      <!-- CPU row: label + sparkline + value -->
+      <Grid ColumnDefinitions="34,*,44">
+        <TextBlock Grid.Column="0"
+                   Text="CPU"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#80FFFFFF"
+                   VerticalAlignment="Center"/>
+        <lvc:CartesianChart Grid.Column="1"
+                            Series="{Binding CpuSeries}"
+                            XAxes="{Binding CpuXAxes}"
+                            YAxes="{Binding CpuYAxes}"
+                            Height="26"
+                            Background="Transparent"
+                            AnimationsSpeed="0:0:0"
+                            ZoomMode="None"
+                            EasingFunction="{x:Null}"/>
+        <TextBlock Grid.Column="2"
+                   Text="{Binding CpuDisplay}"
+                   FontSize="13" FontWeight="Bold"
+                   Foreground="#E0FFFFFF"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- RAM row: label + progress bar + text -->
+      <Grid ColumnDefinitions="34,*,Auto">
+        <TextBlock Grid.Column="0"
+                   Text="RAM"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#80FFFFFF"
+                   VerticalAlignment="Center"/>
+        <ProgressBar Grid.Column="1"
+                     Value="{Binding MemPercent}"
+                     Minimum="0" Maximum="100"
+                     Height="5"
+                     Margin="0,0,8,0"
+                     VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="2"
+                   Text="{Binding MemDisplay}"
+                   FontSize="10"
+                   Foreground="#AAFFFFFF"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- Network rows -->
+      <Grid ColumnDefinitions="34,*">
+        <TextBlock Grid.Column="0"
+                   Text="NET"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#80FFFFFF"
+                   VerticalAlignment="Top"/>
+        <StackPanel Grid.Column="1" Spacing="2">
+          <TextBlock Text="{Binding NetRecvDisplay}"
+                     FontSize="10"
+                     Foreground="#BF5AF2"/>
+          <TextBlock Text="{Binding NetSendDisplay}"
+                     FontSize="10"
+                     Foreground="#FF453A"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- GPU row (hidden when no GPU) -->
+      <Grid ColumnDefinitions="34,*,44"
+            IsVisible="{Binding HasGpu}">
+        <TextBlock Grid.Column="0"
+                   Text="GPU"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#80FFFFFF"
+                   VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="2"
+                   Text="{Binding GpuDisplay}"
+                   FontSize="13" FontWeight="Bold"
+                   Foreground="#FFD60A"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"/>
+      </Grid>
+
+    </StackPanel>
+  </Border>
+
+</Window>
