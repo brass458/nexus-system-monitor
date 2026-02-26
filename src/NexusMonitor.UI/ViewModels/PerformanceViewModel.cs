@@ -16,6 +16,15 @@ namespace NexusMonitor.UI.ViewModels;
 /// <summary>Represents one CPU core cell in the per-core heatmap.</summary>
 public record CoreCellViewModel(int Index, double Percent);
 
+/// <summary>Represents one fixed drive in the per-drive disk usage breakdown.</summary>
+public record DriveRowViewModel(
+    string DriveLetter,
+    string Label,
+    double TotalGb,
+    double UsedGb,
+    double FreeGb,
+    double UsedPercent);
+
 public partial class PerformanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISystemMetricsProvider _metricsProvider;
@@ -55,6 +64,9 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _netSendMbps;
     [ObservableProperty] private double _netRecvMbps;
     public ISeries[] NetSeries { get; }
+
+    // Disk drives
+    [ObservableProperty] private IReadOnlyList<DriveRowViewModel> _driveRows = [];
 
     // GPU
     [ObservableProperty] private double _gpuPercent;
@@ -173,6 +185,19 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             DiskWriteMbps = Math.Round(m.Disks[0].WriteBytesPerSec / 1e6, 1);
             Push(_diskReadValues,  m.Disks[0].ReadBytesPerSec  / 1e6);
             Push(_diskWriteValues, m.Disks[0].WriteBytesPerSec / 1e6);
+
+            // Per-drive summary
+            DriveRows = m.Disks
+                .Where(d => d.TotalBytes > 0)
+                .Select(d =>
+                {
+                    double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
+                    double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
+                    double usedGb  = Math.Round(totalGb - freeGb, 1);
+                    double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
+                    return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
+                })
+                .ToList();
         }
 
         // Network

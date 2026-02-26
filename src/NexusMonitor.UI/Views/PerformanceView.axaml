@@ -256,6 +256,56 @@
 
       </Grid>
 
+      <!-- ===== DISK DRIVES ===== -->
+      <Border Margin="0,0,0,12"
+              Padding="16"
+              Background="{StaticResource BgElevatedBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{StaticResource CornerLG}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Disk Drives"
+                     FontSize="13" FontWeight="Medium"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <ItemsControl ItemsSource="{Binding DriveRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:DriveRowViewModel">
+                <Grid ColumnDefinitions="48,*,180" Margin="0,4,0,0" RowDefinitions="Auto,Auto">
+                  <!-- Drive letter -->
+                  <TextBlock Grid.Column="0" Grid.Row="0"
+                             Text="{Binding DriveLetter}"
+                             FontSize="13" FontWeight="SemiBold"
+                             Foreground="{StaticResource TextPrimaryBrush}"
+                             VerticalAlignment="Center"/>
+                  <!-- Capacity bar -->
+                  <ProgressBar Grid.Column="1" Grid.Row="0"
+                               Value="{Binding UsedPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Margin="8,0"/>
+                  <!-- Stats -->
+                  <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                    <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                      <Run Text="{Binding UsedGb, StringFormat='{}{0:F1} GB'}"/>
+                      <Run Text=" / "/>
+                      <Run Text="{Binding TotalGb, StringFormat='{}{0:F1} GB'}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding UsedPercent, StringFormat='({0:F0}%)'}"
+                               FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  </StackPanel>
+                  <!-- Drive label (second row) -->
+                  <TextBlock Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1"
+                             Text="{Binding Label}"
+                             FontSize="10"
+                             Foreground="{StaticResource TextTertiaryBrush}"
+                             Margin="0,2,0,0"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
     </StackPanel>
   </ScrollViewer>
 
