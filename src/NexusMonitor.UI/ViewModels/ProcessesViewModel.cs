@@ -183,6 +183,19 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { LastError = $"Resume failed: {ex.Message}"; }
     }
 
+    [RelayCommand]
+    private async Task SetPriority(string priorityName)
+    {
+        if (SelectedProcess is null) return;
+        if (!Enum.TryParse<ProcessPriority>(priorityName, out var priority)) return;
+        try
+        {
+            LastError = string.Empty;
+            await _processProvider.SetPriorityAsync(SelectedProcess.Pid, priority, _cts.Token);
+        }
+        catch (Exception ex) { LastError = $"Set priority failed: {ex.Message}"; }
+    }
+
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 

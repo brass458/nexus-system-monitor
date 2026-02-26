@@ -160,12 +160,12 @@
             <MenuItem Header="Resume"  Command="{Binding ResumeProcessCommand}"/>
             <Separator/>
             <MenuItem Header="Set Priority">
-              <MenuItem Header="Idle"/>
-              <MenuItem Header="Below Normal"/>
-              <MenuItem Header="Normal"/>
-              <MenuItem Header="Above Normal"/>
-              <MenuItem Header="High"/>
-              <MenuItem Header="Real Time"/>
+              <MenuItem Header="Idle"         Command="{Binding SetPriorityCommand}" CommandParameter="Idle"/>
+              <MenuItem Header="Below Normal" Command="{Binding SetPriorityCommand}" CommandParameter="BelowNormal"/>
+              <MenuItem Header="Normal"       Command="{Binding SetPriorityCommand}" CommandParameter="Normal"/>
+              <MenuItem Header="Above Normal" Command="{Binding SetPriorityCommand}" CommandParameter="AboveNormal"/>
+              <MenuItem Header="High"         Command="{Binding SetPriorityCommand}" CommandParameter="High"/>
+              <MenuItem Header="Real Time"    Command="{Binding SetPriorityCommand}" CommandParameter="RealTime"/>
             </MenuItem>
             <MenuItem Header="Set CPU Affinity…"/>
             <Separator/>
