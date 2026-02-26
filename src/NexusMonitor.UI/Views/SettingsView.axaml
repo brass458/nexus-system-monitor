@@ -103,31 +103,76 @@
                   ToolTip.Tip="Red"/>
         </WrapPanel>
 
-        <!-- Aero Glass -->
-        <TextBlock Text="WINDOW GLASS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+        <!-- Liquid Glass -->
+        <TextBlock Text="LIQUID GLASS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
                    Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
-            <TextBlock Text="Aero Glass Effect" FontSize="13"
+            <TextBlock Text="Liquid Glass Effect" FontSize="13"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Semi-transparent window with blur behind"
+            <TextBlock Text="Full-window refraction, specular rim lights, OS backdrop blur"
                        FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
-                       Margin="0,2,0,0"/>
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
-          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsAeroGlassEnabled}"/>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsGlassEnabled}"/>
         </Grid>
 
-        <!-- Opacity slider (active only when glass is on) -->
-        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsAeroGlassEnabled}">
-          <TextBlock Grid.Column="0" Text="Window Opacity" FontSize="12"
-                     Foreground="{StaticResource TextSecondaryBrush}"/>
-          <TextBlock Grid.Column="1" Text="{Binding WindowOpacity, StringFormat='{}{0:P0}'}"
-                     FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+        <!-- Glass Opacity slider (active only when glass is on) -->
+        <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="2">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Glass Opacity" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Grid.Column="1" Text="{Binding GlassOpacity, StringFormat='{}{0:P0}'}"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+          </Grid>
+          <Slider Minimum="0.0" Maximum="1.0" Value="{Binding GlassOpacity}"
+                  TickFrequency="0.05" IsSnapToTickEnabled="True"
+                  Margin="0,2,0,0"/>
+          <TextBlock Text="0% = fully see-through · 100% = solid"
+                     FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                     Margin="0,0,0,4"/>
+        </StackPanel>
+
+        <!-- Backdrop Blur Mode (active only when glass is on) -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGlassEnabled}">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Backdrop Blur Mode" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Acrylic: Win 10/11 · Mica: Win 11+ · Blur: legacy"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.BackdropModes}"
+                    SelectedItem="{Binding BackdropBlurMode}"/>
         </Grid>
-        <Slider Minimum="0.4" Maximum="1.0" Value="{Binding WindowOpacity}"
-                TickFrequency="0.05" IsSnapToTickEnabled="True"
-                IsEnabled="{Binding IsAeroGlassEnabled}"
-                Margin="0,0,0,4"/>
+
+        <!-- Specular Highlights -->
+        <TextBlock Text="SPECULAR HIGHLIGHTS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
+        <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="Specular Rim Lights" FontSize="13"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="White edge glow simulating glass refraction"
+                         FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                         Margin="0,2,0,0"/>
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsSpecularEnabled}"/>
+          </Grid>
+          <StackPanel IsEnabled="{Binding IsSpecularEnabled}" Spacing="2">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Intensity" FontSize="12"
+                         Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Grid.Column="1" Text="{Binding SpecularIntensity, StringFormat='{}{0:P0}'}"
+                         FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+            </Grid>
+            <Slider Minimum="0.0" Maximum="1.0" Value="{Binding SpecularIntensity}"
+                    TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    Margin="0,2,0,4"/>
+          </StackPanel>
+        </StackPanel>
 
         <!-- Update interval -->
         <Grid ColumnDefinitions="*,Auto">
