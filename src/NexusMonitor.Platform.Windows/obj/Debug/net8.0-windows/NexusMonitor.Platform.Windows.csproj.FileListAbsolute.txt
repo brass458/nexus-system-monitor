@@ -1,0 +1,15 @@
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\bin\Debug\net8.0-windows\NexusMonitor.Platform.Windows.deps.json
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\bin\Debug\net8.0-windows\NexusMonitor.Platform.Windows.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\bin\Debug\net8.0-windows\NexusMonitor.Platform.Windows.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\bin\Debug\net8.0-windows\NexusMonitor.Core.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\bin\Debug\net8.0-windows\NexusMonitor.Core.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.csproj.AssemblyReference.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.GeneratedMSBuildEditorConfig.editorconfig
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.AssemblyInfoInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.AssemblyInfo.cs
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.csproj.CoreCompileInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMon.BCCC6ACD.Up2Date
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\refint\NexusMonitor.Platform.Windows.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\NexusMonitor.Platform.Windows.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Windows\obj\Debug\net8.0-windows\ref\NexusMonitor.Platform.Windows.dll

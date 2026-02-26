@@ -1,0 +1,229 @@
+using System.Collections.ObjectModel;
+using System.Reactive.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
+using LiveChartsCore;
+using LiveChartsCore.Defaults;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
+using SkiaSharp;
+using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Models;
+using Avalonia.Threading;
+using ReactiveUI;
+
+namespace NexusMonitor.UI.ViewModels;
+
+/// <summary>Represents one CPU core cell in the per-core heatmap.</summary>
+public record CoreCellViewModel(int Index, double Percent);
+
+/// <summary>Represents one fixed drive in the per-drive disk usage breakdown.</summary>
+public record DriveRowViewModel(
+    string DriveLetter,
+    string Label,
+    double TotalGb,
+    double UsedGb,
+    double FreeGb,
+    double UsedPercent);
+
+public partial class PerformanceViewModel : ViewModelBase, IDisposable
+{
+    private readonly ISystemMetricsProvider _metricsProvider;
+    private IDisposable? _subscription;
+    private const int HistoryLength = 60;
+
+    // CPU
+    private readonly ObservableCollection<ObservableValue> _cpuValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    [ObservableProperty] private double _cpuPercent;
+    [ObservableProperty] private double _cpuFrequencyGhz;
+    [ObservableProperty] private double _cpuTempC;
+    [ObservableProperty] private string _cpuModelName = string.Empty;
+    [ObservableProperty] private int _logicalCores;
+    [ObservableProperty] private IReadOnlyList<CoreCellViewModel> _coreCells = [];
+    public ISeries[] CpuSeries { get; }
+    public Axis[] CpuXAxes { get; }
+    public Axis[] CpuYAxes { get; }
+
+    // Memory
+    private readonly ObservableCollection<ObservableValue> _memValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    [ObservableProperty] private double _memUsedGb;
+    [ObservableProperty] private double _memTotalGb;
+    [ObservableProperty] private double _memPercent;
+    public ISeries[] MemSeries { get; }
+    public Axis[] MemYAxes { get; }
+
+    // Disk
+    private readonly ObservableCollection<ObservableValue> _diskReadValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    private readonly ObservableCollection<ObservableValue> _diskWriteValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    [ObservableProperty] private double _diskReadMbps;
+    [ObservableProperty] private double _diskWriteMbps;
+    public ISeries[] DiskSeries { get; }
+
+    // Network
+    private readonly ObservableCollection<ObservableValue> _netSendValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    private readonly ObservableCollection<ObservableValue> _netRecvValues = new(Enumerable.Range(0, HistoryLength).Select(_ => new ObservableValue(0)));
+    [ObservableProperty] private double _netSendMbps;
+    [ObservableProperty] private double _netRecvMbps;
+    public ISeries[] NetSeries { get; }
+
+    // Disk drives
+    [ObservableProperty] private IReadOnlyList<DriveRowViewModel> _driveRows = [];
+
+    // GPU
+    [ObservableProperty] private double _gpuPercent;
+    [ObservableProperty] private double _gpuMemGb;
+    [ObservableProperty] private double _gpuMemTotalGb;
+    [ObservableProperty] private string _gpuName = string.Empty;
+
+    public PerformanceViewModel(ISystemMetricsProvider metricsProvider)
+    {
+        _metricsProvider = metricsProvider;
+        Title = "Performance";
+
+        var sharedXAxes = new Axis[]
+        {
+            new() { IsVisible = false, MinLimit = 0, MaxLimit = HistoryLength - 1 }
+        };
+
+        CpuSeries =
+        [
+            new LineSeries<ObservableValue>
+            {
+                Values = _cpuValues,
+                Fill = new LinearGradientPaint(
+                    new SKColor(10, 132, 255, 80), new SKColor(10, 132, 255, 0),
+                    new SKPoint(0.5f, 0f), new SKPoint(0.5f, 1f)),
+                Stroke = new SolidColorPaint(new SKColor(10, 132, 255), 2),
+                GeometrySize = 0,
+                LineSmoothness = 0.6,
+                Name = "CPU"
+            }
+        ];
+        CpuXAxes = sharedXAxes;
+        CpuYAxes = [new Axis { MinLimit = 0, MaxLimit = 100, IsVisible = false }];
+
+        MemSeries =
+        [
+            new LineSeries<ObservableValue>
+            {
+                Values = _memValues,
+                Fill = new LinearGradientPaint(
+                    new SKColor(52, 199, 89, 80), new SKColor(52, 199, 89, 0),
+                    new SKPoint(0.5f, 0f), new SKPoint(0.5f, 1f)),
+                Stroke = new SolidColorPaint(new SKColor(52, 199, 89), 2),
+                GeometrySize = 0,
+                LineSmoothness = 0.6,
+                Name = "Memory"
+            }
+        ];
+        MemYAxes = [new Axis { MinLimit = 0, MaxLimit = 100, IsVisible = false }];
+
+        DiskSeries =
+        [
+            new LineSeries<ObservableValue>
+            {
+                Values = _diskReadValues,
+                Stroke = new SolidColorPaint(new SKColor(100, 210, 255), 2),
+                Fill = null, GeometrySize = 0, LineSmoothness = 0.6, Name = "Read"
+            },
+            new LineSeries<ObservableValue>
+            {
+                Values = _diskWriteValues,
+                Stroke = new SolidColorPaint(new SKColor(255, 159, 10), 2),
+                Fill = null, GeometrySize = 0, LineSmoothness = 0.6, Name = "Write"
+            }
+        ];
+
+        NetSeries =
+        [
+            new LineSeries<ObservableValue>
+            {
+                Values = _netRecvValues,
+                Stroke = new SolidColorPaint(new SKColor(191, 90, 242), 2),
+                Fill = null, GeometrySize = 0, LineSmoothness = 0.6, Name = "Download"
+            },
+            new LineSeries<ObservableValue>
+            {
+                Values = _netSendValues,
+                Stroke = new SolidColorPaint(new SKColor(255, 69, 58), 2),
+                Fill = null, GeometrySize = 0, LineSmoothness = 0.6, Name = "Upload"
+            }
+        ];
+
+        _subscription = _metricsProvider
+            .GetMetricsStream(TimeSpan.FromSeconds(1))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(Update);
+    }
+
+    // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.
+    private void Update(SystemMetrics m)
+    {
+        // CPU
+        CpuPercent      = Math.Round(m.Cpu.TotalPercent, 1);
+        CpuFrequencyGhz = Math.Round(m.Cpu.FrequencyMhz / 1000.0, 2);
+        CpuTempC        = Math.Round(m.Cpu.TemperatureCelsius, 0);
+        CpuModelName    = m.Cpu.ModelName;
+        LogicalCores    = m.Cpu.LogicalCores;
+        Push(_cpuValues, m.Cpu.TotalPercent);
+
+        // Per-core heatmap cells
+        if (m.Cpu.CorePercents.Count > 0)
+            CoreCells = m.Cpu.CorePercents
+                .Select((p, i) => new CoreCellViewModel(i, Math.Round(p, 0)))
+                .ToList();
+
+        // Memory
+        MemTotalGb = Math.Round(m.Memory.TotalBytes / 1e9, 1);
+        MemUsedGb  = Math.Round(m.Memory.UsedBytes  / 1e9, 1);
+        MemPercent = Math.Round(m.Memory.UsedPercent, 1);
+        Push(_memValues, m.Memory.UsedPercent);
+
+        // Disk (aggregate first disk)
+        if (m.Disks.Count > 0)
+        {
+            DiskReadMbps  = Math.Round(m.Disks[0].ReadBytesPerSec  / 1e6, 1);
+            DiskWriteMbps = Math.Round(m.Disks[0].WriteBytesPerSec / 1e6, 1);
+            Push(_diskReadValues,  m.Disks[0].ReadBytesPerSec  / 1e6);
+            Push(_diskWriteValues, m.Disks[0].WriteBytesPerSec / 1e6);
+        }
+
+        // Per-drive summary — always update so stale rows are cleared when Disks is empty
+        DriveRows = m.Disks
+            .Where(d => d.TotalBytes > 0)
+            .Select(d =>
+            {
+                double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
+                double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
+                double usedGb  = Math.Round(totalGb - freeGb, 1);
+                double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
+                return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
+            })
+            .ToList();
+
+        // Network
+        if (m.NetworkAdapters.Count > 0)
+        {
+            NetSendMbps = Math.Round(m.NetworkAdapters[0].SendBytesPerSec / 1e6, 2);
+            NetRecvMbps = Math.Round(m.NetworkAdapters[0].RecvBytesPerSec / 1e6, 2);
+            Push(_netSendValues, m.NetworkAdapters[0].SendBytesPerSec / 1e6);
+            Push(_netRecvValues, m.NetworkAdapters[0].RecvBytesPerSec / 1e6);
+        }
+
+        // GPU
+        if (m.Gpus.Count > 0)
+        {
+            GpuPercent    = Math.Round(m.Gpus[0].UsagePercent, 1);
+            GpuMemGb      = Math.Round(m.Gpus[0].DedicatedMemoryUsedBytes   / 1e9, 1);
+            GpuMemTotalGb = Math.Round(m.Gpus[0].DedicatedMemoryTotalBytes  / 1e9, 1);
+            GpuName       = m.Gpus[0].Name;
+        }
+    }
+
+    private static void Push(ObservableCollection<ObservableValue> col, double value)
+    {
+        col.RemoveAt(0);
+        col.Add(new ObservableValue(value));
+    }
+
+    public void Dispose() => _subscription?.Dispose();
+}

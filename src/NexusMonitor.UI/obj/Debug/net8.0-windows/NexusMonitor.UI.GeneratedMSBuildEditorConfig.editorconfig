@@ -1,0 +1,60 @@
+is_global = true
+build_property.AvaloniaNameGeneratorIsEnabled = true
+build_property.AvaloniaNameGeneratorBehavior = InitializeComponent
+build_property.AvaloniaNameGeneratorDefaultFieldModifier = internal
+build_property.AvaloniaNameGeneratorFilterByPath = *
+build_property.AvaloniaNameGeneratorFilterByNamespace = *
+build_property.AvaloniaNameGeneratorViewFileNamingStrategy = NamespaceAndClassName
+build_property.AvaloniaNameGeneratorAttachDevTools = true
+build_property.MvvmToolkitEnableINotifyPropertyChangingSupport = true
+build_property.TargetFramework = net8.0-windows
+build_property.TargetPlatformMinVersion = 7.0
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = NexusMonitor.UI
+build_property.ProjectDir = O:\Github\Nexus System Monitor\src\NexusMonitor.UI\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/App.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/MainWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Themes/Colors.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Themes/Controls.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Themes/NexusTheme.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Themes/Typography.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/NetworkView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/OptimizationView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/PerformanceView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/ProcessesView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/ServicesView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/SettingsView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[O:/Github/Nexus System Monitor/src/NexusMonitor.UI/Views/StartupView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

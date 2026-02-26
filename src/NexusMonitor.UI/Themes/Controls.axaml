@@ -1,0 +1,188 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- ===== BUTTON ===== -->
+  <Style Selector="Button.nx-btn">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.nx-btn:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+  </Style>
+  <Style Selector="Button.nx-btn:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgSelectedBrush}" />
+  </Style>
+
+  <Style Selector="Button.nx-btn-accent">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.nx-btn-accent:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.nx-btn-ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.nx-btn-ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+  </Style>
+
+  <!-- ===== TEXT INPUT ===== -->
+  <Style Selector="TextBox.nx-input">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentBlueDimBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentBlueBrush}" />
+  </Style>
+  <Style Selector="TextBox.nx-input:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+  </Style>
+
+  <!-- ===== SCROLLBAR ===== -->
+  <Style Selector="ScrollBar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="{DynamicResource BorderDefaultBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="MinWidth" Value="4" />
+  </Style>
+
+  <!-- ===== DATA GRID ===== -->
+  <Style Selector="DataGrid.nx-grid">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="RowBackground" Value="Transparent" />
+    <Setter Property="GridLinesVisibility" Value="None" />
+    <Setter Property="HeadersVisibility" Value="Column" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="DataGrid.nx-grid DataGridColumnHeader">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="DataGrid.nx-grid DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource BgHoverBrush}" />
+  </Style>
+  <Style Selector="DataGrid.nx-grid DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource AccentBlueDimBrush}" />
+  </Style>
+  <Style Selector="DataGrid.nx-grid DataGridCell">
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ===== LIST BOX ===== -->
+  <Style Selector="ListBox.nx-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.nx-list ListBoxItem">
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Margin" Value="2,1" />
+  </Style>
+  <Style Selector="ListBox.nx-list ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+  </Style>
+  <Style Selector="ListBox.nx-list ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueDimBrush}" />
+  </Style>
+
+  <!-- ===== CONTEXT MENU ===== -->
+  <Style Selector="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="MenuItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- ===== TOGGLE BUTTON ===== -->
+  <Style Selector="ToggleButton.nx-toggle">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9999" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.nx-toggle:checked">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.nx-toggle:checked:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueHoverBrush}" />
+  </Style>
+
+  <!-- ===== TOOL TIP ===== -->
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="FontSize" Value="11" />
+  </Style>
+
+  <!-- ===== PROCESS DETAIL PANEL LABELS ===== -->
+  <Style Selector="TextBlock.detail-label">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,4,12,4" />
+    <Setter Property="MinWidth" Value="72" />
+  </Style>
+  <Style Selector="TextBlock.detail-value">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,4,0,4" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+</Styles>

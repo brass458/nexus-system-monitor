@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Font families — Inter (bundled via Avalonia.Fonts.Inter) as primary, platform fallbacks -->
+  <FontFamily x:Key="FontSans">Inter,Segoe UI Variable,Segoe UI,Helvetica Neue,Arial,sans-serif</FontFamily>
+  <FontFamily x:Key="FontMono">Cascadia Code,JetBrains Mono,Consolas,Menlo,monospace</FontFamily>
+
+  <!-- Font size scale -->
+  <x:Double x:Key="FontSizeXS">10</x:Double>
+  <x:Double x:Key="FontSizeSM">11</x:Double>
+  <x:Double x:Key="FontSizeMD">12</x:Double>
+  <x:Double x:Key="FontSizeBase">13</x:Double>
+  <x:Double x:Key="FontSizeLG">14</x:Double>
+  <x:Double x:Key="FontSizeXL">16</x:Double>
+  <x:Double x:Key="FontSize2XL">20</x:Double>
+  <x:Double x:Key="FontSize3XL">24</x:Double>
+
+  <!-- Corner radii -->
+  <CornerRadius x:Key="CornerSM">6</CornerRadius>
+  <CornerRadius x:Key="CornerMD">8</CornerRadius>
+  <CornerRadius x:Key="CornerLG">12</CornerRadius>
+  <CornerRadius x:Key="CornerXL">16</CornerRadius>
+  <CornerRadius x:Key="CornerFull">9999</CornerRadius>
+
+  <!-- Padding tokens -->
+  <Thickness x:Key="PaddingXS">4</Thickness>
+  <Thickness x:Key="PaddingSM">8</Thickness>
+  <Thickness x:Key="PaddingMD">12</Thickness>
+  <Thickness x:Key="PaddingLG">16</Thickness>
+  <Thickness x:Key="PaddingXL">24</Thickness>
+
+</ResourceDictionary>

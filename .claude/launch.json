@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "NexusMonitor (Windows)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/NexusMonitor.UI/NexusMonitor.UI.csproj", "--framework", "net8.0-windows"],
+      "port": 0
+    }
+  ]
+}

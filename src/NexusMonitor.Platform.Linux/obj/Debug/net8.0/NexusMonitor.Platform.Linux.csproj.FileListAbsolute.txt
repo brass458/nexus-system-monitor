@@ -1,0 +1,15 @@
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\bin\Debug\net8.0\NexusMonitor.Platform.Linux.deps.json
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\bin\Debug\net8.0\NexusMonitor.Platform.Linux.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\bin\Debug\net8.0\NexusMonitor.Platform.Linux.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\bin\Debug\net8.0\NexusMonitor.Core.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\bin\Debug\net8.0\NexusMonitor.Core.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.csproj.AssemblyReference.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.GeneratedMSBuildEditorConfig.editorconfig
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.AssemblyInfoInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.AssemblyInfo.cs
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.csproj.CoreCompileInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMon.81F58B97.Up2Date
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\refint\NexusMonitor.Platform.Linux.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\NexusMonitor.Platform.Linux.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Platform.Linux\obj\Debug\net8.0\ref\NexusMonitor.Platform.Linux.dll

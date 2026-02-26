@@ -1,0 +1,312 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:conv="using:NexusMonitor.UI.Converters"
+             x:Class="NexusMonitor.UI.Views.PerformanceView"
+             x:DataType="vm:PerformanceViewModel">
+
+  <UserControl.Resources>
+    <conv:CpuHeatBrushConverter x:Key="CpuHeat"/>
+  </UserControl.Resources>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="0" Margin="20">
+
+      <!-- Page title -->
+      <TextBlock Text="Performance"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 Foreground="{StaticResource TextPrimaryBrush}"
+                 Margin="0,0,0,16"/>
+
+      <!-- ===== METRIC CARDS ROW ===== -->
+      <WrapPanel Orientation="Horizontal" ItemWidth="180">
+
+        <!-- CPU card -->
+        <Border Margin="0,0,12,12"
+                Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="CPU" FontSize="10" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.8"/>
+            <TextBlock Text="{Binding CpuPercent, StringFormat='{}{0:F1}%'}"
+                       FontSize="28" FontWeight="Bold"
+                       Foreground="{StaticResource AccentBlueBrush}"/>
+            <TextBlock Text="{Binding CpuModelName}"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextTrimming="CharacterEllipsis" MaxWidth="148"/>
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+              <StackPanel>
+                <TextBlock Text="{Binding CpuFrequencyGhz, StringFormat='{}{0:F2} GHz'}"
+                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Text="Freq" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"/>
+              </StackPanel>
+              <StackPanel>
+                <TextBlock Text="{Binding CpuTempC, StringFormat='{}{0}°C'}"
+                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Text="Temp" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"/>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Memory card -->
+        <Border Margin="0,0,12,12"
+                Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="MEMORY" FontSize="10" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.8"/>
+            <TextBlock Text="{Binding MemPercent, StringFormat='{}{0:F1}%'}"
+                       FontSize="28" FontWeight="Bold"
+                       Foreground="{StaticResource ColorSuccessBrush}"/>
+            <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+              <Run Text="{Binding MemUsedGb, StringFormat='{}{0:F1}'}"/>
+              <Run Text=" / "/>
+              <Run Text="{Binding MemTotalGb, StringFormat='{}{0:F0} GB'}"/>
+            </TextBlock>
+          </StackPanel>
+        </Border>
+
+        <!-- GPU card -->
+        <Border Margin="0,0,12,12"
+                Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="GPU" FontSize="10" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.8"/>
+            <TextBlock Text="{Binding GpuPercent, StringFormat='{}{0:F1}%'}"
+                       FontSize="28" FontWeight="Bold"
+                       Foreground="{StaticResource ColorInfoBrush}"/>
+            <TextBlock Text="{Binding GpuName}" FontSize="10"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       TextTrimming="CharacterEllipsis" MaxWidth="148"/>
+            <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+              <Run Text="{Binding GpuMemGb, StringFormat='{}{0:F1}'}"/>
+              <Run Text=" / "/>
+              <Run Text="{Binding GpuMemTotalGb, StringFormat='{}{0:F0} GB VRAM'}"/>
+            </TextBlock>
+          </StackPanel>
+        </Border>
+
+      </WrapPanel>
+
+      <!-- ===== CPU GRAPH ===== -->
+      <Border Margin="0,0,0,12"
+              Padding="16"
+              Background="{StaticResource BgElevatedBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{StaticResource CornerLG}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="CPU Utilization"
+                       FontSize="13" FontWeight="Medium"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding CpuPercent, StringFormat='{}{0:F1}%'}"
+                       FontSize="13" FontWeight="SemiBold"
+                       Foreground="{StaticResource AccentBlueBrush}"/>
+          </Grid>
+          <lvc:CartesianChart Series="{Binding CpuSeries}"
+                               XAxes="{Binding CpuXAxes}"
+                               YAxes="{Binding CpuYAxes}"
+                               Height="120"
+                               Background="Transparent"
+                               AnimationsSpeed="0:0:0.3"
+                               EasingFunction="{x:Null}"/>
+          <TextBlock Text="100% max · 60 second window"
+                     FontSize="9"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     HorizontalAlignment="Right"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== PER-CORE HEATMAP ===== -->
+      <Border Margin="0,0,0,12"
+              Padding="16"
+              Background="{StaticResource BgElevatedBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{StaticResource CornerLG}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Per-Core Utilization"
+                     FontSize="13" FontWeight="Medium"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <ItemsControl ItemsSource="{Binding CoreCells}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CoreCellViewModel">
+                <Border Width="52" Height="44" Margin="0,0,4,4" CornerRadius="8"
+                        Background="{Binding Percent, Converter={StaticResource CpuHeat}}">
+                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{Binding Index, StringFormat='C{0}'}"
+                               FontSize="8" Foreground="White" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding Percent, StringFormat='{}{0:F0}%'}"
+                               FontSize="11" FontWeight="SemiBold" Foreground="White"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== MEMORY GRAPH ===== -->
+      <Border Margin="0,0,0,12"
+              Padding="16"
+              Background="{StaticResource BgElevatedBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{StaticResource CornerLG}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Memory Usage"
+                       FontSize="13" FontWeight="Medium"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding MemUsedGb, StringFormat='{}{0:F1} GB'}"
+                       FontSize="13" FontWeight="SemiBold"
+                       Foreground="{StaticResource ColorSuccessBrush}"/>
+          </Grid>
+          <lvc:CartesianChart Series="{Binding MemSeries}"
+                               XAxes="{Binding CpuXAxes}"
+                               YAxes="{Binding MemYAxes}"
+                               Height="100"
+                               Background="Transparent"
+                               AnimationsSpeed="0:0:0.3"
+                               EasingFunction="{x:Null}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== DISK + NETWORK (side by side) ===== -->
+      <Grid ColumnDefinitions="*,12,*" Margin="0,0,0,12">
+
+        <!-- Disk -->
+        <Border Grid.Column="0"
+                Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Disk I/O"
+                         FontSize="13" FontWeight="Medium"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding DiskReadMbps, StringFormat='R: {0:F1} MB/s'}"
+                           FontSize="11" Foreground="{StaticResource ColorInfoBrush}"/>
+                <TextBlock Text="{Binding DiskWriteMbps, StringFormat='W: {0:F1} MB/s'}"
+                           FontSize="11" Foreground="{StaticResource ColorWarningBrush}"/>
+              </StackPanel>
+            </Grid>
+            <lvc:CartesianChart Series="{Binding DiskSeries}"
+                                 XAxes="{Binding CpuXAxes}"
+                                 Height="90"
+                                 Background="Transparent"
+                                 AnimationsSpeed="0:0:0.3"
+                                 EasingFunction="{x:Null}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Network -->
+        <Border Grid.Column="2"
+                Padding="16"
+                Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Network"
+                         FontSize="13" FontWeight="Medium"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding NetRecvMbps, StringFormat='↓ {0:F2} MB/s'}"
+                           FontSize="11" Foreground="{StaticResource ProcDotNetBrush}"/>
+                <TextBlock Text="{Binding NetSendMbps, StringFormat='↑ {0:F2} MB/s'}"
+                           FontSize="11" Foreground="{StaticResource ColorDangerBrush}"/>
+              </StackPanel>
+            </Grid>
+            <lvc:CartesianChart Series="{Binding NetSeries}"
+                                 XAxes="{Binding CpuXAxes}"
+                                 Height="90"
+                                 Background="Transparent"
+                                 AnimationsSpeed="0:0:0.3"
+                                 EasingFunction="{x:Null}"/>
+          </StackPanel>
+        </Border>
+
+      </Grid>
+
+      <!-- ===== DISK DRIVES ===== -->
+      <Border Margin="0,0,0,12"
+              Padding="16"
+              Background="{StaticResource BgElevatedBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{StaticResource CornerLG}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Disk Drives"
+                     FontSize="13" FontWeight="Medium"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <ItemsControl ItemsSource="{Binding DriveRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:DriveRowViewModel">
+                <Grid ColumnDefinitions="48,*,180" Margin="0,4,0,0" RowDefinitions="Auto,Auto">
+                  <!-- Drive letter -->
+                  <TextBlock Grid.Column="0" Grid.Row="0"
+                             Text="{Binding DriveLetter}"
+                             FontSize="13" FontWeight="SemiBold"
+                             Foreground="{StaticResource TextPrimaryBrush}"
+                             VerticalAlignment="Center"/>
+                  <!-- Capacity bar -->
+                  <ProgressBar Grid.Column="1" Grid.Row="0"
+                               Value="{Binding UsedPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Margin="8,0"/>
+                  <!-- Stats -->
+                  <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                    <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                      <Run Text="{Binding UsedGb, StringFormat='{}{0:F1} GB'}"/>
+                      <Run Text=" / "/>
+                      <Run Text="{Binding TotalGb, StringFormat='{}{0:F1} GB'}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding UsedPercent, StringFormat='({0:F0}%)'}"
+                               FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  </StackPanel>
+                  <!-- Drive label (second row) -->
+                  <TextBlock Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1"
+                             Text="{Binding Label}"
+                             FontSize="10"
+                             Foreground="{StaticResource TextTertiaryBrush}"
+                             Margin="0,2,0,0"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+
+</UserControl>

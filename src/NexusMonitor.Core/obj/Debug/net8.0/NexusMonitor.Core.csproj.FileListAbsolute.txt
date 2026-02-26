@@ -1,0 +1,12 @@
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\bin\Debug\net8.0\NexusMonitor.Core.deps.json
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\bin\Debug\net8.0\NexusMonitor.Core.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\bin\Debug\net8.0\NexusMonitor.Core.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.csproj.AssemblyReference.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.GeneratedMSBuildEditorConfig.editorconfig
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.AssemblyInfoInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.AssemblyInfo.cs
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.csproj.CoreCompileInputs.cache
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\refint\NexusMonitor.Core.dll
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\NexusMonitor.Core.pdb
+O:\Github\Nexus System Monitor\src\NexusMonitor.Core\obj\Debug\net8.0\ref\NexusMonitor.Core.dll

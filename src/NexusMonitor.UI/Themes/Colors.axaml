@@ -1,0 +1,111 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- ===== NEXUS DARK PALETTE ===== -->
+
+  <!-- Background layers (macOS-inspired) -->
+  <Color x:Key="BgBase">#0F0F12</Color>
+  <Color x:Key="BgPrimary">#1C1C1E</Color>
+  <Color x:Key="BgSecondary">#252528</Color>
+  <Color x:Key="BgElevated">#2C2C2E</Color>
+  <Color x:Key="BgHover">#363638</Color>
+  <Color x:Key="BgSelected">#3A3A3C</Color>
+
+  <!-- Glass surface colors -->
+  <Color x:Key="GlassBg">#B21C1C1E</Color>
+  <Color x:Key="GlassBorder">#403A3A3C</Color>
+  <Color x:Key="GlassHighlight">#18FFFFFF</Color>
+  <Color x:Key="GlassShadow">#40000000</Color>
+
+  <!-- Text -->
+  <Color x:Key="TextPrimary">#FFFFFFFF</Color>
+  <Color x:Key="TextSecondary">#99EBEBF5</Color>
+  <Color x:Key="TextTertiary">#66EBEBF5</Color>
+  <Color x:Key="TextDisabled">#40EBEBF5</Color>
+
+  <!-- Borders -->
+  <Color x:Key="BorderSubtle">#28FFFFFF</Color>
+  <Color x:Key="BorderDefault">#40FFFFFF</Color>
+  <Color x:Key="BorderStrong">#60FFFFFF</Color>
+
+  <!-- Accent — macOS Blue -->
+  <Color x:Key="AccentBlue">#0A84FF</Color>
+  <Color x:Key="AccentBlueDim">#1A0A84FF</Color>
+  <Color x:Key="AccentBlueHover">#228BE6</Color>
+
+  <!-- Status / semantic colors -->
+  <Color x:Key="ColorSuccess">#34C759</Color>
+  <Color x:Key="ColorWarning">#FF9F0A</Color>
+  <Color x:Key="ColorDanger">#FF453A</Color>
+  <Color x:Key="ColorInfo">#64D2FF</Color>
+
+  <!-- CPU heat gradient stops -->
+  <Color x:Key="HeatLow">#34C759</Color>
+  <Color x:Key="HeatMid">#FF9F0A</Color>
+  <Color x:Key="HeatHigh">#FF453A</Color>
+
+  <!-- ===== PROCESS CATEGORY COLORS ===== -->
+  <Color x:Key="ProcSystem">#5E5CE6</Color>
+  <Color x:Key="ProcSystemBg">#1A5E5CE6</Color>
+  <Color x:Key="ProcService">#32ADE6</Color>
+  <Color x:Key="ProcServiceBg">#1A32ADE6</Color>
+  <Color x:Key="ProcUser">#34C759</Color>
+  <Color x:Key="ProcUserBg">#1434C759</Color>
+  <Color x:Key="ProcDotNet">#BF5AF2</Color>
+  <Color x:Key="ProcDotNetBg">#1ABF5AF2</Color>
+  <Color x:Key="ProcSuspicious">#FF453A</Color>
+  <Color x:Key="ProcSuspiciousBg">#1AFF453A</Color>
+  <Color x:Key="ProcSuspended">#636366</Color>
+  <Color x:Key="ProcSuspendedBg">#14636366</Color>
+  <Color x:Key="ProcGpu">#64D2FF</Color>
+  <Color x:Key="ProcGpuBg">#1A64D2FF</Color>
+  <Color x:Key="ProcCurrent">#FFD60A</Color>
+  <Color x:Key="ProcCurrentBg">#1AFFD60A</Color>
+
+  <!-- ===== SOLID BRUSHES ===== -->
+  <SolidColorBrush x:Key="BgBaseBrush" Color="{StaticResource BgBase}" />
+  <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimary}" />
+  <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondary}" />
+  <SolidColorBrush x:Key="BgElevatedBrush" Color="{StaticResource BgElevated}" />
+  <SolidColorBrush x:Key="BgHoverBrush" Color="{StaticResource BgHover}" />
+  <SolidColorBrush x:Key="BgSelectedBrush" Color="{StaticResource BgSelected}" />
+
+  <SolidColorBrush x:Key="GlassBgBrush" Color="{StaticResource GlassBg}" />
+  <SolidColorBrush x:Key="GlassBorderBrush" Color="{StaticResource GlassBorder}" />
+  <SolidColorBrush x:Key="GlassHighlightBrush" Color="{StaticResource GlassHighlight}" />
+
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiary}" />
+  <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabled}" />
+
+  <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtle}" />
+  <SolidColorBrush x:Key="BorderDefaultBrush" Color="{StaticResource BorderDefault}" />
+
+  <SolidColorBrush x:Key="AccentBlueBrush" Color="{StaticResource AccentBlue}" />
+  <SolidColorBrush x:Key="AccentBlueDimBrush" Color="{StaticResource AccentBlueDim}" />
+
+  <SolidColorBrush x:Key="ColorSuccessBrush" Color="{StaticResource ColorSuccess}" />
+  <SolidColorBrush x:Key="ColorWarningBrush" Color="{StaticResource ColorWarning}" />
+  <SolidColorBrush x:Key="ColorDangerBrush" Color="{StaticResource ColorDanger}" />
+  <SolidColorBrush x:Key="ColorInfoBrush" Color="{StaticResource ColorInfo}" />
+
+  <!-- Process brushes -->
+  <SolidColorBrush x:Key="ProcSystemBrush" Color="{StaticResource ProcSystem}" />
+  <SolidColorBrush x:Key="ProcSystemBgBrush" Color="{StaticResource ProcSystemBg}" />
+  <SolidColorBrush x:Key="ProcServiceBrush" Color="{StaticResource ProcService}" />
+  <SolidColorBrush x:Key="ProcServiceBgBrush" Color="{StaticResource ProcServiceBg}" />
+  <SolidColorBrush x:Key="ProcUserBrush" Color="{StaticResource ProcUser}" />
+  <SolidColorBrush x:Key="ProcUserBgBrush" Color="{StaticResource ProcUserBg}" />
+  <SolidColorBrush x:Key="ProcDotNetBrush" Color="{StaticResource ProcDotNet}" />
+  <SolidColorBrush x:Key="ProcDotNetBgBrush" Color="{StaticResource ProcDotNetBg}" />
+  <SolidColorBrush x:Key="ProcSuspiciousBrush" Color="{StaticResource ProcSuspicious}" />
+  <SolidColorBrush x:Key="ProcSuspiciousBgBrush" Color="{StaticResource ProcSuspiciousBg}" />
+  <SolidColorBrush x:Key="ProcSuspendedBrush" Color="{StaticResource ProcSuspended}" />
+  <SolidColorBrush x:Key="ProcSuspendedBgBrush" Color="{StaticResource ProcSuspendedBg}" />
+  <SolidColorBrush x:Key="ProcGpuBrush" Color="{StaticResource ProcGpu}" />
+  <SolidColorBrush x:Key="ProcGpuBgBrush" Color="{StaticResource ProcGpuBg}" />
+  <SolidColorBrush x:Key="ProcCurrentBrush" Color="{StaticResource ProcCurrent}" />
+  <SolidColorBrush x:Key="ProcCurrentBgBrush" Color="{StaticResource ProcCurrentBg}" />
+
+</ResourceDictionary>

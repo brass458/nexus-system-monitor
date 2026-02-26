@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "JdkeH5o/eS8=",
+  "success": true,
+  "projectFilePath": "O:\\Github\\Nexus System Monitor\\src\\NexusMonitor.Core\\NexusMonitor.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\josh\\.nuget\\packages\\communitytoolkit.mvvm\\8.3.2\\communitytoolkit.mvvm.8.3.2.nupkg.sha512",
+    "C:\\Users\\josh\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\josh\\.nuget\\packages\\system.reactive\\6.0.1\\system.reactive.6.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}

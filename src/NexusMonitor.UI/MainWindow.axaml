@@ -1,0 +1,152 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexusMonitor.UI.ViewModels"
+        xmlns:views="using:NexusMonitor.UI.Views"
+        xmlns:conv="using:NexusMonitor.UI.Converters"
+        x:Class="NexusMonitor.UI.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Nexus Monitor"
+        Width="1280" Height="800"
+        MinWidth="900" MinHeight="600"
+        Background="{StaticResource BgBaseBrush}"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        SystemDecorations="Full">
+
+  <Window.Resources>
+    <conv:ProcessCategoryToBrushConverter x:Key="CategoryBrush" />
+    <conv:ProcessCategoryToBgBrushConverter x:Key="CategoryBgBrush" />
+    <conv:BytesFormatConverter x:Key="BytesFmt" />
+    <conv:CpuHeatBrushConverter x:Key="CpuHeat" />
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ===== TITLEBAR ===== -->
+    <Border Grid.Row="0"
+            Height="48"
+            Background="{StaticResource GlassBgBrush}"
+            BorderBrush="{StaticResource GlassBorderBrush}"
+            BorderThickness="0,0,0,1"
+            PointerPressed="OnTitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            Margin="16,0">
+
+        <!-- App icon + name -->
+        <StackPanel Grid.Column="0"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    VerticalAlignment="Center">
+          <Border Width="22" Height="22"
+                  CornerRadius="6"
+                  Background="{StaticResource AccentBlueBrush}">
+            <TextBlock Text="N"
+                       FontSize="13"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+          </Border>
+          <TextBlock Text="Nexus Monitor"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Window controls -->
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    VerticalAlignment="Center">
+          <Button Classes="nx-btn-ghost" Padding="8,6"
+                  Click="OnMinimize"
+                  ToolTip.Tip="Minimize">
+            <TextBlock Text="—" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+          </Button>
+          <Button Classes="nx-btn-ghost" Padding="8,6"
+                  Click="OnMaximize"
+                  ToolTip.Tip="Maximize">
+            <TextBlock Text="⬜" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+          </Button>
+          <Button Classes="nx-btn-ghost" Padding="8,6"
+                  Click="OnClose"
+                  ToolTip.Tip="Close">
+            <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+          </Button>
+        </StackPanel>
+
+      </Grid>
+    </Border>
+
+    <!-- ===== MAIN LAYOUT ===== -->
+    <Grid Grid.Row="1" ColumnDefinitions="200,*">
+
+      <!-- ===== LEFT SIDEBAR ===== -->
+      <Border Grid.Column="0"
+              Background="{StaticResource GlassBgBrush}"
+              BorderBrush="{StaticResource GlassBorderBrush}"
+              BorderThickness="0,0,1,0">
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding NavItems}"
+                        Margin="8,12">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:NavItem">
+                <Button Classes="nx-btn-ghost"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="12,9"
+                        Margin="0,1"
+                        CornerRadius="8"
+                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
+                        CommandParameter="{Binding}">
+                  <TextBlock Text="{Binding Label}"
+                             FontSize="13"
+                             VerticalAlignment="Center" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+      </Border>
+
+      <!-- ===== CONTENT AREA ===== -->
+      <Border Grid.Column="1" Background="{StaticResource BgPrimaryBrush}">
+        <TransitioningContentControl Content="{Binding CurrentPage}">
+          <TransitioningContentControl.PageTransition>
+            <CrossFade Duration="0:0:0.15"/>
+          </TransitioningContentControl.PageTransition>
+          <TransitioningContentControl.DataTemplates>
+            <DataTemplate DataType="vm:ProcessesViewModel">
+              <views:ProcessesView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:PerformanceViewModel">
+              <views:PerformanceView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ServicesViewModel">
+              <views:ServicesView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:StartupViewModel">
+              <views:StartupView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:NetworkViewModel">
+              <views:NetworkView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:OptimizationViewModel">
+              <views:OptimizationView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:SettingsViewModel">
+              <views:SettingsView />
+            </DataTemplate>
+          </TransitioningContentControl.DataTemplates>
+        </TransitioningContentControl>
+      </Border>
+
+    </Grid>
+
+  </Grid>
+</Window>
