@@ -4,11 +4,41 @@
              x:Class="NexusMonitor.UI.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
+  <UserControl.Resources>
+    <!-- Minimal control theme for circular colour-swatch buttons -->
+    <ControlTheme x:Key="SwatchTheme" TargetType="Button">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Width="{TemplateBinding Width}"
+                  Height="{TemplateBinding Height}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Background="{TemplateBinding Background}"
+                  Cursor="Hand"
+                  Opacity="{TemplateBinding Opacity}">
+            <Border.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.1"/>
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:pointerover">
+        <Setter Property="Opacity" Value="0.75"/>
+      </Style>
+      <Style Selector="^:pressed">
+        <Setter Property="Opacity" Value="0.5"/>
+      </Style>
+    </ControlTheme>
+  </UserControl.Resources>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="24" Spacing="16">
     <TextBlock Text="Settings"
                FontSize="20" FontWeight="SemiBold"
                Foreground="{StaticResource TextPrimaryBrush}"/>
 
+    <!-- ===== APPEARANCE ===== -->
     <Border Padding="20"
             Background="{StaticResource BgElevatedBrush}"
             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -18,6 +48,8 @@
         <TextBlock Text="Appearance" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
+
+        <!-- Dark / Light theme toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Grid.Column="0" Text="Theme" FontSize="13"
                      Foreground="{StaticResource TextSecondaryBrush}"
@@ -32,6 +64,72 @@
                           Command="{Binding SetLightThemeCommand}"/>
           </StackPanel>
         </Grid>
+
+        <!-- Accent colour palette -->
+        <TextBlock Text="ACCENT COLOR" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
+        <WrapPanel Orientation="Horizontal">
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#0A84FF"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#0A84FF"
+                  ToolTip.Tip="Blue"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#BF5AF2"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#BF5AF2"
+                  ToolTip.Tip="Purple"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF375F"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF375F"
+                  ToolTip.Tip="Pink"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF9F0A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF9F0A"
+                  ToolTip.Tip="Orange"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FFD60A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FFD60A"
+                  ToolTip.Tip="Yellow"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#34C759"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#34C759"
+                  ToolTip.Tip="Green"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#5AC8FA"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#5AC8FA"
+                  ToolTip.Tip="Teal"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#FF453A"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#FF453A"
+                  ToolTip.Tip="Red"/>
+        </WrapPanel>
+
+        <!-- Aero Glass -->
+        <TextBlock Text="WINDOW GLASS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Aero Glass Effect" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Semi-transparent window with blur behind"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsAeroGlassEnabled}"/>
+        </Grid>
+
+        <!-- Opacity slider (active only when glass is on) -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsAeroGlassEnabled}">
+          <TextBlock Grid.Column="0" Text="Window Opacity" FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}"/>
+          <TextBlock Grid.Column="1" Text="{Binding WindowOpacity, StringFormat='{}{0:P0}'}"
+                     FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+        </Grid>
+        <Slider Minimum="0.4" Maximum="1.0" Value="{Binding WindowOpacity}"
+                TickFrequency="0.05" IsSnapToTickEnabled="True"
+                IsEnabled="{Binding IsAeroGlassEnabled}"
+                Margin="0,0,0,4"/>
+
+        <!-- Update interval -->
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Grid.Column="0" Text="Update interval" FontSize="13"
                      Foreground="{StaticResource TextSecondaryBrush}"
@@ -43,9 +141,34 @@
             <ComboBoxItem Content="5 seconds"/>
           </ComboBox>
         </Grid>
+
       </StackPanel>
     </Border>
 
+    <!-- ===== DESKTOP OVERLAY ===== -->
+    <Border Padding="20"
+            Background="{StaticResource BgElevatedBrush}"
+            BorderBrush="{StaticResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Desktop Overlay" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Floating Monitor Widget" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Always-on-top overlay showing CPU, RAM, network"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding ShowOverlayWidget}"/>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- ===== ABOUT ===== -->
     <Border Padding="20"
             Background="{StaticResource BgElevatedBrush}"
             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -54,7 +177,7 @@
       <StackPanel Spacing="4">
         <TextBlock Text="Nexus Monitor" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
-        <TextBlock Text="Version 0.1.0 — Phase 3 (Polish &amp; Settings)"
+        <TextBlock Text="Version 0.1.0 — Phase 6 (Per-Device Performance + Overlay)"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
         <TextBlock Text="MIT License · Open Source · Cross-Platform"
                    FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0"/>
@@ -62,5 +185,6 @@
     </Border>
 
   </StackPanel>
+  </ScrollViewer>
 
 </UserControl>

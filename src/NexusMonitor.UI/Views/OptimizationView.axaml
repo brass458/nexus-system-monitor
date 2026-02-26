@@ -66,7 +66,7 @@
                     <TextBlock Grid.Column="1"
                                Text="{Binding CpuDisplay}"
                                FontSize="12"
-                               Foreground="{StaticResource AccentBlueBrush}"
+                               Foreground="{DynamicResource AccentBlueBrush}"
                                HorizontalAlignment="Right"/>
                     <TextBlock Grid.Column="2"
                                Text="{Binding MemDisplay}"
@@ -102,7 +102,7 @@
                     <TextBlock Grid.Column="1"
                                Text="{Binding CpuDisplay}"
                                FontSize="12"
-                               Foreground="{StaticResource AccentBlueBrush}"
+                               Foreground="{DynamicResource AccentBlueBrush}"
                                HorizontalAlignment="Right"/>
                     <TextBlock Grid.Column="2"
                                Text="{Binding MemDisplay}"

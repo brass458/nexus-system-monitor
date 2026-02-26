@@ -8,7 +8,7 @@
         Title="Nexus Monitor"
         Width="1280" Height="800"
         MinWidth="900" MinHeight="600"
-        Background="{StaticResource BgBaseBrush}"
+        Background="{DynamicResource BgBaseBrush}"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
@@ -40,7 +40,7 @@
                     VerticalAlignment="Center">
           <Border Width="22" Height="22"
                   CornerRadius="6"
-                  Background="{StaticResource AccentBlueBrush}">
+                  Background="{DynamicResource AccentBlueBrush}">
             <TextBlock Text="N"
                        FontSize="13"
                        FontWeight="Bold"
@@ -115,7 +115,7 @@
       </Border>
 
       <!-- ===== CONTENT AREA ===== -->
-      <Border Grid.Column="1" Background="{StaticResource BgPrimaryBrush}">
+      <Border Grid.Column="1" Background="{DynamicResource BgPrimaryBrush}">
         <TransitioningContentControl Content="{Binding CurrentPage}">
           <TransitioningContentControl.PageTransition>
             <CrossFade Duration="0:0:0.15"/>
