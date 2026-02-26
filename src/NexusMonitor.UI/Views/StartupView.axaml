@@ -58,16 +58,28 @@
             Background="{StaticResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
-      <StackPanel Orientation="Horizontal" Spacing="24">
-        <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
-          <Run Text="Total: "/>
-          <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}"  FontWeight="Medium"/>
-        </TextBlock>
-        <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
-          <Run Text="Enabled: "/>
-          <Run Text="{Binding EnabledCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
-        </TextBlock>
-      </StackPanel>
+      <DockPanel>
+
+        <!-- Error message — right-aligned, hidden when empty -->
+        <TextBlock DockPanel.Dock="Right"
+                   Text="{Binding LastError}"
+                   IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   FontSize="11"
+                   Foreground="{StaticResource ColorDangerBrush}"
+                   VerticalAlignment="Center"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="24">
+          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+            <Run Text="Total: "/>
+            <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}"  FontWeight="Medium"/>
+          </TextBlock>
+          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+            <Run Text="Enabled: "/>
+            <Run Text="{Binding EnabledCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
+          </TextBlock>
+        </StackPanel>
+
+      </DockPanel>
     </Border>
 
     <!-- Table + loading overlay -->
