@@ -214,8 +214,17 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     private async Task LoadModulesAsync(int pid)
     {
-        try { ProcessModules = await _processProvider.GetModulesAsync(pid, _cts.Token); }
-        catch { ProcessModules = []; }
+        try
+        {
+            var modules = await _processProvider.GetModulesAsync(pid, _cts.Token);
+            if (SelectedProcess?.Pid == pid)
+                ProcessModules = modules;
+        }
+        catch
+        {
+            if (SelectedProcess?.Pid == pid)
+                ProcessModules = [];
+        }
     }
 
     public void Dispose()
