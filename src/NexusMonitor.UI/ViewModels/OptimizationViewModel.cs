@@ -72,7 +72,8 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
                     await _processProvider.SetPriorityAsync(p.Pid, ProcessPriority.Normal, _cts.Token);
                     count++;
                 }
-                catch { }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception) { /* access denied or process exited — skip */ }
             }
             LastAction = $"Normalized priority for {count} processes.";
         }
