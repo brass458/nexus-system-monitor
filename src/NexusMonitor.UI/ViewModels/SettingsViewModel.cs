@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using NexusMonitor.Core.Services;
 
 namespace NexusMonitor.UI.ViewModels;
@@ -29,4 +30,7 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Current.IsDarkTheme = value;
         _settings.Save();
     }
+
+    [RelayCommand]
+    private void SetLightTheme() => IsDarkTheme = false;
 }

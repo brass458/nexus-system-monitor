@@ -28,7 +28,8 @@
                           IsChecked="{Binding IsDarkTheme}"/>
             <ToggleButton Classes="nx-toggle"
                           Content="Light"
-                          IsChecked="{Binding IsDarkTheme, Converter={x:Static BoolConverters.Not}}"/>
+                          IsChecked="{Binding IsDarkTheme, Converter={x:Static BoolConverters.Not}, Mode=OneWay}"
+                          Command="{Binding SetLightThemeCommand}"/>
           </StackPanel>
         </Grid>
         <Grid ColumnDefinitions="*,Auto">
