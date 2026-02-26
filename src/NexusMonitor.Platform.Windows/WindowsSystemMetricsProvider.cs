@@ -335,7 +335,9 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 @"root\wmi",
                 "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
             double max = 0;
-            foreach (ManagementObject obj in searcher.Get())
+            using var results = searcher.Get();
+            foreach (ManagementObject obj in results)
+            using (obj)
             {
                 // CurrentTemperature is in tenths of Kelvin
                 double tempK = Convert.ToDouble(obj["CurrentTemperature"]);
