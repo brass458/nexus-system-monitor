@@ -185,20 +185,20 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             DiskWriteMbps = Math.Round(m.Disks[0].WriteBytesPerSec / 1e6, 1);
             Push(_diskReadValues,  m.Disks[0].ReadBytesPerSec  / 1e6);
             Push(_diskWriteValues, m.Disks[0].WriteBytesPerSec / 1e6);
-
-            // Per-drive summary
-            DriveRows = m.Disks
-                .Where(d => d.TotalBytes > 0)
-                .Select(d =>
-                {
-                    double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
-                    double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
-                    double usedGb  = Math.Round(totalGb - freeGb, 1);
-                    double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
-                    return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
-                })
-                .ToList();
         }
+
+        // Per-drive summary — always update so stale rows are cleared when Disks is empty
+        DriveRows = m.Disks
+            .Where(d => d.TotalBytes > 0)
+            .Select(d =>
+            {
+                double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
+                double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
+                double usedGb  = Math.Round(totalGb - freeGb, 1);
+                double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
+                return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
+            })
+            .ToList();
 
         // Network
         if (m.NetworkAdapters.Count > 0)
