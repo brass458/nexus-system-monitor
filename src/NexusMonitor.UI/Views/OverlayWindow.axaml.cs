@@ -10,14 +10,15 @@ public partial class OverlayWindow : Window
     {
         InitializeComponent();
 
-        // TransparencyLevelHint is managed by SettingsViewModel.ApplyBackdropMode
-        // which fires once OverlayWindow is assigned in App.axaml.cs.
-        // Set a sensible default in case the settings haven't applied yet.
+        // TransparencyLevelHint is managed by SettingsViewModel.ApplyBackdropMode.
+        // IMPORTANT: always end with Transparent (never None) so that pixels outside
+        // the CornerRadius="14" border are genuinely cut out by the compositor.
+        // "None" falls back to an opaque rectangular OS window, making corners appear square.
         TransparencyLevelHint =
         [
             WindowTransparencyLevel.AcrylicBlur,
             WindowTransparencyLevel.Blur,
-            WindowTransparencyLevel.None,
+            WindowTransparencyLevel.Transparent,  // ← per-pixel alpha; clips corners correctly
         ];
 
         // Position at the bottom-right corner of the primary screen's working area

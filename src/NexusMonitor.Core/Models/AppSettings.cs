@@ -21,6 +21,11 @@ public class AppSettings
     // Performance
     public int    UpdateIntervalMs   { get; set; } = 1000;   // 500 | 1000 | 2000 | 5000
 
+    // Tray / window close behaviour
+    /// <summary>"" = always ask, "Tray" = minimize to tray, "Exit" = close application.</summary>
+    public string CloseAction          { get; set; } = "";
+    public bool   HideWidgetOnMinimize { get; set; } = false;
+
     // Other
     public bool   ShowOverlayWidget  { get; set; } = false;
 }

@@ -374,6 +374,50 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== SYSTEM TRAY ===== -->
+    <Border Padding="20"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="14">
+        <TextBlock Text="System Tray" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Close behaviour -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="When Pressing the Close Button" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Default action when you click the × button on the main window"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.CloseActionLabels}"
+                    SelectedIndex="{Binding CloseActionIndex}"/>
+        </Grid>
+
+        <!-- Hide widget on minimize -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Hide Widget When Minimizing to Tray" FontSize="13"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Hides the desktop overlay widget when the app goes to tray"
+                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding HideWidgetOnMinimize}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <TextBlock Text="Tip: Right-click the tray icon for quick access to Show / Widget / Exit"
+                   FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap"/>
+
+      </StackPanel>
+    </Border>
+
     <!-- ===== ABOUT ===== -->
     <Border Padding="20"
             Background="{DynamicResource BgElevatedBrush}"

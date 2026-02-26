@@ -36,6 +36,11 @@ public partial class SettingsViewModel : ViewModelBase
     // ── Performance ───────────────────────────────────────────────────────────
     [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s
 
+    // ── Tray / close behaviour ────────────────────────────────────────────────
+    /// <summary>Index into <see cref="CloseActionLabels"/>: 0=Ask, 1=Tray, 2=Exit.</summary>
+    [ObservableProperty] private int  _closeActionIndex;
+    [ObservableProperty] private bool _hideWidgetOnMinimize;
+
     // ── Other ─────────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _showOverlayWidget;
 
@@ -60,6 +65,11 @@ public partial class SettingsViewModel : ViewModelBase
         ["500 ms", "1 second", "2 seconds", "5 seconds"];
 
     private static readonly int[] _intervalValues = [500, 1000, 2000, 5000];
+
+    public static IReadOnlyList<string> CloseActionLabels { get; } =
+        ["Always Ask", "Minimize to Tray", "Close Application"];
+
+    private static readonly string[] _closeActionValues = ["", "Tray", "Exit"];
 
     /// <summary>All system font families enumerated once via SkiaSharp (sorted).</summary>
     public static IReadOnlyList<string> SystemFonts { get; } = LoadSystemFonts();
@@ -95,6 +105,11 @@ public partial class SettingsViewModel : ViewModelBase
         _textAccentColorHex = settings.Current.TextAccentColorHex;
         _fontFamily         = settings.Current.FontFamily;
         _showOverlayWidget  = settings.Current.ShowOverlayWidget;
+
+        // Map stored CloseAction → index
+        _closeActionIndex = Array.IndexOf(_closeActionValues, settings.Current.CloseAction);
+        if (_closeActionIndex < 0) _closeActionIndex = 0;
+        _hideWidgetOnMinimize = settings.Current.HideWidgetOnMinimize;
 
         // Map stored UpdateIntervalMs → index
         _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
@@ -177,6 +192,19 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Current.FontFamily = value;
         _settings.Save();
         ApplyFont(value);
+    }
+
+    partial void OnCloseActionIndexChanged(int value)
+    {
+        _settings.Current.CloseAction =
+            _closeActionValues[Math.Clamp(value, 0, _closeActionValues.Length - 1)];
+        _settings.Save();
+    }
+
+    partial void OnHideWidgetOnMinimizeChanged(bool value)
+    {
+        _settings.Current.HideWidgetOnMinimize = value;
+        _settings.Save();
     }
 
     partial void OnUpdateIntervalIndexChanged(int value)
@@ -300,7 +328,25 @@ public partial class SettingsViewModel : ViewModelBase
             main.TransparencyLevelHint = hints;
 
         if (_overlayWindow is not null)
-            _overlayWindow.TransparencyLevelHint = hints;
+        {
+            // Overlay always needs Transparent as last-resort fallback (never None) so
+            // the CornerRadius clips correctly — None would give a square opaque window.
+            IReadOnlyList<WindowTransparencyLevel> overlayHints = (!glassEnabled || mode == "None")
+                ? [WindowTransparencyLevel.Transparent]
+                : mode switch
+                {
+                    "Blur" => [WindowTransparencyLevel.Blur,
+                               WindowTransparencyLevel.Transparent],
+                    "Mica" => [WindowTransparencyLevel.Mica,
+                               WindowTransparencyLevel.AcrylicBlur,
+                               WindowTransparencyLevel.Blur,
+                               WindowTransparencyLevel.Transparent],
+                    _      => [WindowTransparencyLevel.AcrylicBlur,
+                               WindowTransparencyLevel.Blur,
+                               WindowTransparencyLevel.Transparent],
+                };
+            _overlayWindow.TransparencyLevelHint = overlayHints;
+        }
     }
 
     private static void ApplyAccentColor(string hex)
