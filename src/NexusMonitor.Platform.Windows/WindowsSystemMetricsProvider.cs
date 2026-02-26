@@ -277,6 +277,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 "SELECT Name, AdapterRAM FROM Win32_VideoController WHERE VideoProcessor <> NULL");
             using var results = searcher.Get();
             foreach (ManagementBaseObject obj in results)
+            using (obj)
             {
                 _gpuName     = (obj["Name"]       as string ?? string.Empty).Trim();
                 _gpuTotalVram = System.Convert.ToInt64(obj["AdapterRAM"] ?? 0L);
@@ -313,7 +314,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         {
             var memCat = new PerformanceCounterCategory("GPU Adapter Memory");
             _gpuMemCounters = memCat.GetInstanceNames()
-                .Select(inst => new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", inst))
+                .Select(inst => new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", inst, readOnly: true))
                 .ToArray();
             // Warm up — first read always returns 0
             foreach (var c in _gpuMemCounters) c.NextValue();

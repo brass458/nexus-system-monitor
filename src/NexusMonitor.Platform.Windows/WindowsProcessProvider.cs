@@ -465,6 +465,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 var pathBuf = new char[1024];
                 foreach (var hMod in handles)
                 {
+                    ct.ThrowIfCancellationRequested();
                     uint len = PsApi.GetModuleFileNameExW(hProc, hMod, pathBuf, (uint)pathBuf.Length);
                     if (len == 0) continue;
                     string fullPath = new string(pathBuf, 0, (int)len);

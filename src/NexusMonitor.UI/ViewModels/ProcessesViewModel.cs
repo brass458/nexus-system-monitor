@@ -217,13 +217,20 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         try
         {
             var modules = await _processProvider.GetModulesAsync(pid, _cts.Token);
-            if (SelectedProcess?.Pid == pid)
-                ProcessModules = modules;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessModules = modules;
+            });
         }
+        catch (OperationCanceledException) { }
         catch
         {
-            if (SelectedProcess?.Pid == pid)
-                ProcessModules = [];
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessModules = [];
+            });
         }
     }
 
