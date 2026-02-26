@@ -34,6 +34,9 @@ public record DiskMetrics
     public long TotalBytes { get; init; }
     public long FreeBytes { get; init; }
     public double UsedPercent => TotalBytes > 0 ? (double)(TotalBytes - FreeBytes) / TotalBytes * 100.0 : 0;
+    public int    DiskIndex       { get; init; }
+    public string PhysicalName    { get; init; } = string.Empty;
+    public string AllDriveLetters { get; init; } = string.Empty;
 }
 
 public record NetworkAdapterMetrics
@@ -46,6 +49,10 @@ public record NetworkAdapterMetrics
     public long TotalRecvBytes { get; init; }
     public bool IsConnected { get; init; }
     public string IpAddress { get; init; } = string.Empty;
+    public string IPv4Address  { get; init; } = string.Empty;
+    public string IPv6Address  { get; init; } = string.Empty;
+    public long   LinkSpeedBps { get; init; }
+    public string AdapterType  { get; init; } = string.Empty;
 }
 
 public record GpuMetrics
@@ -57,6 +64,11 @@ public record GpuMetrics
     public double TemperatureCelsius { get; init; }
     public double MemoryUsedPercent => DedicatedMemoryTotalBytes > 0
         ? (double)DedicatedMemoryUsedBytes / DedicatedMemoryTotalBytes * 100.0 : 0;
+    public double Engine3DPercent          { get; init; }
+    public double EngineCopyPercent        { get; init; }
+    public double EngineVideoDecodePercent { get; init; }
+    public double EngineVideoEncodePercent { get; init; }
+    public long   SharedMemoryUsedBytes    { get; init; }
 }
 
 public record SystemMetrics
