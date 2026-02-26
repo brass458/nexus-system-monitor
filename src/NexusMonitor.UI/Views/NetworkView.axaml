@@ -1,9 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:conv="using:NexusMonitor.UI.Converters"
              x:Class="NexusMonitor.UI.Views.NetworkView"
              x:DataType="vm:NetworkViewModel"
              x:CompileBindings="False">
+
+  <UserControl.Resources>
+    <conv:TcpStateBrushConverter x:Key="TcpStateBrush"/>
+    <conv:TcpStateLabelConverter x:Key="TcpStateLabel"/>
+  </UserControl.Resources>
 
   <DockPanel>
 
@@ -53,7 +59,21 @@
         <DataGridTextColumn Header="Local Port"     Binding="{Binding LocalPort}"     Width="80"  IsReadOnly="True"/>
         <DataGridTextColumn Header="Remote Address" Binding="{Binding RemoteAddress}" Width="140" IsReadOnly="True"/>
         <DataGridTextColumn Header="Remote Port"    Binding="{Binding RemotePort}"    Width="80"  IsReadOnly="True"/>
-        <DataGridTextColumn Header="State"          Binding="{Binding State}"         Width="120" IsReadOnly="True"/>
+        <DataGridTemplateColumn Header="State" Width="130" SortMemberPath="State">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Border CornerRadius="4"
+                      Padding="6,2"
+                      Margin="4,3"
+                      HorizontalAlignment="Left"
+                      Background="{Binding State, Converter={StaticResource TcpStateBrush}}">
+                <TextBlock Text="{Binding State, Converter={StaticResource TcpStateLabel}}"
+                           FontSize="10" FontWeight="Medium"
+                           Foreground="White"/>
+              </Border>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
         <DataGridTextColumn Header="PID"            Binding="{Binding ProcessId}"     Width="60"  IsReadOnly="True"/>
         <DataGridTextColumn Header="Process"        Binding="{Binding ProcessName}"   Width="*"   IsReadOnly="True"/>
       </DataGrid.Columns>

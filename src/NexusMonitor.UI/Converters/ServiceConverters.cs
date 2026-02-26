@@ -54,3 +54,54 @@ public class BoolToEnabledBrushConverter : IValueConverter
     public object? ConvertBack(object? v, Type t, object? p, CultureInfo c)
         => Avalonia.AvaloniaProperty.UnsetValue;
 }
+
+/// <summary>Maps TcpConnectionState to a background brush for the badge.</summary>
+public class TcpStateBrushConverter : IValueConverter
+{
+    public static readonly TcpStateBrushConverter Instance = new();
+    private static readonly SolidColorBrush _green  = new(Color.Parse("#34C759"));
+    private static readonly SolidColorBrush _blue   = new(Color.Parse("#0A84FF"));
+    private static readonly SolidColorBrush _orange = new(Color.Parse("#FF9F0A"));
+    private static readonly SolidColorBrush _gray   = new(Color.Parse("#636366"));
+
+    public object? Convert(object? value, Type t, object? p, CultureInfo c) =>
+        value is TcpConnectionState state ? state switch
+        {
+            TcpConnectionState.Established                                      => _green,
+            TcpConnectionState.Listen                                           => _blue,
+            TcpConnectionState.TimeWait or TcpConnectionState.CloseWait
+                or TcpConnectionState.FinWait1 or TcpConnectionState.FinWait2
+                or TcpConnectionState.Closing or TcpConnectionState.LastAck    => _orange,
+            _                                                                   => _gray,
+        } : _gray;
+
+    public object? ConvertBack(object? v, Type t, object? p, CultureInfo c)
+        => Avalonia.AvaloniaProperty.UnsetValue;
+}
+
+/// <summary>Maps TcpConnectionState to a short display label.</summary>
+public class TcpStateLabelConverter : IValueConverter
+{
+    public static readonly TcpStateLabelConverter Instance = new();
+
+    public object? Convert(object? value, Type t, object? p, CultureInfo c) =>
+        value is TcpConnectionState state ? state switch
+        {
+            TcpConnectionState.Established  => "ESTABLISHED",
+            TcpConnectionState.Listen       => "LISTEN",
+            TcpConnectionState.SynSent      => "SYN_SENT",
+            TcpConnectionState.SynReceived  => "SYN_RCVD",
+            TcpConnectionState.FinWait1     => "FIN_WAIT1",
+            TcpConnectionState.FinWait2     => "FIN_WAIT2",
+            TcpConnectionState.CloseWait    => "CLOSE_WAIT",
+            TcpConnectionState.Closing      => "CLOSING",
+            TcpConnectionState.LastAck      => "LAST_ACK",
+            TcpConnectionState.TimeWait     => "TIME_WAIT",
+            TcpConnectionState.Closed       => "CLOSED",
+            TcpConnectionState.DeleteTcb    => "DELETE_TCB",
+            _                               => "—",
+        } : "—";
+
+    public object? ConvertBack(object? v, Type t, object? p, CultureInfo c)
+        => Avalonia.AvaloniaProperty.UnsetValue;
+}
