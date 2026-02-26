@@ -9,6 +9,8 @@ using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
+#elif MACOS
+using NexusMonitor.Platform.MacOS;
 #endif
 
 namespace NexusMonitor.UI;
@@ -52,9 +54,9 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  WindowsNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             WindowsStartupProvider>();
 #elif MACOS
-        services.AddSingleton<IProcessProvider,             MockProcessProvider>();
-        services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
-        services.AddSingleton<IServicesProvider,            MockServicesProvider>();
+        services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
+        services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
+        services.AddSingleton<IServicesProvider,            MacOSServicesProvider>();
         services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MockStartupProvider>();
 #else
