@@ -442,6 +442,44 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             finally { Kernel32.CloseHandle(h); }
         }, ct);
 
+    public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            var result = new List<ModuleInfo>();
+            nint hProc = Kernel32.OpenProcess(
+                Kernel32.PROCESS_QUERY_INFORMATION | Kernel32.PROCESS_VM_READ, false, (uint)pid);
+            if (hProc == nint.Zero) return (IReadOnlyList<ModuleInfo>)result;
+            try
+            {
+                // First call: probe required buffer size using a minimal array
+                var probe = new nint[1];
+                PsApi.EnumProcessModules(hProc, probe, (uint)(nint.Size), out uint needed);
+                if (needed == 0) return result;
+
+                int count = (int)(needed / (uint)nint.Size);
+                var handles = new nint[count];
+                if (!PsApi.EnumProcessModules(hProc, handles, needed, out _))
+                    return result;
+
+                var pathBuf = new char[1024];
+                foreach (var hMod in handles)
+                {
+                    uint len = PsApi.GetModuleFileNameExW(hProc, hMod, pathBuf, (uint)pathBuf.Length);
+                    if (len == 0) continue;
+                    string fullPath = new string(pathBuf, 0, (int)len);
+                    result.Add(new ModuleInfo(
+                        System.IO.Path.GetFileName(fullPath),
+                        fullPath,
+                        hMod));
+                }
+            }
+            catch { }
+            finally { Kernel32.CloseHandle(hProc); }
+            return (IReadOnlyList<ModuleInfo>)result;
+        }, ct);
+    }
+
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
         Task.Run(() =>
         {

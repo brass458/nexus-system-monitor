@@ -377,6 +377,27 @@
                        TextWrapping="Wrap" Margin="0,0,0,6"
                        FontStyle="Italic"/>
 
+            <!-- Section: Loaded Modules -->
+            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+
+            <TextBlock Text="MODULES" FontSize="9" FontWeight="Medium"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+
+            <ScrollViewer MaxHeight="160">
+              <ItemsControl ItemsSource="{Binding DataContext.ProcessModules, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Name}"
+                               FontSize="11"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               ToolTip.Tip="{Binding Path}"
+                               Margin="0,1"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+
           </StackPanel>
         </ScrollViewer>
       </Border>

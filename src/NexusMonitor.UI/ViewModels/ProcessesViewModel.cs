@@ -47,6 +47,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string _lastError = string.Empty;
 
+    [ObservableProperty]
+    private IReadOnlyList<ModuleInfo> _processModules = [];
+
     public ProcessesViewModel(IProcessProvider processProvider)
     {
         _processProvider = processProvider;
@@ -204,6 +207,15 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         // Dispose the old detail view model to unsubscribe its PropertyChanged handler
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
+        ProcessModules = [];
+        if (value is not null)
+            _ = LoadModulesAsync(value.Pid);
+    }
+
+    private async Task LoadModulesAsync(int pid)
+    {
+        try { ProcessModules = await _processProvider.GetModulesAsync(pid, _cts.Token); }
+        catch { ProcessModules = []; }
     }
 
     public void Dispose()

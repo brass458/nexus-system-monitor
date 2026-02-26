@@ -32,6 +32,14 @@ public sealed class MockProcessProvider : IProcessProvider
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default)
         => Task.CompletedTask;
 
+    public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<ModuleInfo>>(new List<ModuleInfo>
+        {
+            new("ntdll.dll",      @"C:\Windows\System32\ntdll.dll",      0x7FF800000000),
+            new("kernel32.dll",   @"C:\Windows\System32\kernel32.dll",   0x7FF7E0000000),
+            new("kernelbase.dll", @"C:\Windows\System32\KernelBase.dll", 0x7FF7C0000000),
+        });
+
     private static ProcessInfo[] GetAnimatedSnapshot()
     {
         var t = DateTime.UtcNow.TimeOfDay.TotalSeconds;
