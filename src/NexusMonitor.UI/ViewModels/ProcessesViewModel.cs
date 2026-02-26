@@ -3,10 +3,13 @@ using System.ComponentModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using Avalonia.Threading;
 using ReactiveUI;
+using NexusMonitor.UI.Messages;
+using NexusMonitor.UI.Helpers;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -61,6 +64,13 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         _processProvider = processProvider;
         Title = "Processes";
         StartMonitoring();
+
+        WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_allRows.TryGetValue(msg.Pid, out var row))
+                    SelectedProcess = row;
+            }));
     }
 
     private void StartMonitoring()
@@ -205,6 +215,20 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { LastError = $"Set priority failed: {ex.Message}"; }
     }
 
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        ShellHelper.OpenFileLocation(SelectedProcess?.ImagePath ?? string.Empty);
+    }
+
+    [RelayCommand]
+    private void SearchOnline()
+    {
+        var name = SelectedProcess?.Name ?? string.Empty;
+        if (name.Length > 0)
+            ShellHelper.OpenUrl($"https://www.google.com/search?q={Uri.EscapeDataString(name + " process")}");
+    }
+
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
@@ -297,6 +321,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         _subscription?.Dispose();
         (SelectedDetails as IDisposable)?.Dispose();
         _allRows.Clear();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }
 

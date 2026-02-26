@@ -124,7 +124,7 @@
                        Foreground="{StaticResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalCpuPercent, StringFormat='{}{0:F1}%'}"
                        FontSize="11"
-                       Foreground="{StaticResource AccentBlueBrush}"
+                       Foreground="{DynamicResource AccentBlueBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
         </StackPanel>
@@ -169,8 +169,8 @@
             </MenuItem>
             <MenuItem Header="Set CPU Affinity…"/>
             <Separator/>
-            <MenuItem Header="Open File Location"/>
-            <MenuItem Header="Search Online"/>
+            <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
+            <MenuItem Header="Search Online"      Command="{Binding SearchOnlineCommand}"/>
             <Separator/>
             <MenuItem Header="Properties"/>
             <MenuItem Header="Create Dump File…"/>
@@ -334,7 +334,7 @@
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU"         Classes="detail-label"/>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CpuPercent}"   Classes="detail-value" Foreground="{StaticResource AccentBlueBrush}"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CpuPercent}"   Classes="detail-value" Foreground="{DynamicResource AccentBlueBrush}"/>
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Threads"     Classes="detail-label"/>
               <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Threads}"      Classes="detail-value"/>
               <TextBlock Grid.Row="2" Grid.Column="0" Text="Handles"     Classes="detail-label"/>
