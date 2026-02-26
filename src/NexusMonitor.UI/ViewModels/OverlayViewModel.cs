@@ -1,12 +1,16 @@
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Services;
+using NexusMonitor.UI.Messages;
+using Avalonia.Threading;
 using ReactiveUI;
 using SkiaSharp;
 
@@ -30,10 +34,13 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     public Axis[]    CpuXAxes  { get; } = [new() { IsVisible = false, MinLimit = 0, MaxLimit = 29 }];
     public Axis[]    CpuYAxes  { get; } = [new() { IsVisible = false, MinLimit = 0, MaxLimit = 100 }];
 
-    private readonly IDisposable _sub;
+    private readonly ISystemMetricsProvider _provider;
+    private IDisposable? _sub;
 
-    public OverlayViewModel(ISystemMetricsProvider provider)
+    public OverlayViewModel(ISystemMetricsProvider provider, SettingsService settings)
     {
+        _provider = provider;
+
         CpuSeries =
         [
             new LineSeries<ObservableValue>
@@ -49,7 +56,16 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
             }
         ];
 
-        _sub = provider.GetMetricsStream(TimeSpan.FromSeconds(1))
+        StartStream(TimeSpan.FromMilliseconds(settings.Current.UpdateIntervalMs));
+
+        WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() => StartStream(msg.Interval)));
+    }
+
+    private void StartStream(TimeSpan interval)
+    {
+        _sub?.Dispose();
+        _sub = _provider.GetMetricsStream(interval)
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(Update);
     }
@@ -78,7 +94,11 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         CpuHistory.Add(new ObservableValue(m.Cpu.TotalPercent));
     }
 
-    public void Dispose() => _sub.Dispose();
+    public void Dispose()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _sub?.Dispose();
+    }
 
     private static string FmtRate(long bps) => bps switch
     {

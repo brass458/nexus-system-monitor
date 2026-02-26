@@ -5,7 +5,10 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Services;
+using NexusMonitor.UI.Messages;
+using SkiaSharp;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -21,13 +24,22 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private double _glassOpacity    = 0.80;
     [ObservableProperty] private string _backdropBlurMode = "Acrylic";
     [ObservableProperty] private bool   _isSpecularEnabled;
-    [ObservableProperty] private double _specularIntensity = 0.35;
+    [ObservableProperty] private double _specularIntensity = 0.55;
 
     // ── Accent ────────────────────────────────────────────────────────────────
-    [ObservableProperty] private string _accentColorHex = "#0A84FF";
+    [ObservableProperty] private string _accentColorHex     = "#0A84FF";
+    [ObservableProperty] private string _textAccentColorHex = "";
+
+    // ── Typography ────────────────────────────────────────────────────────────
+    [ObservableProperty] private string _fontFamily = "";
+
+    // ── Performance ───────────────────────────────────────────────────────────
+    [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s
 
     // ── Other ─────────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _showOverlayWidget;
+
+    // ── Static lists ─────────────────────────────────────────────────────────
 
     public static IReadOnlyList<string> AccentPresets { get; } =
     [
@@ -44,26 +56,57 @@ public partial class SettingsViewModel : ViewModelBase
     public static IReadOnlyList<string> BackdropModes { get; } =
         ["None", "Blur", "Acrylic", "Mica"];
 
+    public static IReadOnlyList<string> UpdateIntervalLabels { get; } =
+        ["500 ms", "1 second", "2 seconds", "5 seconds"];
+
+    private static readonly int[] _intervalValues = [500, 1000, 2000, 5000];
+
+    /// <summary>All system font families enumerated once via SkiaSharp (sorted).</summary>
+    public static IReadOnlyList<string> SystemFonts { get; } = LoadSystemFonts();
+
+    private static IReadOnlyList<string> LoadSystemFonts()
+    {
+        try
+        {
+            var fonts = SKFontManager.Default.FontFamilies
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            fonts.Insert(0, "(System Default)");
+            return fonts;
+        }
+        catch { return ["(System Default)"]; }
+    }
+
+    // ── Constructor ──────────────────────────────────────────────────────────
+
     public SettingsViewModel(SettingsService settings)
     {
         Title     = "Settings";
         _settings = settings;
 
         // Load saved values via backing fields so partial callbacks don't fire during init
-        _isDarkTheme       = settings.Current.IsDarkTheme;
-        _isGlassEnabled    = settings.Current.IsGlassEnabled;
-        _glassOpacity      = settings.Current.GlassOpacity;
-        _backdropBlurMode  = settings.Current.BackdropBlurMode;
-        _isSpecularEnabled = settings.Current.IsSpecularEnabled;
-        _specularIntensity = settings.Current.SpecularIntensity;
-        _accentColorHex    = settings.Current.AccentColorHex;
-        _showOverlayWidget = settings.Current.ShowOverlayWidget;
+        _isDarkTheme        = settings.Current.IsDarkTheme;
+        _isGlassEnabled     = settings.Current.IsGlassEnabled;
+        _glassOpacity       = settings.Current.GlassOpacity;
+        _backdropBlurMode   = settings.Current.BackdropBlurMode;
+        _isSpecularEnabled  = settings.Current.IsSpecularEnabled;
+        _specularIntensity  = settings.Current.SpecularIntensity;
+        _accentColorHex     = settings.Current.AccentColorHex;
+        _textAccentColorHex = settings.Current.TextAccentColorHex;
+        _fontFamily         = settings.Current.FontFamily;
+        _showOverlayWidget  = settings.Current.ShowOverlayWidget;
+
+        // Map stored UpdateIntervalMs → index
+        _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
+        if (_updateIntervalIndex < 0) _updateIntervalIndex = 1;
 
         // Restore at startup
         ApplyGlass(_isGlassEnabled, _glassOpacity);
         ApplySpecular(_isGlassEnabled, _isSpecularEnabled, _specularIntensity);
         ApplyBackdropMode(_isGlassEnabled, _backdropBlurMode);
         ApplyAccentColor(_accentColorHex);
+        ApplyTextAccent(_accentColorHex, _textAccentColorHex);
+        ApplyFont(_fontFamily);
     }
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
@@ -119,10 +162,50 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Current.AccentColorHex = value;
         _settings.Save();
         ApplyAccentColor(value);
+        ApplyTextAccent(value, TextAccentColorHex);
     }
 
+    partial void OnTextAccentColorHexChanged(string value)
+    {
+        _settings.Current.TextAccentColorHex = value;
+        _settings.Save();
+        ApplyTextAccent(AccentColorHex, value);
+    }
+
+    partial void OnFontFamilyChanged(string value)
+    {
+        _settings.Current.FontFamily = value;
+        _settings.Save();
+        ApplyFont(value);
+    }
+
+    partial void OnUpdateIntervalIndexChanged(int value)
+    {
+        var ms = _intervalValues[Math.Clamp(value, 0, _intervalValues.Length - 1)];
+        _settings.Current.UpdateIntervalMs = ms;
+        _settings.Save();
+        WeakReferenceMessenger.Default.Send(
+            new MetricsIntervalChangedMessage(TimeSpan.FromMilliseconds(ms)));
+    }
+
+    // ── Overlay window ────────────────────────────────────────────────────────
+
     // Set by App.axaml.cs after the overlay window is created
-    internal Window? OverlayWindow { private get; set; }
+    private Window? _overlayWindow;
+    internal Window? OverlayWindow
+    {
+        get => _overlayWindow;
+        set
+        {
+            _overlayWindow = value;
+            // Apply current glass/backdrop/font settings to the newly assigned overlay
+            if (value is not null)
+            {
+                ApplyBackdropMode(IsGlassEnabled, BackdropBlurMode);
+                ApplyFont(FontFamily);
+            }
+        }
+    }
 
     partial void OnShowOverlayWidgetChanged(bool value)
     {
@@ -134,8 +217,8 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
-    [RelayCommand] private void SetLightTheme()          => IsDarkTheme = false;
-    [RelayCommand] private void SetAccentColor(string h) => AccentColorHex = h;
+    [RelayCommand] private void SetLightTheme()           => IsDarkTheme = false;
+    [RelayCommand] private void SetAccentColor(string h)  => AccentColorHex = h;
 
     // ── Static resource helpers ───────────────────────────────────────────────
     //   Write directly into Application.Current.Resources so every
@@ -143,6 +226,8 @@ public partial class SettingsViewModel : ViewModelBase
 
     /// <summary>
     /// Updates ALL background and glass-surface brushes.
+    /// Also updates OverlayBgBrush with a 50% opacity floor so the widget
+    /// stays readable even at full transparency.
     /// <paramref name="opacity"/> 0 = fully transparent, 1 = fully opaque.
     /// </summary>
     private static void ApplyGlass(bool enabled, double opacity)
@@ -167,10 +252,17 @@ public partial class SettingsViewModel : ViewModelBase
         byte borderAlpha = enabled ? (byte)0x60 : (byte)0x40;
         Application.Current.Resources["GlassBorderBrush"] =
             new SolidColorBrush(new Color(borderAlpha, 0x3A, 0x3A, 0x3C));
+
+        // Overlay widget: always semi-transparent; floor at alpha=0x80 (50%)
+        byte overlayAlpha = enabled
+            ? (byte)Math.Max(0x80, (int)Math.Round(opacity * 0xCC))
+            : (byte)0xCC;
+        Application.Current.Resources["OverlayBgBrush"] =
+            new SolidColorBrush(new Color(overlayAlpha, 0x05, 0x05, 0x08));
     }
 
     /// <summary>
-    /// Controls the opacity of the specular highlight overlays in MainWindow.
+    /// Controls the opacity of ALL specular highlight overlays in MainWindow and OverlayWindow.
     /// Writes the <c>GlassSpecularOpacity</c> double resource consumed by
     /// <c>Opacity="{DynamicResource GlassSpecularOpacity}"</c> in XAML.
     /// </summary>
@@ -182,16 +274,12 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Sets the Window's <see cref="WindowTransparencyLevel"/> hint so the OS
-    /// provides the correct backdrop blur type.
+    /// Sets the <see cref="WindowTransparencyLevel"/> hint on BOTH the main window
+    /// and the overlay widget so the OS provides the correct backdrop blur type.
     /// </summary>
-    private static void ApplyBackdropMode(bool glassEnabled, string mode)
+    private void ApplyBackdropMode(bool glassEnabled, string mode)
     {
-        if (Application.Current?.ApplicationLifetime
-                is not IClassicDesktopStyleApplicationLifetime desktop) return;
-        if (desktop.MainWindow is not Window win) return;
-
-        win.TransparencyLevelHint = (!glassEnabled || mode == "None")
+        IReadOnlyList<WindowTransparencyLevel> hints = (!glassEnabled || mode == "None")
             ? [WindowTransparencyLevel.None]
             : mode switch
             {
@@ -205,6 +293,14 @@ public partial class SettingsViewModel : ViewModelBase
                              WindowTransparencyLevel.Blur,
                              WindowTransparencyLevel.None],
             };
+
+        if (Application.Current?.ApplicationLifetime
+                is IClassicDesktopStyleApplicationLifetime desktop
+            && desktop.MainWindow is Window main)
+            main.TransparencyLevelHint = hints;
+
+        if (_overlayWindow is not null)
+            _overlayWindow.TransparencyLevelHint = hints;
     }
 
     private static void ApplyAccentColor(string hex)
@@ -223,6 +319,41 @@ public partial class SettingsViewModel : ViewModelBase
                     (byte)Math.Min(255, c.B + 25)));
         }
         catch { /* ignore invalid hex */ }
+    }
+
+    /// <summary>
+    /// Writes <c>TextAccentBrush</c>.  If <paramref name="textHex"/> is empty the
+    /// brush derives from the primary accent at 90% opacity for a softer text look.
+    /// </summary>
+    private static void ApplyTextAccent(string accentHex, string textHex)
+    {
+        if (Application.Current is null) return;
+        try
+        {
+            Color base_ = Color.Parse(accentHex);
+            Color c = string.IsNullOrWhiteSpace(textHex)
+                ? new Color(0xE6, base_.R, base_.G, base_.B)  // 90% opacity accent
+                : Color.Parse(textHex);
+            Application.Current.Resources["TextAccentBrush"] = new SolidColorBrush(c);
+        }
+        catch { /* ignore invalid hex */ }
+    }
+
+    /// <summary>
+    /// Applies <paramref name="family"/> as the <c>FontFamily</c> on every open
+    /// window.  An empty string or "(System Default)" restores the system default.
+    /// </summary>
+    private void ApplyFont(string family)
+    {
+        if (Application.Current?.ApplicationLifetime
+                is not IClassicDesktopStyleApplicationLifetime desktop) return;
+
+        var ff = string.IsNullOrWhiteSpace(family) || family == "(System Default)"
+            ? Avalonia.Media.FontFamily.Default
+            : new Avalonia.Media.FontFamily(family);
+
+        if (desktop.MainWindow is Window main) main.FontFamily = ff;
+        if (_overlayWindow      is Window ow)  ow.FontFamily   = ff;
     }
 
     private static void SetBrush(string key, Color baseColor, byte alpha)

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
@@ -8,6 +9,8 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Services;
+using NexusMonitor.UI.Messages;
 using Avalonia.Threading;
 using ReactiveUI;
 
@@ -29,6 +32,7 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISystemMetricsProvider _metricsProvider;
     private IDisposable? _subscription;
+    private int _initialIntervalMs = 1000;
     private const int HistoryLength = 60;
 
     // CPU
@@ -80,10 +84,11 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     private CpuDeviceViewModel?    _cpuDevice;
     private MemoryDeviceViewModel? _memDevice;
 
-    public PerformanceViewModel(ISystemMetricsProvider metricsProvider)
+    public PerformanceViewModel(ISystemMetricsProvider metricsProvider, SettingsService settings)
     {
         _metricsProvider = metricsProvider;
         Title = "Performance";
+        _initialIntervalMs = settings.Current.UpdateIntervalMs;
 
         var sharedXAxes = new Axis[]
         {
@@ -155,10 +160,10 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             }
         ];
 
-        _subscription = _metricsProvider
-            .GetMetricsStream(TimeSpan.FromSeconds(1))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(Update);
+        StartMetricsStream(TimeSpan.FromMilliseconds(_initialIntervalMs));
+
+        WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() => StartMetricsStream(msg.Interval)));
 
         // Populate sidebar devices
         var overview = new OverviewDeviceViewModel();
@@ -294,5 +299,18 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             Devices.Remove(dev);
     }
 
-    public void Dispose() => _subscription?.Dispose();
+    private void StartMetricsStream(TimeSpan interval)
+    {
+        _subscription?.Dispose();
+        _subscription = _metricsProvider
+            .GetMetricsStream(interval)
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(Update);
+    }
+
+    public void Dispose()
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _subscription?.Dispose();
+    }
 }

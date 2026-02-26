@@ -10,6 +10,9 @@ public partial class OverlayWindow : Window
     {
         InitializeComponent();
 
+        // TransparencyLevelHint is managed by SettingsViewModel.ApplyBackdropMode
+        // which fires once OverlayWindow is assigned in App.axaml.cs.
+        // Set a sensible default in case the settings haven't applied yet.
         TransparencyLevelHint =
         [
             WindowTransparencyLevel.AcrylicBlur,
