@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+﻿﻿using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,7 +8,7 @@ using ReactiveUI;
 
 namespace NexusMonitor.UI.ViewModels;
 
-// â”€â”€ Impact tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Impact tier ───────────────────────────────────────────────────────────────
 
 public enum ImpactLevel { Critical, High, Medium }
 
@@ -24,9 +24,9 @@ public record RecommendationRow(
 
     public string ImpactIcon  => Impact switch
     {
-        ImpactLevel.Critical => "ðŸ”´",
-        ImpactLevel.High     => "ðŸŸ ",
-        _                    => "ðŸŸ¡",
+        ImpactLevel.Critical => "🔴",
+        ImpactLevel.High     => "🟠",
+        _                    => "🟡",
     };
     public string ImpactLabel => Impact switch
     {
@@ -41,11 +41,11 @@ public record RecommendationRow(
         _                    => "#FFD60A",
     };
     public string ActionTip => Impact == ImpactLevel.Critical
-        ? "Severe resource usage â€” consider terminating or reducing priority"
-        : "Elevated resource usage â€” reducing priority frees up resources for other apps";
+        ? "Severe resource usage — consider terminating or reducing priority"
+        : "Elevated resource usage — reducing priority frees up resources for other apps";
 }
 
-// â”€â”€ ViewModel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ViewModel ─────────────────────────────────────────────────────────────────
 
 public partial class OptimizationViewModel : ViewModelBase, IDisposable
 {
@@ -53,24 +53,24 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
     private IDisposable? _subscription;
     private readonly CancellationTokenSource _cts = new();
 
-    // â”€â”€ Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Data ─────────────────────────────────────────────────────────────────
 
     [ObservableProperty] private ObservableCollection<RecommendationRow> _recommendations = [];
 
-    // â”€â”€ Overview stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Overview stats ────────────────────────────────────────────────────────
 
     [ObservableProperty] private int    _criticalCount;
     [ObservableProperty] private int    _highCount;
     [ObservableProperty] private int    _mediumCount;
     [ObservableProperty] private string _totalCpuDisplay = "0%";
-    [ObservableProperty] private string _topRamProcess   = "â€”";
-    [ObservableProperty] private string _summaryLine     = "Scanning processesâ€¦";
+    [ObservableProperty] private string _topRamProcess   = "—";
+    [ObservableProperty] private string _summaryLine     = "Scanning processes…";
 
-    // â”€â”€ Status bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Status bar ────────────────────────────────────────────────────────────
 
     [ObservableProperty] private string _lastAction = string.Empty;
 
-    // â”€â”€ Constructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Constructor ───────────────────────────────────────────────────────────
 
     public OptimizationViewModel(IProcessProvider processProvider)
     {
@@ -82,11 +82,11 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
             .Subscribe(Update);
     }
 
-    // â”€â”€ Update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Update ────────────────────────────────────────────────────────────────
 
     private void Update(IReadOnlyList<ProcessInfo> processes)
     {
-        // Total CPU (capped at 100 % for display â€” individual threads can push sum above)
+        // Total CPU (capped at 100 % for display — individual threads can push sum above)
         double totalCpu = Math.Min(processes.Sum(p => p.CpuPercent), 100.0);
         TotalCpuDisplay = $"{totalCpu:F0}%";
 
@@ -94,9 +94,9 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         var topRam = processes.OrderByDescending(p => p.WorkingSetBytes).FirstOrDefault();
         TopRamProcess = topRam is not null
             ? $"{topRam.Name} ({ProcessRowViewModel.FormatBytes(topRam.WorkingSetBytes)})"
-            : "â€”";
+            : "—";
 
-        // Classify & sort: Critical â†’ High â†’ Medium; within tier sort by CPU desc
+        // Classify & sort: Critical → High → Medium; within tier sort by CPU desc
         var recs = processes
             .Select(p => new { p, tier = Classify(p) })
             .Where(x => x.tier.HasValue)
@@ -113,7 +113,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         MediumCount   = recs.Count(r => r.Impact == ImpactLevel.Medium);
 
         SummaryLine = recs.Count == 0
-            ? "âœ…  System is running efficiently â€” no high-impact processes detected"
+            ? "✅  System is running efficiently — no high-impact processes detected"
             : $"Found {recs.Count} process{(recs.Count == 1 ? "" : "es")} using significant resources";
 
         SyncCollection(Recommendations, recs);
@@ -131,7 +131,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         (p.CpuPercent > 2  || p.WorkingSetBytes > 209_715_200L)   ? ImpactLevel.Medium  :
         null;
 
-    // â”€â”€ Per-row commands (bound via CommandParameter="{Binding}") â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Per-row commands (bound via CommandParameter="{Binding}") ─────────────
 
     /// <summary>Lower a process one step: set it to Below Normal priority.</summary>
     [RelayCommand]
@@ -141,7 +141,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         try
         {
             await _processProvider.SetPriorityAsync(row.Pid, ProcessPriority.BelowNormal, _cts.Token);
-            LastAction = $"'{row.Name}' â†’ Below Normal priority.";
+            LastAction = $"'{row.Name}' → Below Normal priority.";
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { LastAction = $"Priority change failed: {ex.Message}"; }
@@ -155,7 +155,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         try
         {
             await _processProvider.SetPriorityAsync(row.Pid, ProcessPriority.Idle, _cts.Token);
-            LastAction = $"'{row.Name}' â†’ Idle priority.";
+            LastAction = $"'{row.Name}' → Idle priority.";
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { LastAction = $"Priority change failed: {ex.Message}"; }
@@ -175,7 +175,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { LastAction = $"Terminate failed: {ex.Message}"; }
     }
 
-    // â”€â”€ Bulk / quick-action commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Bulk / quick-action commands ──────────────────────────────────────────
 
     /// <summary>Set every currently-listed process to Below Normal priority at once.</summary>
     [RelayCommand]
@@ -216,7 +216,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
                     count++;
                 }
                 catch (OperationCanceledException) { throw; }
-                catch { /* access denied or process exited â€” skip */ }
+                catch { /* access denied or process exited — skip */ }
             }
             LastAction = $"Normalized priority for {count} processes.";
         }
@@ -255,7 +255,7 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException) { }
         catch (Exception ex) { LastAction = $"SmartTrim failed: {ex.Message}"; }
     }
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void SyncCollection(
         ObservableCollection<RecommendationRow> target,

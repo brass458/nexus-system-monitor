@@ -51,6 +51,12 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private string _lastError = string.Empty;
 
     [ObservableProperty]
+    private bool _isDetailPanelVisible = true;
+
+    /// <summary>True when the detail panel should be shown (has selection AND toggle is on).</summary>
+    public bool IsDetailPanelShown => SelectedDetails is not null && IsDetailPanelVisible;
+
+    [ObservableProperty]
     private IReadOnlyList<ModuleInfo> _processModules = [];
 
     [ObservableProperty]
@@ -232,11 +238,15 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    partial void OnIsDetailPanelVisibleChanged(bool value) =>
+        OnPropertyChanged(nameof(IsDetailPanelShown));
+
     partial void OnSelectedProcessChanged(ProcessRowViewModel? value)
     {
         // Dispose the old detail view model to unsubscribe its PropertyChanged handler
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
+        OnPropertyChanged(nameof(IsDetailPanelShown));
         ProcessModules = [];
         ProcessThreads = [];
         ProcessEnvironment = [];

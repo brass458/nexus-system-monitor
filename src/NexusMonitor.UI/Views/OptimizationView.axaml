@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              x:Class="NexusMonitor.UI.Views.OptimizationView"
@@ -7,7 +7,7 @@
 
   <DockPanel>
 
-    <!-- â•â• Header â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══ Header ══════════════════════════════════════════════════════════ -->
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{StaticResource BgSecondaryBrush}"
@@ -25,12 +25,12 @@
           <Button Classes="nx-btn"
                   Command="{Binding ThrottleAllCommand}"
                   ToolTip.Tip="Set every listed high-impact process to Below Normal priority">
-            <TextBlock Text="ðŸ”½ Throttle High Impact" FontSize="12"/>
+            <TextBlock Text="&#x1F53D; Throttle High Impact" FontSize="12"/>
           </Button>
           <Button Classes="nx-btn"
                   Command="{Binding NormalizePrioritiesCommand}"
                   ToolTip.Tip="Reset all non-system processes to Normal priority">
-            <TextBlock Text="âš¡ Normalize All" FontSize="12"/>
+            <TextBlock Text="&#x26A1; Normalize All" FontSize="12"/>
           </Button>
           <Button Classes="nx-btn"
                   Command="{Binding SmartTrimAllCommand}"
@@ -41,7 +41,7 @@
       </DockPanel>
     </Border>
 
-    <!-- â•â• Status bar â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══ Status bar ═══════════════════════════════════════════════════════ -->
     <Border DockPanel.Dock="Bottom"
             Padding="16,7"
             Background="{StaticResource BgSecondaryBrush}"
@@ -52,11 +52,11 @@
                  Foreground="{StaticResource TextSecondaryBrush}"/>
     </Border>
 
-    <!-- â•â• Content â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══ Content ══════════════════════════════════════════════════════════ -->
     <ScrollViewer Padding="16">
       <StackPanel Spacing="14">
 
-        <!-- â”€â”€ Overview stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <!-- ── Overview stat cards ──────────────────────────────────────── -->
         <Grid ColumnDefinitions="*,8,*,8,*">
 
           <!-- Total CPU -->
@@ -107,23 +107,23 @@
               <TextBlock Text="ATTENTION" FontSize="10" FontWeight="Medium" LetterSpacing="0.6"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
               <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <TextBlock Text="ðŸ”´" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text="🔴" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding CriticalCount}" FontSize="14" FontWeight="Bold"
                            Foreground="#FF453A" VerticalAlignment="Center"/>
-                <TextBlock Text="ðŸŸ " FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text="🟠" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding HighCount}" FontSize="14" FontWeight="Bold"
                            Foreground="#FF9F0A" VerticalAlignment="Center"/>
-                <TextBlock Text="ðŸŸ¡" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text="🟡" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding MediumCount}" FontSize="14" FontWeight="Bold"
                            Foreground="#FFD60A" VerticalAlignment="Center"/>
               </StackPanel>
-              <TextBlock Text="critical Â· high Â· medium"
+              <TextBlock Text="critical · high · medium"
                          FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"/>
             </StackPanel>
           </Border>
         </Grid>
 
-        <!-- â”€â”€ Summary & legend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <!-- ── Summary & legend ─────────────────────────────────────────── -->
         <Border Padding="14,10"
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
@@ -156,7 +156,7 @@
           </DockPanel>
         </Border>
 
-        <!-- â”€â”€ Recommendations list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <!-- ── Recommendations list ──────────────────────────────────────── -->
         <Border Padding="0"
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
@@ -172,7 +172,7 @@
                     BorderThickness="0,0,0,1">
               <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
-                           Text="Resource Hogs â€” Action Required"
+                           Text="Resource Hogs — Action Required"
                            FontSize="13" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
@@ -184,13 +184,13 @@
                   <TextBlock Grid.Column="1" Text="RAM" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"
                              HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                  <TextBlock Grid.Column="2" Text="â†“ Below Normal" FontSize="10"
+                  <TextBlock Grid.Column="2" Text="↓ Below Normal" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                  <TextBlock Grid.Column="3" Text="â¬ Idle" FontSize="10"
+                  <TextBlock Grid.Column="3" Text="⏬ Idle" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                  <TextBlock Grid.Column="4" Text="âœ•" FontSize="10"
+                  <TextBlock Grid.Column="4" Text="✕" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
@@ -201,7 +201,7 @@
             <Border Padding="24,32"
                     IsVisible="{Binding Recommendations.Count, Converter={x:Static BoolConverters.Not}}">
               <StackPanel HorizontalAlignment="Center" Spacing="8">
-                <TextBlock Text="âœ…" FontSize="32" HorizontalAlignment="Center"/>
+                <TextBlock Text="✅" FontSize="32" HorizontalAlignment="Center"/>
                 <TextBlock Text="No high-impact processes detected"
                            FontSize="13" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"
@@ -270,7 +270,7 @@
                                 HorizontalAlignment="Center"
                                 Padding="6,3"
                                 FontSize="11"
-                                Content="â†“ Below Normal"
+                                Content="↓ Below Normal"
                                 Command="{Binding DataContext.SetBelowNormalCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
@@ -282,11 +282,11 @@
                                 HorizontalAlignment="Center"
                                 Padding="6,3"
                                 FontSize="11"
-                                Content="â¬ Idle"
+                                Content="⏬ Idle"
                                 Command="{Binding DataContext.SetIdleCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                ToolTip.Tip="Set to Idle (lowest) priority â€” OS gives this process CPU time only when nothing else needs it"/>
+                                ToolTip.Tip="Set to Idle (lowest) priority — OS gives this process CPU time only when nothing else needs it"/>
 
                         <!-- Terminate -->
                         <Button Grid.Column="4"
@@ -294,7 +294,7 @@
                                 HorizontalAlignment="Center"
                                 Padding="4,3"
                                 FontSize="11"
-                                Content="âœ•"
+                                Content="✕"
                                 Command="{Binding DataContext.TerminateProcessCommand,
                                           RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
@@ -319,7 +319,7 @@
           </StackPanel>
         </Border>
 
-        <!-- â”€â”€ Priority guide card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <!-- ── Priority guide card ───────────────────────────────────────── -->
         <Border Padding="16"
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
@@ -334,7 +334,7 @@
                 <TextBlock Grid.Column="0" Text="Real-Time / High" FontSize="11" FontWeight="Medium"
                            Foreground="{StaticResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Column="1"
-                           Text="Reserved for time-critical system tasks. Avoid setting user apps here â€” can starve other processes."
+                           Text="Reserved for time-critical system tasks. Avoid setting user apps here — can starve other processes."
                            FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" TextWrapping="Wrap"/>
               </Grid>
               <Grid ColumnDefinitions="130,*">
@@ -355,7 +355,7 @@
                 <TextBlock Grid.Column="0" Text="Idle" FontSize="11" FontWeight="Medium"
                            Foreground="{DynamicResource TextAccentBrush}"/>
                 <TextBlock Grid.Column="1"
-                           Text="Lowest priority â€” process only gets CPU when nothing else needs it. Useful for stubborn background tasks."
+                           Text="Lowest priority — process only gets CPU when nothing else needs it. Useful for stubborn background tasks."
                            FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" TextWrapping="Wrap"/>
               </Grid>
             </StackPanel>

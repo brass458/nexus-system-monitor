@@ -75,7 +75,7 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    // â”€â”€ System-tray icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── System-tray icon ────────────────────────────────────────────
 
     private void SetupTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {

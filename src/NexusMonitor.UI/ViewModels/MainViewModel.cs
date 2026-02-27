@@ -1,4 +1,4 @@
-﻿using Avalonia.Threading;
+﻿﻿using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -21,7 +21,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         NavItems =
         [
-            // eager: true  â†’  ViewModel created immediately at app startup so its
+            // eager: true  →  ViewModel created immediately at app startup so its
             // data streams are live before the user ever clicks the tab.
             new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),    eager: true),
             new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(),  eager: true),
@@ -57,7 +57,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (item == SelectedNavItem) return;
 
-        // Each NavItem caches its ViewModel â€” we never dispose on navigation.
+        // Each NavItem caches its ViewModel — we never dispose on navigation.
         // The instance keeps its Rx subscription and history alive in the
         // background, so data is always ready when the user returns to a tab.
         SelectedNavItem = item;

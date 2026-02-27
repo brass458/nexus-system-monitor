@@ -452,9 +452,22 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>
     /// Scales the base font size (14pt) of all open windows.
     /// Range: 0.75 (compact) → 1.5 (large).
+    /// Also updates the <c>NxFontSm/Base/Md</c> DynamicResource tokens so every
+    /// styled control (Button, TextBox, DataGrid, etc.) scales in real time.
     /// </summary>
     private void ApplyFontScale(double scale)
     {
+        // ── 1. Update global font-size resource tokens ────────────────────────
+        // Controls.axaml uses {DynamicResource NxFontSm/Base/Md} so writing here
+        // cascades instantly to every styled control — no MainWindow needed.
+        if (Application.Current is not null)
+        {
+            Application.Current.Resources["NxFontSm"]   = Math.Round(11.0 * scale, 1);
+            Application.Current.Resources["NxFontBase"]  = Math.Round(12.0 * scale, 1);
+            Application.Current.Resources["NxFontMd"]    = Math.Round(13.0 * scale, 1);
+        }
+
+        // ── 2. Also set Window.FontSize for unstyled / inherited text ─────────
         if (Application.Current?.ApplicationLifetime
                 is not IClassicDesktopStyleApplicationLifetime desktop) return;
         double sz = Math.Round(14.0 * scale, 1);

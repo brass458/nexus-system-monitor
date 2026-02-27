@@ -71,6 +71,11 @@
   <Color x:Key="ProcCurrent">#FFD60A</Color>
   <Color x:Key="ProcCurrentBg">#1AFFD60A</Color>
 
+  <!-- ===== FONT SCALE TOKENS (updated at runtime by SettingsViewModel.ApplyFontScale) ===== -->
+  <x:Double x:Key="NxFontSm">11</x:Double>
+  <x:Double x:Key="NxFontBase">12</x:Double>
+  <x:Double x:Key="NxFontMd">13</x:Double>
+
   <!-- ===== SOLID BRUSHES ===== -->
   <SolidColorBrush x:Key="BgBaseBrush" Color="{StaticResource BgBase}" />
   <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimary}" />

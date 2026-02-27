@@ -9,7 +9,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,6" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontMd}" />
     <Setter Property="Cursor" Value="Hand" />
   </Style>
   <Style Selector="Button.nx-btn:pointerover /template/ ContentPresenter">
@@ -51,7 +51,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="10,6" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontMd}" />
     <Setter Property="SelectionBrush" Value="{DynamicResource AccentBlueDimBrush}" />
     <Setter Property="CaretBrush" Value="{DynamicResource AccentBlueBrush}" />
   </Style>
@@ -78,7 +78,7 @@
     <Setter Property="RowBackground" Value="Transparent" />
     <Setter Property="GridLinesVisibility" Value="None" />
     <Setter Property="HeadersVisibility" Value="Column" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontBase}" />
   </Style>
   <Style Selector="DataGrid.nx-grid DataGridColumnHeader">
     <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
@@ -86,7 +86,7 @@
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="Padding" Value="8,6" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontSm}" />
     <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="DataGrid.nx-grid DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
@@ -146,7 +146,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="10,7" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontBase}" />
     <Setter Property="CornerRadius" Value="7" />
   </Style>
   <Style Selector="MenuItem:pointerover /template/ Border#root">
@@ -171,7 +171,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="9999" />
     <Setter Property="Padding" Value="12,5" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontSm}" />
     <Setter Property="Cursor" Value="Hand" />
   </Style>
   <Style Selector="ToggleButton.nx-toggle:checked">
@@ -191,7 +191,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="8,5" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontSm}" />
   </Style>
 
   <!-- ===== PROCESS DETAIL PANEL LABELS ===== -->

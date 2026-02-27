@@ -60,6 +60,9 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
 
         var progress = new Progress<ScanProgress>(p =>
         {
+            // Throttle UI updates: only refresh every 100 files (or the first 5)
+            // to prevent flooding the UI thread and causing button reflow/flicker.
+            if (p.FilesScanned > 5 && p.FilesScanned % 100 != 0) return;
             ScanProgressText = $"{p.FilesScanned:N0} files \u2014 {DiskNode.FormatSize(p.BytesCounted)}";
             ScanStatus = $"Scanning: {Path.GetFileName(p.CurrentPath)}";
         });

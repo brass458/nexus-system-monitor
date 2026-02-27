@@ -18,4 +18,18 @@ public record NetworkConnection
     public TcpConnectionState State     { get; init; }
     public int    ProcessId             { get; init; }
     public string ProcessName           { get; init; } = string.Empty;
+
+    // Per-connection throughput (populated by platform provider; 0 when unavailable)
+    public long SendBytesPerSec         { get; init; }
+    public long RecvBytesPerSec         { get; init; }
+
+    public string SendDisplay => SendBytesPerSec > 0 ? FormatRate(SendBytesPerSec) : "\u2014";
+    public string RecvDisplay => RecvBytesPerSec > 0 ? FormatRate(RecvBytesPerSec) : "\u2014";
+
+    private static string FormatRate(long bps) => bps switch
+    {
+        >= 1_048_576 => $"{bps / 1_048_576.0:F1} MB/s",
+        >= 1_024     => $"{bps / 1_024.0:F0} KB/s",
+        _            => $"{bps} B/s",
+    };
 }
