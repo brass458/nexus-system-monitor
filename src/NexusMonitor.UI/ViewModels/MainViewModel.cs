@@ -1,6 +1,9 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.UI.Messages;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -32,6 +35,16 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         _selectedNavItem = NavItems[0];
         _currentPage     = NavItems[0].GetOrCreate();   // Processes VM already exists
         Title = "Nexus Monitor";
+
+        WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, _) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var nav = NavItems.First(n => n.Label == "Processes");
+                SelectedNavItem = nav;
+                CurrentPage     = nav.GetOrCreate();
+            });
+        });
     }
 
     [RelayCommand]
@@ -52,6 +65,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     /// </summary>
     public void Dispose()
     {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         foreach (var item in NavItems)
             item.DisposeViewModel();
     }

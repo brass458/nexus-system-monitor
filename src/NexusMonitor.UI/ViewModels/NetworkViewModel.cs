@@ -1,9 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using ReactiveUI;
 using System.Reactive.Linq;
+using NexusMonitor.UI.Messages;
+using NexusMonitor.UI.Helpers;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -16,6 +20,7 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private ObservableCollection<NetworkConnection> _connections = [];
     [ObservableProperty] private int    _totalCount;
     [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private NetworkConnection? _selectedConnection;
 
     public NetworkViewModel(INetworkConnectionsProvider provider)
     {
@@ -109,6 +114,21 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
             c.State.ToString().Contains(ft, StringComparison.OrdinalIgnoreCase)    ||
             c.Protocol.ToString().Contains(ft, StringComparison.OrdinalIgnoreCase))
         .ToList();
+    }
+
+    [RelayCommand]
+    private Task CopyLocalAddress() =>
+        ClipboardHelper.CopyAsync($"{SelectedConnection?.LocalAddress}:{SelectedConnection?.LocalPort}");
+
+    [RelayCommand]
+    private Task CopyRemoteAddress() =>
+        ClipboardHelper.CopyAsync($"{SelectedConnection?.RemoteAddress}:{SelectedConnection?.RemotePort}");
+
+    [RelayCommand]
+    private void GoToProcess()
+    {
+        if (SelectedConnection?.ProcessId is int pid and > 0)
+            WeakReferenceMessenger.Default.Send(new NavigateToProcessMessage(pid));
     }
 
     public void Dispose() => _subscription?.Dispose();

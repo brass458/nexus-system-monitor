@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.UI.Helpers;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -92,6 +93,48 @@ public partial class StartupViewModel : ViewModelBase, IDisposable
             await LoadAsync();
         }
         catch (Exception ex) { LastError = $"Refresh failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task EnableItem()
+    {
+        if (SelectedItem is null || SelectedItem.IsEnabled) return;
+        try
+        {
+            LastError = string.Empty;
+            await _provider.SetEnabledAsync(SelectedItem, true, _cts.Token);
+            await LoadAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { LastError = $"Enable failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task DisableItem()
+    {
+        if (SelectedItem is null || !SelectedItem.IsEnabled) return;
+        try
+        {
+            LastError = string.Empty;
+            await _provider.SetEnabledAsync(SelectedItem, false, _cts.Token);
+            await LoadAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { LastError = $"Disable failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private void OpenFileLocation()
+    {
+        var cmd = SelectedItem?.Command ?? string.Empty;
+        var exe = cmd.TrimStart('"').Split('"')[0].Split(' ')[0];
+        ShellHelper.OpenFileLocation(exe);
+    }
+
+    [RelayCommand]
+    private void OpenRegistryKey()
+    {
+        ShellHelper.Launch("regedit.exe");
     }
 
     public void Dispose()

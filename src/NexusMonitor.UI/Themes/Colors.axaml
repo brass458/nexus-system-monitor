@@ -17,6 +17,15 @@
   <Color x:Key="GlassHighlight">#18FFFFFF</Color>
   <Color x:Key="GlassShadow">#40000000</Color>
 
+  <!-- Liquid Glass runtime token (0 = invisible, 1 = full intensity) — written from code -->
+  <x:Double x:Key="GlassSpecularOpacity">0</x:Double>
+
+  <!-- Overlay widget background — always semi-transparent (tracks main glass opacity with a floor) -->
+  <SolidColorBrush x:Key="OverlayBgBrush" Color="#CC050508" />
+
+  <!-- Text accent — written from code; defaults to AccentBlue -->
+  <SolidColorBrush x:Key="TextAccentBrush" Color="{StaticResource AccentBlue}" />
+
   <!-- Text -->
   <Color x:Key="TextPrimary">#FFFFFFFF</Color>
   <Color x:Key="TextSecondary">#99EBEBF5</Color>

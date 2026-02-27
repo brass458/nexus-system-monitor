@@ -40,6 +40,22 @@ public sealed class MockProcessProvider : IProcessProvider
             new("kernelbase.dll", @"C:\Windows\System32\KernelBase.dll", 0x7FF7C0000000),
         });
 
+    public Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(int pid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<ThreadInfo>>(new List<ThreadInfo>
+        {
+            new(1001, pid, 8),
+            new(1002, pid, 8),
+            new(1003, pid, 2),
+        });
+
+    public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<EnvironmentEntry>>(new List<EnvironmentEntry>
+        {
+            new("PATH",     @"C:\Windows\system32;C:\Windows"),
+            new("TEMP",     @"C:\Users\User\AppData\Local\Temp"),
+            new("USERNAME", "User"),
+        });
+
     private static ProcessInfo[] GetAnimatedSnapshot()
     {
         var t = DateTime.UtcNow.TimeOfDay.TotalSeconds;

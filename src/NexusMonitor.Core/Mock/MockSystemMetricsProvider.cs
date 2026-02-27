@@ -58,7 +58,8 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     WriteBytesPerSec = (long)(Math.Abs(Math.Sin(t * 0.9)) * 20_000_000),
                     ActivePercent = Math.Min(100, 5 + 15 * Math.Abs(Math.Sin(t * 0.7))),
                     TotalBytes = 2L * 1024 * 1024 * 1024 * 1024,
-                    FreeBytes = 800L * 1024 * 1024 * 1024
+                    FreeBytes = 800L * 1024 * 1024 * 1024,
+                    DiskIndex = 0, PhysicalName = "Physical Drive 0", AllDriveLetters = "C:"
                 },
                 new DiskMetrics
                 {
@@ -68,7 +69,8 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     WriteBytesPerSec = (long)(Math.Abs(Math.Sin(t * 0.3)) * 5_000_000),
                     ActivePercent = Math.Min(100, 2 + 8 * Math.Abs(Math.Sin(t * 0.4))),
                     TotalBytes = 4L * 1024 * 1024 * 1024 * 1024,
-                    FreeBytes = 2_500L * 1024 * 1024 * 1024
+                    FreeBytes = 2_500L * 1024 * 1024 * 1024,
+                    DiskIndex = 1, PhysicalName = "Physical Drive 1", AllDriveLetters = "D:"
                 }
             ],
             NetworkAdapters =
@@ -82,7 +84,8 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     TotalSendBytes = 15L * 1024 * 1024 * 1024,
                     TotalRecvBytes = 80L * 1024 * 1024 * 1024,
                     IsConnected = true,
-                    IpAddress = "192.168.1.100"
+                    IpAddress = "192.168.1.100",
+                    IPv4Address = "192.168.1.100", IPv6Address = "fe80::1", LinkSpeedBps = 1_000_000_000L, AdapterType = "Ethernet"
                 }
             ],
             Gpus =
@@ -93,7 +96,8 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     UsagePercent = Math.Min(100, 5 + 30 * Math.Abs(Math.Sin(t * 0.4))),
                     DedicatedMemoryUsedBytes = (long)(4L * 1024 * 1024 * 1024 * Math.Abs(Math.Sin(t * 0.2)) + 2L * 1024 * 1024 * 1024),
                     DedicatedMemoryTotalBytes = 16L * 1024 * 1024 * 1024,
-                    TemperatureCelsius = 40 + 20 * Math.Abs(Math.Sin(t * 0.3))
+                    TemperatureCelsius = 40 + 20 * Math.Abs(Math.Sin(t * 0.3)),
+                    Engine3DPercent = Math.Min(100, 5 + 30 * Math.Abs(Math.Sin(t * 0.4))), EngineCopyPercent = 2.0, EngineVideoDecodePercent = 1.0, EngineVideoEncodePercent = 0.5, SharedMemoryUsedBytes = 512L * 1024 * 1024
                 }
             ]
         };

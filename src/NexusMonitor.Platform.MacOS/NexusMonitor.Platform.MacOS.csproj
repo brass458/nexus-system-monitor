@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>NexusMonitor.Platform.MacOS</AssemblyName>
     <RootNamespace>NexusMonitor.Platform.MacOS</RootNamespace>
   </PropertyGroup>

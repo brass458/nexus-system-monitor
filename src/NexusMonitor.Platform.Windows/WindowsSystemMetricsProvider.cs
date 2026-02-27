@@ -28,20 +28,19 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private int    _logicalCores;
     private int    _physicalCores;
 
-    // Disk (aggregate _Total)
-    private PerformanceCounter? _diskRead  = null;
-    private PerformanceCounter? _diskWrite = null;
-    private PerformanceCounter? _diskActive= null;
-    private string[] _diskInstances = [];
+    // Disk (per-disk counters)
+    private (string instance, PerformanceCounter read, PerformanceCounter write, PerformanceCounter active)[] _diskCounters = [];
 
-    // Network (first active adapter)
-    private PerformanceCounter? _netSend   = null;
-    private PerformanceCounter? _netRecv   = null;
-    private string _netAdapterName = string.Empty;
+    // Network (all active adapters)
+    private (string instance, PerformanceCounter send, PerformanceCounter recv)[] _netCounters = [];
 
     // GPU
     private PerformanceCounter[] _gpuEngineCounters = [];
     private PerformanceCounter[]? _gpuMemCounters;
+    private PerformanceCounter[] _gpuCopyCounters   = [];
+    private PerformanceCounter[] _gpuDecodeCounters  = [];
+    private PerformanceCounter[] _gpuEncodeCounters  = [];
+    private PerformanceCounter[] _gpuSharedCounters  = [];
     private string _gpuName       = string.Empty;
     private long   _gpuTotalVram  = 0;
 
@@ -116,66 +115,129 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     private List<DiskMetrics> SampleDisks()
     {
-        double readBytes = 0, writeBytes = 0, activePercent = 0;
-        try { readBytes    = _diskRead?.NextValue()   ?? 0; } catch { }
-        try { writeBytes   = _diskWrite?.NextValue()  ?? 0; } catch { }
-        try { activePercent= _diskActive?.NextValue() ?? 0; } catch { }
-
-        // Enumerate fixed drives for space info
         var drives = DriveInfo.GetDrives()
                               .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
                               .ToList();
-
-        // First drive gets the aggregate throughput; others space-only
         var list = new List<DiskMetrics>();
-        for (int i = 0; i < drives.Count; i++)
+
+        if (_diskCounters.Length == 0)
         {
-            var d = drives[i];
-            list.Add(new DiskMetrics
-            {
-                DriveLetter      = d.Name.TrimEnd('\\', '/'),
-                Label            = d.VolumeLabel,
-                ReadBytesPerSec  = i == 0 ? (long)readBytes  : 0,
-                WriteBytesPerSec = i == 0 ? (long)writeBytes : 0,
-                ActivePercent    = i == 0 ? activePercent    : 0,
-                TotalBytes       = d.TotalSize,
-                FreeBytes        = d.TotalFreeSpace,
-            });
+            foreach (var d in drives)
+                list.Add(new DiskMetrics
+                {
+                    DriveLetter = d.Name.TrimEnd('\\', '/'),
+                    Label       = d.VolumeLabel,
+                    TotalBytes  = d.TotalSize,
+                    FreeBytes   = d.TotalFreeSpace,
+                });
+            return list.Count > 0 ? list : [new DiskMetrics { DriveLetter = "C:" }];
         }
 
-        if (list.Count == 0)
+        foreach (var (inst, readCtr, writeCtr, activeCtr) in _diskCounters)
         {
+            double readBytes = 0, writeBytes = 0, activePercent = 0;
+            try { readBytes    = readCtr.NextValue();   } catch { }
+            try { writeBytes   = writeCtr.NextValue();  } catch { }
+            try { activePercent= activeCtr.NextValue(); } catch { }
+
+            var (idx, letters) = ParseDiskInstance(inst);
+            string allLetters  = string.Join(" ", letters.Select(l => l + ":"));
+            string firstLetter = letters.Length > 0 ? letters[0] + ":" : string.Empty;
+            var drive = drives.FirstOrDefault(d =>
+                letters.Any(l => d.Name.StartsWith(l, StringComparison.OrdinalIgnoreCase)));
+
             list.Add(new DiskMetrics
             {
-                DriveLetter      = "C:",
+                DriveLetter      = firstLetter,
+                Label            = drive?.VolumeLabel ?? string.Empty,
+                DiskIndex        = idx,
+                PhysicalName     = $"Physical Drive {idx}",
+                AllDriveLetters  = allLetters,
                 ReadBytesPerSec  = (long)readBytes,
                 WriteBytesPerSec = (long)writeBytes,
                 ActivePercent    = activePercent,
+                TotalBytes       = drive?.TotalSize ?? 0,
+                FreeBytes        = drive?.TotalFreeSpace ?? 0,
             });
         }
 
-        return list;
+        return list.Count > 0 ? list : drives.Select(d => new DiskMetrics
+        {
+            DriveLetter = d.Name.TrimEnd('\\', '/'),
+            Label       = d.VolumeLabel,
+            TotalBytes  = d.TotalSize,
+            FreeBytes   = d.TotalFreeSpace,
+        }).ToList();
+    }
+
+    private static (int index, string[] letters) ParseDiskInstance(string name)
+    {
+        // PDH instance names look like "0 C: D:" or "1 E:"
+        var parts = name.Split(' ');
+        int.TryParse(parts[0], out int idx);
+        var letters = parts.Skip(1)
+            .Where(p => p.Length == 2 && p[1] == ':')
+            .Select(p => p[0].ToString().ToUpper())
+            .ToArray();
+        return (idx, letters);
     }
 
     private List<NetworkAdapterMetrics> SampleNetwork()
     {
-        double send = 0, recv = 0;
-        try { send = _netSend?.NextValue() ?? 0; } catch { }
-        try { recv = _netRecv?.NextValue() ?? 0; } catch { }
+        if (_netCounters.Length == 0) return [];
 
-        if (string.IsNullOrEmpty(_netAdapterName)) return [];
+        var nics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+        var list  = new List<NetworkAdapterMetrics>();
 
-        return
-        [
-            new NetworkAdapterMetrics
+        foreach (var (inst, sendCtr, recvCtr) in _netCounters)
+        {
+            double send = 0, recv = 0;
+            try { send = sendCtr.NextValue(); } catch { }
+            try { recv = recvCtr.NextValue(); } catch { }
+
+            // Fuzzy-match PDH instance name to a NetworkInterface (PDH replaces / with _)
+            var nic = nics.FirstOrDefault(n =>
             {
-                Name             = _netAdapterName,
-                Description      = _netAdapterName,
-                SendBytesPerSec  = (long)send,
-                RecvBytesPerSec  = (long)recv,
-                IsConnected      = true,
+                var norm = n.Description.Replace("/", "_").Replace("(", "[").Replace(")", "]");
+                return inst.Equals(norm, StringComparison.OrdinalIgnoreCase)
+                    || (norm.Length >= 20 && inst.Contains(norm[..20], StringComparison.OrdinalIgnoreCase));
+            });
+
+            string ipv4 = string.Empty, ipv6 = string.Empty, type = string.Empty;
+            long speed = 0;
+            if (nic != null)
+            {
+                try
+                {
+                    var ip = nic.GetIPProperties();
+                    ipv4 = ip.UnicastAddresses
+                        .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        .Select(a => a.Address.ToString()).FirstOrDefault() ?? string.Empty;
+                    ipv6 = ip.UnicastAddresses
+                        .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                        .Select(a => a.Address.ToString()).FirstOrDefault() ?? string.Empty;
+                    speed = nic.Speed;
+                    type  = nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211
+                        ? "IEEE 802.11" : "Ethernet";
+                }
+                catch { }
             }
-        ];
+
+            list.Add(new NetworkAdapterMetrics
+            {
+                Name            = nic?.Name ?? inst,
+                Description     = nic?.Description ?? inst,
+                SendBytesPerSec = (long)send,
+                RecvBytesPerSec = (long)recv,
+                IsConnected     = nic?.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up,
+                IPv4Address     = ipv4,
+                IPv6Address     = ipv6,
+                LinkSpeedBps    = speed,
+                AdapterType     = type,
+            });
+        }
+
+        return list;
     }
 
     // ─── Lazy initialisation ──────────────────────────────────────────────────
@@ -231,38 +293,54 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         }
         catch { _cpuCores = []; }
 
-        // ── Disk counters (_Total for aggregate throughput) ───────────────────
+        // ── Per-disk counters ─────────────────────────────────────────────────
         try
         {
-            _diskRead   = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec",  "_Total", readOnly: true);
-            _diskWrite  = new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", "_Total", readOnly: true);
-            _diskActive = new PerformanceCounter("PhysicalDisk", "% Disk Time",          "_Total", readOnly: true);
-            _diskRead.NextValue();
-            _diskWrite.NextValue();
-            _diskActive.NextValue();
-        }
-        catch { _diskRead = _diskWrite = _diskActive = null; }
-
-        // ── Network counters (first non-loopback adapter) ─────────────────────
-        try
-        {
-            string[] instances = new PerformanceCounterCategory("Network Interface").GetInstanceNames();
-            // Prefer adapters that aren't loopback / virtual; fall back to first available
-            string? chosen = instances.FirstOrDefault(n =>
-                !n.Contains("Loopback", StringComparison.OrdinalIgnoreCase)
-             && !n.Contains("Pseudo-Interface", StringComparison.OrdinalIgnoreCase))
-                ?? instances.FirstOrDefault();
-
-            if (chosen != null)
+            var diskInstances = new PerformanceCounterCategory("PhysicalDisk")
+                .GetInstanceNames()
+                .Where(n => n != "_Total")
+                .OrderBy(n => n)
+                .ToArray();
+            var diskList = new List<(string, PerformanceCounter, PerformanceCounter, PerformanceCounter)>();
+            foreach (var inst in diskInstances)
             {
-                _netAdapterName = chosen;
-                _netSend = new PerformanceCounter("Network Interface", "Bytes Sent/sec",     chosen, readOnly: true);
-                _netRecv = new PerformanceCounter("Network Interface", "Bytes Received/sec", chosen, readOnly: true);
-                _netSend.NextValue();
-                _netRecv.NextValue();
+                try
+                {
+                    var r = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec",  inst, readOnly: true);
+                    var w = new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", inst, readOnly: true);
+                    var a = new PerformanceCounter("PhysicalDisk", "% Disk Time",          inst, readOnly: true);
+                    r.NextValue(); w.NextValue(); a.NextValue();
+                    diskList.Add((inst, r, w, a));
+                }
+                catch { }
             }
+            _diskCounters = diskList.ToArray();
         }
-        catch { _netSend = _netRecv = null; }
+        catch { _diskCounters = []; }
+
+        // ── Network counters (all active adapters) ────────────────────────────
+        try
+        {
+            var netInstances = new PerformanceCounterCategory("Network Interface")
+                .GetInstanceNames()
+                .Where(n => !n.Contains("Loopback",        StringComparison.OrdinalIgnoreCase)
+                         && !n.Contains("Pseudo-Interface", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            var netList = new List<(string, PerformanceCounter, PerformanceCounter)>();
+            foreach (var inst in netInstances)
+            {
+                try
+                {
+                    var s = new PerformanceCounter("Network Interface", "Bytes Sent/sec",     inst, readOnly: true);
+                    var r = new PerformanceCounter("Network Interface", "Bytes Received/sec", inst, readOnly: true);
+                    s.NextValue(); r.NextValue();
+                    netList.Add((inst, s, r));
+                }
+                catch { }
+            }
+            _netCounters = netList.ToArray();
+        }
+        catch { _netCounters = []; }
 
         // ── GPU ───────────────────────────────────────────────────────────────
         InitGpu();
@@ -309,6 +387,10 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         }
         catch { _gpuEngineCounters = []; }
 
+        _gpuCopyCounters   = InitEngineCounters("engtype_Copy");
+        _gpuDecodeCounters = InitEngineCounters("engtype_VideoDecode");
+        _gpuEncodeCounters = InitEngineCounters("engtype_VideoEncode");
+
         // GPU dedicated memory usage (Windows 10+, works on NVIDIA/AMD/Intel)
         try
         {
@@ -320,6 +402,21 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             foreach (var c in _gpuMemCounters) c.NextValue();
         }
         catch { _gpuMemCounters = null; }
+
+        // GPU shared memory
+        try
+        {
+            var memCat = new PerformanceCounterCategory("GPU Adapter Memory");
+            _gpuSharedCounters = memCat.GetInstanceNames()
+                .Select(inst =>
+                {
+                    var c = new PerformanceCounter("GPU Adapter Memory", "Shared Usage", inst, readOnly: true);
+                    try { c.NextValue(); } catch { }
+                    return c;
+                })
+                .ToArray();
+        }
+        catch { _gpuSharedCounters = []; }
     }
 
     /// <summary>
@@ -363,30 +460,67 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         catch { return 0; }
     }
 
+    private static PerformanceCounter[] InitEngineCounters(string engineType)
+    {
+        try
+        {
+            var cat      = new PerformanceCounterCategory("GPU Engine");
+            var counters = new List<PerformanceCounter>();
+            foreach (var inst in cat.GetInstanceNames())
+            {
+                if (!inst.Contains(engineType, StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    var c = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
+                    c.NextValue();
+                    counters.Add(c);
+                }
+                catch { }
+            }
+            return counters.ToArray();
+        }
+        catch { return []; }
+    }
+
     /// <summary>
-    /// Sums all GPU 3D-engine utilization counters and caps at 100%.
+    /// Sums GPU engine utilization counters and caps at 100%.
     /// Returns an empty list if no GPU was detected at init time.
     /// </summary>
     private IReadOnlyList<GpuMetrics> SampleGpu()
     {
         if (string.IsNullOrEmpty(_gpuName)) return [];
 
-        double usage = 0;
-        foreach (var c in _gpuEngineCounters)
-            try { usage += c.NextValue(); } catch { }
-        usage = Math.Clamp(usage, 0, 100);
+        double usage3D = 0, usageCopy = 0, usageDecode = 0, usageEncode = 0;
+        foreach (var c in _gpuEngineCounters)  try { usage3D     += c.NextValue(); } catch { }
+        foreach (var c in _gpuCopyCounters)    try { usageCopy   += c.NextValue(); } catch { }
+        foreach (var c in _gpuDecodeCounters)  try { usageDecode += c.NextValue(); } catch { }
+        foreach (var c in _gpuEncodeCounters)  try { usageEncode += c.NextValue(); } catch { }
+        usage3D     = Math.Clamp(usage3D,     0, 100);
+        usageCopy   = Math.Clamp(usageCopy,   0, 100);
+        usageDecode = Math.Clamp(usageDecode, 0, 100);
+        usageEncode = Math.Clamp(usageEncode, 0, 100);
+
+        long dedicatedUsed = _gpuMemCounters is { Length: > 0 }
+            ? (long)_gpuMemCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
+            : 0;
+        long sharedUsed = _gpuSharedCounters is { Length: > 0 }
+            ? (long)_gpuSharedCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
+            : 0;
 
         return
         [
             new GpuMetrics
             {
                 Name                      = _gpuName,
-                UsagePercent              = Math.Round(usage, 1),
+                UsagePercent              = Math.Round(usage3D, 1),
                 DedicatedMemoryTotalBytes = _gpuTotalVram,
-                DedicatedMemoryUsedBytes  = _gpuMemCounters is { Length: > 0 }
-                    ? (long)_gpuMemCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
-                    : 0,
-                TemperatureCelsius        = 0,   // requires NVML / sensor — future phase
+                DedicatedMemoryUsedBytes  = dedicatedUsed,
+                SharedMemoryUsedBytes     = sharedUsed,
+                TemperatureCelsius        = 0,
+                Engine3DPercent           = Math.Round(usage3D,     1),
+                EngineCopyPercent         = Math.Round(usageCopy,   1),
+                EngineVideoDecodePercent  = Math.Round(usageDecode, 1),
+                EngineVideoEncodePercent  = Math.Round(usageEncode, 1),
             }
         ];
     }
@@ -415,12 +549,13 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     {
         _cpuTotal?.Dispose();
         foreach (var c in _cpuCores) c?.Dispose();
-        _diskRead?.Dispose();
-        _diskWrite?.Dispose();
-        _diskActive?.Dispose();
-        _netSend?.Dispose();
-        _netRecv?.Dispose();
+        foreach (var (_, r, w, a) in _diskCounters) { r?.Dispose(); w?.Dispose(); a?.Dispose(); }
+        foreach (var (_, s, r) in _netCounters) { s?.Dispose(); r?.Dispose(); }
         foreach (var c in _gpuEngineCounters) c?.Dispose();
         if (_gpuMemCounters != null) foreach (var c in _gpuMemCounters) c?.Dispose();
+        foreach (var c in _gpuCopyCounters)   c?.Dispose();
+        foreach (var c in _gpuDecodeCounters)  c?.Dispose();
+        foreach (var c in _gpuEncodeCounters)  c?.Dispose();
+        foreach (var c in _gpuSharedCounters)  c?.Dispose();
     }
 }
