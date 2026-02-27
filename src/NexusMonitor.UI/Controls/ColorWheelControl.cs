@@ -65,8 +65,13 @@ public class ColorWheelControl : Avalonia.Controls.Control
         base.OnPointerPressed(e);
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            // Check zone BEFORE capturing — prevents capturing when the user
+            // clicks in the blank space outside the disc and strip, which would
+            // steal pointer events from all other controls on the page.
+            var pos = e.GetPosition(this);
+            if (HitZoneAt(pos) == HitZone.None) return;
             e.Pointer.Capture(this);
-            HandlePointer(e.GetPosition(this), true);
+            HandlePointer(pos, true);
         }
     }
 

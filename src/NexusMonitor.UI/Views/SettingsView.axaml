@@ -3,7 +3,8 @@
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:controls="using:NexusMonitor.UI.Controls"
              x:Class="NexusMonitor.UI.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="vm:SettingsViewModel"
+             x:CompileBindings="False">
 
   <UserControl.Resources>
     <!-- Minimal control theme for circular colour-swatch buttons -->
