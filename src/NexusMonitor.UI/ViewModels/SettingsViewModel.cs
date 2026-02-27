@@ -30,8 +30,13 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _accentColorHex     = "#0A84FF";
     [ObservableProperty] private string _textAccentColorHex = "";
 
+    // ── Color picker state ────────────────────────────────────────────────────
+    [ObservableProperty] private Color  _pickerAccentColor  = Color.Parse("#0A84FF");
+    private bool _suppressColorSync;
+
     // ── Typography ────────────────────────────────────────────────────────────
-    [ObservableProperty] private string _fontFamily = "";
+    [ObservableProperty] private string _fontFamily  = "";
+    [ObservableProperty] private double _fontScale   = 1.0;
 
     // ── Performance ───────────────────────────────────────────────────────────
     [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s
@@ -103,7 +108,14 @@ public partial class SettingsViewModel : ViewModelBase
         _specularIntensity  = settings.Current.SpecularIntensity;
         _accentColorHex     = settings.Current.AccentColorHex;
         _textAccentColorHex = settings.Current.TextAccentColorHex;
+        // Initialise picker from stored accent
+        try
+        {
+            _pickerAccentColor = Color.Parse(settings.Current.AccentColorHex);
+        }
+        catch { _pickerAccentColor = Color.Parse("#0A84FF"); }
         _fontFamily         = settings.Current.FontFamily;
+        _fontScale          = settings.Current.FontScale;
         _showOverlayWidget  = settings.Current.ShowOverlayWidget;
 
         // Map stored CloseAction → index
@@ -122,6 +134,7 @@ public partial class SettingsViewModel : ViewModelBase
         ApplyAccentColor(_accentColorHex);
         ApplyTextAccent(_accentColorHex, _textAccentColorHex);
         ApplyFont(_fontFamily);
+        ApplyFontScale(_fontScale);
     }
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
@@ -178,6 +191,18 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Save();
         ApplyAccentColor(value);
         ApplyTextAccent(value, TextAccentColorHex);
+
+        // Keep the color-wheel picker in sync when accent is changed via presets
+        if (!_suppressColorSync)
+        {
+            try
+            {
+                _suppressColorSync = true;
+                PickerAccentColor  = Color.Parse(value);
+            }
+            catch { /* invalid hex — leave picker unchanged */ }
+            finally { _suppressColorSync = false; }
+        }
     }
 
     partial void OnTextAccentColorHexChanged(string value)
@@ -192,6 +217,13 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Current.FontFamily = value;
         _settings.Save();
         ApplyFont(value);
+    }
+
+    partial void OnFontScaleChanged(double value)
+    {
+        _settings.Current.FontScale = value;
+        _settings.Save();
+        ApplyFontScale(value);
     }
 
     partial void OnCloseActionIndexChanged(int value)
@@ -248,6 +280,15 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand] private void SetLightTheme()           => IsDarkTheme = false;
     [RelayCommand] private void SetAccentColor(string h)  => AccentColorHex = h;
 
+    /// <summary>Called by the ColorWheelControl binding when the user picks a color.</summary>
+    partial void OnPickerAccentColorChanged(Color value)
+    {
+        if (_suppressColorSync) return;
+        var hex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";
+        if (!string.Equals(hex, AccentColorHex, StringComparison.OrdinalIgnoreCase))
+            AccentColorHex = hex;
+    }
+
     // ── Static resource helpers ───────────────────────────────────────────────
     //   Write directly into Application.Current.Resources so every
     //   {DynamicResource …} binding across the whole app updates instantly.
@@ -262,13 +303,19 @@ public partial class SettingsViewModel : ViewModelBase
     {
         if (Application.Current is null) return;
 
-        // Solid fill layers: content area, cards, hover cells
+        // Window-frame brush can go fully transparent (that IS the glass effect)
         byte bg = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
-        SetBrush("BgBaseBrush",      Color.Parse("#0F0F12"), bg);
-        SetBrush("BgPrimaryBrush",   Color.Parse("#1C1C1E"), bg);
-        SetBrush("BgSecondaryBrush", Color.Parse("#252528"), bg);
-        SetBrush("BgElevatedBrush",  Color.Parse("#2C2C2E"), bg);
-        SetBrush("BgHoverBrush",     Color.Parse("#363638"), bg);
+        SetBrush("BgBaseBrush", Color.Parse("#0F0F12"), bg);
+
+        // Content-area brushes: floor at 0xA0 (~63%) so text stays readable
+        // at any transparency level (light text on near-transparent = invisible on white BG)
+        byte contentBg = enabled
+            ? (byte)Math.Max(0xA0, (int)Math.Round(opacity * 255))
+            : (byte)0xFF;
+        SetBrush("BgPrimaryBrush",   Color.Parse("#1C1C1E"), contentBg);
+        SetBrush("BgSecondaryBrush", Color.Parse("#252528"), contentBg);
+        SetBrush("BgElevatedBrush",  Color.Parse("#2C2C2E"), contentBg);
+        SetBrush("BgHoverBrush",     Color.Parse("#363638"), contentBg);
 
         // Glass surface layers (sidebar + titlebar) — keep proportional to
         // their design-intent opacity (0xB2 = 70%) so they read as a separate
@@ -400,6 +447,19 @@ public partial class SettingsViewModel : ViewModelBase
 
         if (desktop.MainWindow is Window main) main.FontFamily = ff;
         if (_overlayWindow      is Window ow)  ow.FontFamily   = ff;
+    }
+
+    /// <summary>
+    /// Scales the base font size (14pt) of all open windows.
+    /// Range: 0.75 (compact) → 1.5 (large).
+    /// </summary>
+    private void ApplyFontScale(double scale)
+    {
+        if (Application.Current?.ApplicationLifetime
+                is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        double sz = Math.Round(14.0 * scale, 1);
+        if (desktop.MainWindow is Window main) main.FontSize = sz;
+        if (_overlayWindow is Window ow)       ow.FontSize   = sz;
     }
 
     private static void SetBrush(string key, Color baseColor, byte alpha)

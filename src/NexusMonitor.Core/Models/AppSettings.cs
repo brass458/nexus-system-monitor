@@ -20,6 +20,7 @@ public class AppSettings
 
     // Typography
     public string FontFamily         { get; set; } = "";     // "" = system default
+    public double FontScale { get; set; } = 1.0;    // 0.75 to 1.5, 1.0 = default
 
     // Performance
     public int    UpdateIntervalMs   { get; set; } = 1000;   // 500 | 1000 | 2000 | 5000
