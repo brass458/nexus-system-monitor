@@ -23,7 +23,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Services"
-                   FontSize="16" FontWeight="SemiBold"
+                   FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,12,0"/>
@@ -41,22 +41,22 @@
           <Button Classes="nx-btn"
                   Command="{Binding StartServiceCommand}"
                   IsEnabled="{Binding SelectedService, Converter={StaticResource NullToBool}}">
-            <TextBlock Text="&#x25B6;  Start" FontSize="11"/>
+            <TextBlock Text="&#x25B6;  Start" FontSize="{DynamicResource NxFont11}"/>
           </Button>
           <Button Classes="nx-btn"
                   Command="{Binding StopServiceCommand}"
                   IsEnabled="{Binding SelectedService, Converter={StaticResource NullToBool}}">
-            <TextBlock Text="&#x23F9;  Stop" FontSize="11"/>
+            <TextBlock Text="&#x23F9;  Stop" FontSize="{DynamicResource NxFont11}"/>
           </Button>
           <Button Classes="nx-btn"
                   Command="{Binding RestartServiceCommand}"
                   IsEnabled="{Binding SelectedService, Converter={StaticResource NullToBool}}">
-            <TextBlock Text="&#x21BA;  Restart" FontSize="11"/>
+            <TextBlock Text="&#x21BA;  Restart" FontSize="{DynamicResource NxFont11}"/>
           </Button>
           <ToggleButton Classes="nx-toggle"
                         IsChecked="{Binding IsDetailPanelVisible}"
                         ToolTip.Tip="Show/hide service details panel">
-            <TextBlock Text="Details" FontSize="11"/>
+            <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
           </ToggleButton>
         </StackPanel>
       </DockPanel>
@@ -74,17 +74,17 @@
         <TextBlock DockPanel.Dock="Right"
                    Text="{Binding LastError}"
                    IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   FontSize="11"
+                   FontSize="{DynamicResource NxFont11}"
                    Foreground="{StaticResource ColorDangerBrush}"
                    VerticalAlignment="Center"/>
 
         <!-- Stats -->
         <StackPanel Orientation="Horizontal" Spacing="24">
-          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
             <Run Text="Total: "/>
             <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Medium"/>
           </TextBlock>
-          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
             <Run Text="Running: "/>
             <Run Text="{Binding RunningCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
           </TextBlock>
@@ -123,7 +123,7 @@
                   <Border CornerRadius="4" Padding="5,2" Margin="4,2"
                           HorizontalAlignment="Left"
                           Background="{Binding State, Converter={StaticResource StateColor}}">
-                    <TextBlock Text="{Binding State}" FontSize="10" Foreground="White"/>
+                    <TextBlock Text="{Binding State}" FontSize="{DynamicResource NxFont10}" Foreground="White"/>
                   </Border>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -141,7 +141,7 @@
         <Border IsVisible="{Binding IsLoading}"
                 Background="#80000000">
           <TextBlock Text="Loading services&#x2026;"
-                     FontSize="14"
+                     FontSize="{DynamicResource NxFont14}"
                      Foreground="White"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center"/>
@@ -166,12 +166,12 @@
 
             <!-- Header: service name -->
             <TextBlock Text="{Binding DisplayName}"
-                       FontSize="14" FontWeight="SemiBold"
+                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,2"/>
             <TextBlock Text="{Binding Name}"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        Margin="0,0,0,10"/>
 
@@ -181,11 +181,11 @@
             <Border CornerRadius="4" Padding="8,3" Margin="0,0,0,10"
                     HorizontalAlignment="Left"
                     Background="{Binding State, Converter={StaticResource StateColor}}">
-              <TextBlock Text="{Binding State}" FontSize="11" Foreground="White" FontWeight="Medium"/>
+              <TextBlock Text="{Binding State}" FontSize="{DynamicResource NxFont11}" Foreground="White" FontWeight="Medium"/>
             </Border>
 
             <!-- Section: Identity -->
-            <TextBlock Text="IDENTITY" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="IDENTITY" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -201,23 +201,23 @@
             </Grid>
 
             <!-- Section: Description -->
-            <TextBlock Text="DESCRIPTION" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="DESCRIPTION" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding Description}"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,12"/>
 
             <!-- Section: Binary Path -->
-            <TextBlock Text="BINARY PATH" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="BINARY PATH" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding BinaryPath}"
-                       FontSize="10"
+                       FontSize="{DynamicResource NxFont10}"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        TextWrapping="Wrap"/>
 

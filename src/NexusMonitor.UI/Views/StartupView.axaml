@@ -22,7 +22,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Startup Programs"
-                   FontSize="16" FontWeight="SemiBold"
+                   FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>
@@ -32,7 +32,7 @@
                 Command="{Binding RefreshCommand}"
                 Margin="8,0,0,0"
                 ToolTip.Tip="Refresh list">
-          <TextBlock Text="↺  Refresh" FontSize="12"/>
+          <TextBlock Text="↺  Refresh" FontSize="{DynamicResource NxFont12}"/>
         </Button>
 
         <Button DockPanel.Dock="Right"
@@ -40,7 +40,7 @@
                 Command="{Binding ToggleEnabledCommand}"
                 IsEnabled="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"
                 ToolTip.Tip="Enable or disable selected startup item">
-          <TextBlock Text="Toggle" FontSize="12"/>
+          <TextBlock Text="Toggle" FontSize="{DynamicResource NxFont12}"/>
         </Button>
 
         <TextBox DockPanel.Dock="Right"
@@ -64,16 +64,16 @@
         <TextBlock DockPanel.Dock="Right"
                    Text="{Binding LastError}"
                    IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   FontSize="11"
+                   FontSize="{DynamicResource NxFont11}"
                    Foreground="{StaticResource ColorDangerBrush}"
                    VerticalAlignment="Center"/>
 
         <StackPanel Orientation="Horizontal" Spacing="24">
-          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
             <Run Text="Total: "/>
             <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}"  FontWeight="Medium"/>
           </TextBlock>
-          <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
             <Run Text="Enabled: "/>
             <Run Text="{Binding EnabledCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
           </TextBlock>
@@ -114,7 +114,7 @@
                         HorizontalAlignment="Center"
                         Background="{Binding IsEnabled, Converter={StaticResource BoolEnabledBrush}}">
                   <TextBlock Text="{Binding IsEnabled, Converter={StaticResource BoolEnabled}}"
-                             FontSize="10" FontWeight="Medium"
+                             FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                              Foreground="White"
                              HorizontalAlignment="Center"/>
                 </Border>
@@ -135,7 +135,7 @@
       <Border IsVisible="{Binding IsLoading}"
               Background="#80000000">
         <TextBlock Text="Loading startup items…"
-                   FontSize="14"
+                   FontSize="{DynamicResource NxFont14}"
                    Foreground="White"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"/>

@@ -44,14 +44,14 @@
                     CornerRadius="6"
                     Background="{DynamicResource AccentBlueBrush}">
               <TextBlock Text="N"
-                         FontSize="13"
+                         FontSize="{DynamicResource NxFont13}"
                          FontWeight="Bold"
                          Foreground="White"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"/>
             </Border>
             <TextBlock Text="Nexus Monitor"
-                       FontSize="13"
+                       FontSize="{DynamicResource NxFont13}"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        VerticalAlignment="Center"/>
@@ -65,17 +65,17 @@
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMinimize"
                     ToolTip.Tip="Minimize">
-              <TextBlock Text="—" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="—" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMaximize"
                     ToolTip.Tip="Maximize">
-              <TextBlock Text="⬜" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="⬜" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnClose"
                     ToolTip.Tip="Close">
-              <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
           </StackPanel>
 
@@ -152,7 +152,7 @@
                           Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
                           CommandParameter="{Binding}">
                     <TextBlock Text="{Binding Label}"
-                               FontSize="13"
+                               FontSize="{DynamicResource NxFont13}"
                                VerticalAlignment="Center" />
                   </Button>
                 </DataTemplate>

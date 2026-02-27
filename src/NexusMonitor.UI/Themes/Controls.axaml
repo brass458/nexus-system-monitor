@@ -203,14 +203,14 @@
 
   <!-- ===== PROCESS DETAIL PANEL LABELS ===== -->
   <Style Selector="TextBlock.detail-label">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFont10}" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="0,4,12,4" />
     <Setter Property="MinWidth" Value="72" />
   </Style>
   <Style Selector="TextBlock.detail-value">
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFont11}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="0,4,0,4" />

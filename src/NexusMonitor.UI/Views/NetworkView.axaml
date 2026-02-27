@@ -23,7 +23,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Network Connections"
-                   FontSize="16" FontWeight="SemiBold"
+                   FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>
@@ -31,7 +31,7 @@
           <ToggleButton Classes="nx-toggle"
                         IsChecked="{Binding IsDetailPanelVisible}"
                         ToolTip.Tip="Show/hide connection details panel">
-            <TextBlock Text="Details" FontSize="11"/>
+            <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
           </ToggleButton>
           <TextBox Classes="nx-input"
                    Text="{Binding SearchText}"
@@ -49,7 +49,7 @@
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
-                 FontSize="11"
+                 FontSize="{DynamicResource NxFont11}"
                  Foreground="{StaticResource TextSecondaryBrush}"/>
     </Border>
 
@@ -89,7 +89,7 @@
                         HorizontalAlignment="Left"
                         Background="{Binding State, Converter={StaticResource TcpStateBrush}}">
                   <TextBlock Text="{Binding State, Converter={StaticResource TcpStateLabel}}"
-                             FontSize="10" FontWeight="Medium"
+                             FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                              Foreground="White"/>
                 </Border>
               </DataTemplate>
@@ -120,11 +120,11 @@
 
             <!-- Header: process name -->
             <TextBlock Text="{Binding ProcessName}"
-                       FontSize="14" FontWeight="SemiBold"
+                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,2"/>
-            <TextBlock FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,6">
+            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,6">
               <Run Text="PID "/>
               <Run Text="{Binding ProcessId}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
             </TextBlock>
@@ -134,13 +134,13 @@
                     HorizontalAlignment="Left"
                     Background="{Binding State, Converter={StaticResource TcpStateBrush}}">
               <TextBlock Text="{Binding State, Converter={StaticResource TcpStateLabel}}"
-                         FontSize="11" Foreground="White" FontWeight="Medium"/>
+                         FontSize="{DynamicResource NxFont11}" Foreground="White" FontWeight="Medium"/>
             </Border>
 
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Local endpoint -->
-            <TextBlock Text="LOCAL ENDPOINT" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="LOCAL ENDPOINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -152,7 +152,7 @@
             </Grid>
 
             <!-- Remote endpoint -->
-            <TextBlock Text="REMOTE ENDPOINT" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="REMOTE ENDPOINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -164,7 +164,7 @@
             </Grid>
 
             <!-- Throughput -->
-            <TextBlock Text="THROUGHPUT" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="THROUGHPUT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 

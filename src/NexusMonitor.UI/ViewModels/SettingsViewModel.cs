@@ -465,6 +465,14 @@ public partial class SettingsViewModel : ViewModelBase
             Application.Current.Resources["NxFontSm"]   = Math.Round(11.0 * scale, 1);
             Application.Current.Resources["NxFontBase"]  = Math.Round(12.0 * scale, 1);
             Application.Current.Resources["NxFontMd"]    = Math.Round(13.0 * scale, 1);
+            // Per-size tokens used by all TextBlocks with explicit FontSize="X" in views —
+            // replacing those with {DynamicResource NxFontX} makes them scale in real time.
+            Application.Current.Resources["NxFont10"]    = Math.Round(10.0 * scale, 1);
+            Application.Current.Resources["NxFont11"]    = Math.Round(11.0 * scale, 1);
+            Application.Current.Resources["NxFont12"]    = Math.Round(12.0 * scale, 1);
+            Application.Current.Resources["NxFont13"]    = Math.Round(13.0 * scale, 1);
+            Application.Current.Resources["NxFont14"]    = Math.Round(14.0 * scale, 1);
+            Application.Current.Resources["NxFont16"]    = Math.Round(16.0 * scale, 1);
         }
 
         // ── 2. Also set Window.FontSize for unstyled / inherited text ─────────

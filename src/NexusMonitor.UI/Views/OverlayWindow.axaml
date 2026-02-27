@@ -30,7 +30,7 @@
         <Grid ColumnDefinitions="34,*,48">
           <TextBlock Grid.Column="0"
                      Text="CPU"
-                     FontSize="10" FontWeight="SemiBold"
+                     FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
                      Foreground="#80FFFFFF"
                      VerticalAlignment="Center"/>
           <lvc:CartesianChart Grid.Column="1"
@@ -44,7 +44,7 @@
                               EasingFunction="{x:Null}"/>
           <TextBlock Grid.Column="2"
                      Text="{Binding CpuDisplay}"
-                     FontSize="13" FontWeight="Bold"
+                     FontSize="{DynamicResource NxFont13}" FontWeight="Bold"
                      Foreground="#E0FFFFFF"
                      HorizontalAlignment="Right"
                      VerticalAlignment="Center"/>
@@ -55,12 +55,12 @@
           <Grid ColumnDefinitions="34,*,Auto">
             <TextBlock Grid.Column="0"
                        Text="RAM"
-                       FontSize="10" FontWeight="SemiBold"
+                       FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
                        Foreground="#80FFFFFF"
                        VerticalAlignment="Center"/>
             <TextBlock Grid.Column="2"
                        Text="{Binding MemDisplay}"
-                       FontSize="10"
+                       FontSize="{DynamicResource NxFont10}"
                        Foreground="#AAFFFFFF"
                        HorizontalAlignment="Right"
                        VerticalAlignment="Center"/>
@@ -75,15 +75,15 @@
         <Grid ColumnDefinitions="34,*">
           <TextBlock Grid.Column="0"
                      Text="NET"
-                     FontSize="10" FontWeight="SemiBold"
+                     FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
                      Foreground="#80FFFFFF"
                      VerticalAlignment="Top"/>
           <StackPanel Grid.Column="1" Spacing="2">
             <TextBlock Text="{Binding NetRecvDisplay}"
-                       FontSize="10"
+                       FontSize="{DynamicResource NxFont10}"
                        Foreground="#BF5AF2"/>
             <TextBlock Text="{Binding NetSendDisplay}"
-                       FontSize="10"
+                       FontSize="{DynamicResource NxFont10}"
                        Foreground="{StaticResource ColorDangerBrush}"/>
           </StackPanel>
         </Grid>
@@ -93,12 +93,12 @@
               IsVisible="{Binding HasGpu}">
           <TextBlock Grid.Column="0"
                      Text="GPU"
-                     FontSize="10" FontWeight="SemiBold"
+                     FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
                      Foreground="#80FFFFFF"
                      VerticalAlignment="Center"/>
           <TextBlock Grid.Column="2"
                      Text="{Binding GpuDisplay}"
-                     FontSize="13" FontWeight="Bold"
+                     FontSize="{DynamicResource NxFont13}" FontWeight="Bold"
                      Foreground="{StaticResource ColorWarningBrush}"
                      HorizontalAlignment="Right"
                      VerticalAlignment="Center"/>

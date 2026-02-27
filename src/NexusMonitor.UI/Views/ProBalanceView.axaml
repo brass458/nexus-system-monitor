@@ -16,14 +16,14 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="ProBalance"
-                   FontSize="16" FontWeight="SemiBold"
+                   FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <Button Classes="nx-btn"
                   Command="{Binding ClearLogCommand}"
                   ToolTip.Tip="Clear activity log and reset session counters">
-            <TextBlock Text="Clear Log" FontSize="12"/>
+            <TextBlock Text="Clear Log" FontSize="{DynamicResource NxFont12}"/>
           </Button>
         </StackPanel>
       </DockPanel>
@@ -45,7 +45,7 @@
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Text="⚖" FontSize="20" VerticalAlignment="Center"/>
                 <TextBlock Text="ProBalance CPU Balancer"
-                           FontSize="16" FontWeight="SemiBold"
+                           FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
               </StackPanel>
@@ -54,12 +54,12 @@
                 <Ellipse Width="8" Height="8" Fill="{Binding StatusColor}"
                          VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding StatusLabel}"
-                           FontSize="12"
+                           FontSize="{DynamicResource NxFont12}"
                            Foreground="{StaticResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
               </StackPanel>
               <TextBlock TextWrapping="Wrap" MaxWidth="520"
-                         FontSize="11"
+                         FontSize="{DynamicResource NxFont11}"
                          Foreground="{StaticResource TextTertiaryBrush}"
                          Text="{Binding HowItWorks, Mode=OneTime}"
                          Margin="0,4,0,0"/>
@@ -84,11 +84,11 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="CURRENTLY THROTTLED" FontSize="10" FontWeight="Medium"
+              <TextBlock Text="CURRENTLY THROTTLED" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding ThrottledNow}"
                          FontSize="28" FontWeight="Bold" Foreground="{StaticResource ColorWarningBrush}"/>
-              <TextBlock Text="background processes" FontSize="10"
+              <TextBlock Text="background processes" FontSize="{DynamicResource NxFont10}"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
             </StackPanel>
           </Border>
@@ -100,12 +100,12 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="TOTAL THROTTLED" FontSize="10" FontWeight="Medium"
+              <TextBlock Text="TOTAL THROTTLED" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding TotalThrottled}"
                          FontSize="28" FontWeight="Bold"
                          Foreground="{DynamicResource AccentBlueBrush}"/>
-              <TextBlock Text="this session" FontSize="10"
+              <TextBlock Text="this session" FontSize="{DynamicResource NxFont10}"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
             </StackPanel>
           </Border>
@@ -117,11 +117,11 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="TOTAL RESTORED" FontSize="10" FontWeight="Medium"
+              <TextBlock Text="TOTAL RESTORED" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding TotalRestored}"
                          FontSize="28" FontWeight="Bold" Foreground="#30D158"/>
-              <TextBlock Text="this session" FontSize="10"
+              <TextBlock Text="this session" FontSize="{DynamicResource NxFont10}"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
             </StackPanel>
           </Border>
@@ -139,16 +139,16 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="12">
-              <TextBlock Text="THROTTLE THRESHOLD" FontSize="10" FontWeight="Medium"
+              <TextBlock Text="THROTTLE THRESHOLD" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Grid.Column="0" Text="CPU usage to trigger throttling"
-                             FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"
+                             FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextPrimaryBrush}"
                              VerticalAlignment="Center"/>
                   <TextBlock Grid.Column="1"
                              Text="{Binding CpuThreshold, StringFormat='{}{0:F0}%'}"
-                             FontSize="13" FontWeight="SemiBold"
+                             FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                              Foreground="{DynamicResource AccentBlueBrush}"
                              VerticalAlignment="Center"/>
                 </Grid>
@@ -162,9 +162,9 @@
                       CornerRadius="{StaticResource CornerMD}">
                 <StackPanel Spacing="4">
                   <TextBlock Text="How the threshold works:"
-                             FontSize="11" FontWeight="Medium"
+                             FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                              Foreground="{StaticResource TextSecondaryBrush}"/>
-                  <TextBlock TextWrapping="Wrap" FontSize="10"
+                  <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource NxFont10}"
                              Foreground="{StaticResource TextTertiaryBrush}"
                              Text="When total CPU ≥ threshold, background processes using &gt;5% CPU are lowered to Below Normal. When CPU drops to 70% of threshold, all are restored. The 70% restore band prevents rapid on/off oscillation."/>
                 </StackPanel>
@@ -180,20 +180,20 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="10">
-              <TextBlock Text="PROTECTED PROCESSES" FontSize="10" FontWeight="Medium"
+              <TextBlock Text="PROTECTED PROCESSES" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
-              <TextBlock FontSize="11" TextWrapping="Wrap"
+              <TextBlock FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
                          Foreground="{StaticResource TextSecondaryBrush}"
                          Text="These processes will never be throttled (one name per line, no .exe needed):"/>
               <TextBox Text="{Binding ExclusionsText}"
                        AcceptsReturn="True"
                        MinHeight="120"
                        MaxHeight="200"
-                       FontSize="12"
+                       FontSize="{DynamicResource NxFont12}"
                        FontFamily="Consolas,Courier New,monospace"
                        Padding="8,6"
                        Watermark="chrome&#x0A;spotify&#x0A;teams"/>
-              <TextBlock FontSize="10" TextWrapping="Wrap"
+              <TextBlock FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
                          Foreground="{StaticResource TextTertiaryBrush}"
                          Text="The foreground window process is always protected automatically."/>
             </StackPanel>
@@ -218,12 +218,12 @@
               <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
                            Text="Activity Log"
-                           FontSize="13" FontWeight="SemiBold"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock DockPanel.Dock="Right"
                            Text="{Binding EventLog.Count, StringFormat='{}{0} events'}"
-                           FontSize="11"
+                           FontSize="{DynamicResource NxFont11}"
                            Foreground="{StaticResource TextTertiaryBrush}"
                            VerticalAlignment="Center"/>
               </DockPanel>
@@ -237,11 +237,11 @@
                 <TextBlock Text="⚖" FontSize="28" HorizontalAlignment="Center"
                            Foreground="{StaticResource TextTertiaryBrush}"/>
                 <TextBlock Text="No activity yet"
-                           FontSize="13" FontWeight="SemiBold"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Enable ProBalance above and the log will populate as processes are throttled and restored."
-                           FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
                            HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="360"/>
               </StackPanel>
             </Border>
@@ -259,7 +259,7 @@
                       <!-- Type icon -->
                       <TextBlock Grid.Column="0"
                                  Text="{Binding TypeIcon}"
-                                 FontSize="14"
+                                 FontSize="{DynamicResource NxFont14}"
                                  Foreground="{Binding TypeColor}"
                                  VerticalAlignment="Center"
                                  HorizontalAlignment="Center"/>
@@ -267,7 +267,7 @@
                       <!-- Timestamp -->
                       <TextBlock Grid.Column="1"
                                  Text="{Binding TimeDisplay}"
-                                 FontSize="11"
+                                 FontSize="{DynamicResource NxFont11}"
                                  FontFamily="Consolas,Courier New,monospace"
                                  Foreground="{StaticResource TextTertiaryBrush}"
                                  VerticalAlignment="Center"
@@ -276,7 +276,7 @@
                       <!-- Description -->
                       <TextBlock Grid.Column="2"
                                  Text="{Binding Description}"
-                                 FontSize="12"
+                                 FontSize="{DynamicResource NxFont12}"
                                  Foreground="{StaticResource TextSecondaryBrush}"
                                  VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis"/>

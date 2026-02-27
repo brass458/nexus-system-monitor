@@ -36,7 +36,7 @@
           <Grid ColumnDefinitions="Auto,*">
             <TextBlock Grid.Column="0"
                        Text="&#x1F50D;"
-                       FontSize="13"
+                       FontSize="{DynamicResource NxFont13}"
                        Margin="10,0,6,0"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextTertiaryBrush}"/>
@@ -56,7 +56,7 @@
                       Margin="8,0"
                       IsChecked="{Binding IsSimplifiedView}"
                       ToolTip.Tip="Toggle simplified view">
-          <TextBlock Text="Simplified" FontSize="11"/>
+          <TextBlock Text="Simplified" FontSize="{DynamicResource NxFont11}"/>
         </ToggleButton>
 
         <!-- Kill button -->
@@ -67,8 +67,8 @@
                 IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBool}}"
                 ToolTip.Tip="End process">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource ColorDangerBrush}"/>
-            <TextBlock Text="End" FontSize="12"/>
+            <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource ColorDangerBrush}"/>
+            <TextBlock Text="End" FontSize="{DynamicResource NxFont12}"/>
           </StackPanel>
         </Button>
 
@@ -77,7 +77,7 @@
                 Classes="nx-btn"
                 Margin="4,0"
                 ToolTip.Tip="More actions">
-          <TextBlock Text="⋮" FontSize="14"/>
+          <TextBlock Text="⋮" FontSize="{DynamicResource NxFont14}"/>
         </Button>
 
         <!-- Detail panel toggle -->
@@ -86,7 +86,7 @@
                       Margin="4,0"
                       IsChecked="{Binding IsDetailPanelVisible}"
                       ToolTip.Tip="Show/hide process details panel">
-          <TextBlock Text="Details" FontSize="11"/>
+          <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
         </ToggleButton>
 
       </Grid>
@@ -104,35 +104,35 @@
         <TextBlock DockPanel.Dock="Right"
                    Text="{Binding LastError}"
                    IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   FontSize="11"
+                   FontSize="{DynamicResource NxFont11}"
                    Foreground="{StaticResource ColorDangerBrush}"
                    VerticalAlignment="Center"/>
 
         <StackPanel Orientation="Horizontal" Spacing="24">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="Processes:"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalProcessCount}"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="Threads:"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalThreadCount}"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="CPU:"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalCpuPercent, StringFormat='{}{0:F1}%'}"
-                       FontSize="11"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{DynamicResource AccentBlueBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
@@ -201,7 +201,7 @@
                               Text="{Binding Name}"
                               Margin="8,0,0,0"
                               VerticalAlignment="Center"
-                              FontSize="12"
+                              FontSize="{DynamicResource NxFont12}"
                               Foreground="{Binding Category, Converter={StaticResource CategoryBrush}}"
                               TextTrimming="CharacterEllipsis"/>
                 </Grid>
@@ -220,7 +220,7 @@
                 <Grid Margin="6,0" RowDefinitions="Auto,3">
                   <TextBlock Grid.Row="0"
                               Text="{Binding CpuDisplay}"
-                              FontSize="11"
+                              FontSize="{DynamicResource NxFont11}"
                               HorizontalAlignment="Right"
                               Foreground="{Binding CpuPercent, Converter={StaticResource CpuHeat}}"/>
                   <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
@@ -244,7 +244,7 @@
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding WorkingSetBytes, Converter={StaticResource BytesFmt}}"
-                            FontSize="11"
+                            FontSize="{DynamicResource NxFont11}"
                             HorizontalAlignment="Right"
                             Margin="0,0,8,0"
                             Foreground="{StaticResource TextSecondaryBrush}"/>
@@ -256,7 +256,7 @@
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding IoDisplay}"
-                            FontSize="10"
+                            FontSize="{DynamicResource NxFont10}"
                             HorizontalAlignment="Right"
                             Margin="0,0,8,0"
                             Foreground="{StaticResource TextTertiaryBrush}"
@@ -309,11 +309,11 @@
 
             <!-- Header: process name + PID -->
             <TextBlock Text="{Binding Name}"
-                       FontSize="14" FontWeight="SemiBold"
+                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,2"/>
-            <TextBlock FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,12">
+            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,12">
               <Run Text="PID "/>
               <Run Text="{Binding Pid}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
               <Run Text="  ·  PPID "/>
@@ -323,7 +323,7 @@
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Section: Identity -->
-            <TextBlock Text="IDENTITY" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="IDENTITY" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -339,7 +339,7 @@
             </Grid>
 
             <!-- Section: Performance -->
-            <TextBlock Text="PERFORMANCE" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="PERFORMANCE" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -359,7 +359,7 @@
             </Grid>
 
             <!-- Section: I/O -->
-            <TextBlock Text="DISK I/O" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="DISK I/O" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -371,27 +371,27 @@
             </Grid>
 
             <!-- Section: Image -->
-            <TextBlock Text="IMAGE" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="IMAGE" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding Description}"
-                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding ImagePath}"
-                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding CommandLine}"
-                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"
                        FontStyle="Italic"/>
 
             <!-- Section: Loaded Modules -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
 
-            <TextBlock Text="MODULES" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="MODULES" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -400,7 +400,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding Name}"
-                               FontSize="11"
+                               FontSize="{DynamicResource NxFont11}"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                ToolTip.Tip="{Binding Path}"
                                Margin="0,1"/>
@@ -411,7 +411,7 @@
 
             <!-- Section: Threads -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
-            <TextBlock Text="THREADS" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="THREADS" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="140">
@@ -422,11 +422,11 @@
                     <Grid ColumnDefinitions="*,Auto" Margin="0,1">
                       <TextBlock Grid.Column="0"
                                  Text="{Binding ThreadId, StringFormat='TID {0}'}"
-                                 FontSize="11"
+                                 FontSize="{DynamicResource NxFont11}"
                                  Foreground="{StaticResource TextSecondaryBrush}"/>
                       <TextBlock Grid.Column="1"
                                  Text="{Binding BasePriority, StringFormat='Pri {0}'}"
-                                 FontSize="11"
+                                 FontSize="{DynamicResource NxFont11}"
                                  HorizontalAlignment="Right"
                                  Foreground="{StaticResource TextTertiaryBrush}"/>
                     </Grid>
@@ -437,7 +437,7 @@
 
             <!-- Section: Environment Variables -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
-            <TextBlock Text="ENVIRONMENT" FontSize="11" FontWeight="Medium"
+            <TextBlock Text="ENVIRONMENT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="160">
@@ -446,12 +446,12 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="0,1">
-                      <TextBlock Text="{Binding Key}"   FontSize="10"
+                      <TextBlock Text="{Binding Key}"   FontSize="{DynamicResource NxFont10}"
                                  Foreground="{StaticResource TextTertiaryBrush}"
                                  TextTrimming="CharacterEllipsis" MaxWidth="90"
                                  ToolTip.Tip="{Binding Key}"/>
-                      <TextBlock Text="=" FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="2,0"/>
-                      <TextBlock Text="{Binding Value}" FontSize="10"
+                      <TextBlock Text="=" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="2,0"/>
+                      <TextBlock Text="{Binding Value}" FontSize="{DynamicResource NxFont10}"
                                  Foreground="{StaticResource TextPrimaryBrush}"
                                  TextTrimming="CharacterEllipsis" MaxWidth="130"
                                  ToolTip.Tip="{Binding Value}"/>

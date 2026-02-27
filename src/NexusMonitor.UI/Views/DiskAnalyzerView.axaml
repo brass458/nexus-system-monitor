@@ -84,7 +84,7 @@
                    Text="{Binding ScanStatus}"
                    VerticalAlignment="Center"
                    Foreground="{StaticResource TextTertiaryBrush}"
-                   FontSize="12"
+                   FontSize="{DynamicResource NxFont12}"
                    MaxWidth="260"
                    TextTrimming="CharacterEllipsis"/>
       </Grid>
@@ -123,7 +123,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:DiskNode">
                   <StackPanel Orientation="Horizontal" Spacing="2">
-                    <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center" FontSize="11"/>
+                    <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center" FontSize="{DynamicResource NxFont11}"/>
                     <Button Content="{Binding Name}"
                             Command="{Binding $parent[UserControl].DataContext.NavigateToBreadcrumbCommand}"
                             CommandParameter="{Binding}"
@@ -133,7 +133,7 @@
                           <Setter Property="Background" Value="Transparent"/>
                           <Setter Property="Foreground" Value="{DynamicResource AccentBlueBrush}"/>
                           <Setter Property="CornerRadius" Value="5"/>
-                          <Setter Property="FontSize" Value="12"/>
+                          <Setter Property="FontSize" Value="{DynamicResource NxFont12}"/>
                         </Style>
                       </Button.Styles>
                     </Button>
@@ -152,7 +152,7 @@
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextTertiaryBrush}"
-                       FontSize="14"
+                       FontSize="{DynamicResource NxFont14}"
                        IsVisible="{Binding !HasScanResult}"/>
 
             <!-- Scanning progress bar at bottom -->
@@ -185,7 +185,7 @@
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
                   CanUserSortColumns="True"
-                  FontSize="12"
+                  FontSize="{DynamicResource NxFont12}"
                   Background="{DynamicResource BgPrimaryBrush}">
           <DataGrid.Columns>
             <DataGridTextColumn Header="Name"     Binding="{Binding Name}"        Width="*" MinWidth="140"/>
@@ -228,7 +228,7 @@
                 BorderThickness="0,0,0,1">
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding SelectedFile.Name, FallbackValue='— No selection —'}"
-                       FontSize="13"
+                       FontSize="{DynamicResource NxFont13}"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -237,29 +237,29 @@
                   RowDefinitions="Auto,Auto,Auto,Auto"
                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Size"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
               <TextBlock Grid.Row="0" Grid.Column="1"
                          Text="{Binding SelectedFile.SizeDisplay}"
-                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
+                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
 
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Path"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
               <TextBlock Grid.Row="1" Grid.Column="1"
                          Text="{Binding SelectedFile.FullPath}"
-                         FontSize="10" TextWrapping="Wrap"
+                         FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
                          Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3"/>
 
               <TextBlock Grid.Row="2" Grid.Column="0" Text="Modified"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
               <TextBlock Grid.Row="2" Grid.Column="1"
                          Text="{Binding SelectedFile.LastModified, StringFormat='yyyy-MM-dd HH:mm'}"
-                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
+                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
 
               <TextBlock Grid.Row="3" Grid.Column="0" Text="% of parent"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11"/>
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
               <TextBlock Grid.Row="3" Grid.Column="1"
                          Text="{Binding SelectedFile.PercentOfParent, StringFormat='{}{0:F1}%'}"
-                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}"/>
+                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
             </Grid>
           </StackPanel>
         </Border>
@@ -275,11 +275,11 @@
                   BorderThickness="0,0,0,1">
             <StackPanel Spacing="4">
               <TextBlock Text="Duplicate Files"
-                         FontSize="13"
+                         FontSize="{DynamicResource NxFont13}"
                          FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}"/>
               <TextBlock Text="{Binding DuplicateSummary}"
-                         FontSize="11"
+                         FontSize="{DynamicResource NxFont11}"
                          Foreground="{StaticResource TextTertiaryBrush}"
                          IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                          TextWrapping="Wrap"/>
@@ -308,19 +308,19 @@
                         <TextBlock Text="{Binding WastedDisplay}"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource ColorWarningBrush}"
-                                   FontSize="12"/>
+                                   FontSize="{DynamicResource NxFont12}"/>
                         <TextBlock Text="wasted"
                                    Foreground="{StaticResource TextTertiaryBrush}"
-                                   FontSize="12"/>
+                                   FontSize="{DynamicResource NxFont12}"/>
                         <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
                                    Foreground="{StaticResource TextTertiaryBrush}"
-                                   FontSize="12"/>
+                                   FontSize="{DynamicResource NxFont12}"/>
                       </StackPanel>
                       <ItemsControl ItemsSource="{Binding Files}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate DataType="models:DiskNode">
                             <TextBlock Text="{Binding FullPath}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource NxFont10}"
                                        Foreground="{StaticResource TextTertiaryBrush}"
                                        TextTrimming="CharacterEllipsis"/>
                           </DataTemplate>
