@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
-             xmlns:controls="using:NexusMonitor.UI.Controls"
              x:Class="NexusMonitor.UI.Views.SettingsView"
              x:DataType="vm:SettingsViewModel"
              x:CompileBindings="False">
@@ -282,38 +281,29 @@
                FontWeight="SemiBold"/>
         </TextBlock>
 
-        <!-- ── Custom Color Wheel Picker ──────────────────────────────── -->
+        <!-- ── Custom Color Picker (opens isolated popup window) ──────── -->
         <TextBlock Text="CUSTOM COLOR PICKER" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,12,0,4"/>
-        <TextBlock Text="Drag the wheel to choose hue &amp; saturation. Drag the brightness strip to adjust lightness."
-                   FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
-                   TextWrapping="Wrap" Margin="0,0,0,6"/>
-        <Grid ColumnDefinitions="Auto,16,*">
-          <!-- Colour wheel disc + strip -->
-          <controls:ColorWheelControl Grid.Column="0"
-                                      Width="180" Height="210"
-                                      SelectedColor="{Binding PickerAccentColor}"/>
-
-          <!-- Right-side info panel -->
-          <StackPanel Grid.Column="2" Spacing="10" VerticalAlignment="Center">
-            <!-- Selected color preview circle -->
-            <Border Width="48" Height="48" CornerRadius="24"
-                    Background="{DynamicResource AccentBlueBrush}"
-                    BorderBrush="{StaticResource BorderSubtleBrush}"
-                    BorderThickness="2"/>
-            <!-- Hex readout -->
-            <StackPanel Spacing="2">
-              <TextBlock Text="HEX" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
-                         Foreground="{StaticResource TextTertiaryBrush}"/>
-              <TextBlock Text="{Binding AccentColorHex}"
-                         FontSize="12"
-                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,12,0,6"/>
+        <Grid ColumnDefinitions="*,10,Auto">
+          <!-- Current-accent swatch + hex label -->
+          <Border Grid.Column="0" Height="34" CornerRadius="8"
+                  Background="{DynamicResource AccentBlueBrush}"
+                  Padding="12,0">
+            <TextBlock Text="{Binding AccentColorHex}"
+                       FontSize="12" FontWeight="Medium"
+                       Foreground="White"
+                       VerticalAlignment="Center"/>
+          </Border>
+          <!-- Open picker dialog -->
+          <Button Grid.Column="2"
+                  Classes="nx-btn"
+                  Click="OnPickColorClick"
+                  ToolTip.Tip="Open color wheel picker">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="🎨" FontSize="12" VerticalAlignment="Center"/>
+              <TextBlock Text="Pick Color…" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
-            <!-- Quick tip -->
-            <TextBlock Text="Click any preset swatch above to also jump the picker."
-                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
-                       TextWrapping="Wrap"/>
-          </StackPanel>
+          </Button>
         </Grid>
 
       </StackPanel>

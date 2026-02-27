@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Rendering;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using SkiaSharp;
@@ -14,7 +15,7 @@ namespace NexusMonitor.UI.Controls;
 /// the user control the Value (brightness) component.
 /// Exposes <see cref="SelectedColor"/> as a bindable <see cref="Avalonia.Media.Color"/>.
 /// </summary>
-public class ColorWheelControl : Avalonia.Controls.Control
+public class ColorWheelControl : Avalonia.Controls.Control, Avalonia.Rendering.ICustomHitTest
 {
     // ── Styled Properties ─────────────────────────────────────────────────────
 
@@ -87,6 +88,16 @@ public class ColorWheelControl : Avalonia.Controls.Control
         base.OnPointerReleased(e);
         e.Pointer.Capture(null);
     }
+
+    /// <summary>
+    /// Restrict Avalonia's INPUT hit-testing to the disc and brightness strip only.
+    /// Returning false for the blank rectangular area lets pointer events fall through
+    /// to whatever control is actually at that position in the visual tree.
+    /// Implements <see cref="ICustomHitTest"/> — the Avalonia 11 mechanism for
+    /// custom per-pixel hit testing on a control.
+    /// </summary>
+    bool Avalonia.Rendering.ICustomHitTest.HitTest(Point point) =>
+        HitZoneAt(point) != HitZone.None;
 
     private void HandlePointer(Point pos, bool firstPress)
     {
@@ -212,7 +223,30 @@ public class ColorWheelControl : Avalonia.Controls.Control
         { _bounds = bounds; _h = h; _s = s; _v = v; }
 
         public Rect Bounds => _bounds;
-        public bool HitTest(Point p) => true;
+
+        /// <summary>
+        /// Scene-graph hit test: mirrors the disc + strip geometry so the composition
+        /// renderer agrees with the input-layer <see cref="HitTestCore"/> override.
+        /// Previously this returned <c>true</c> for all points, causing the scene
+        /// renderer to route events from distant controls to this draw operation.
+        /// </summary>
+        public bool HitTest(Point p)
+        {
+            float discAreaH = (float)_bounds.Height - StripGap - StripHeight - DiscPad;
+            float size      = Math.Min((float)_bounds.Width, discAreaH);
+            float cx        = (float)_bounds.Width / 2f;
+            float cy        = size / 2f;
+            float radius    = size / 2f - DiscPad;
+
+            float dx = (float)p.X - cx;
+            float dy = (float)p.Y - cy;
+            if (MathF.Sqrt(dx * dx + dy * dy) <= radius + 4f)
+                return true;
+
+            float stripTop = size + StripGap;
+            return p.Y >= stripTop && p.Y <= stripTop + StripHeight;
+        }
+
         public bool Equals(ICustomDrawOperation? other) => false;
         public void Dispose() { }
 
