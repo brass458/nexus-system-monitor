@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusMonitor.UI.ViewModels"
         xmlns:views="using:NexusMonitor.UI.Views"
@@ -65,25 +65,25 @@
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMinimize"
                     ToolTip.Tip="Minimize">
-              <TextBlock Text="—" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="â€”" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMaximize"
                     ToolTip.Tip="Maximize">
-              <TextBlock Text="⬜" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="â¬œ" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnClose"
                     ToolTip.Tip="Close">
-              <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="âœ•" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
           </StackPanel>
 
         </Grid>
 
-        <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
+        <!-- â”€â”€ Liquid Glass specular stack (pointer-transparent, 3 layers) â”€â”€ -->
 
-        <!-- Layer 1: Broad soft wash — fills the whole titlebar top→bottom -->
+        <!-- Layer 1: Broad soft wash â€” fills the whole titlebar topâ†’bottom -->
         <Border IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
@@ -95,7 +95,7 @@
           </Border.Background>
         </Border>
 
-        <!-- Layer 2: Sharp bright rim — compressed to top 5px for iOS-glass "lip" -->
+        <!-- Layer 2: Sharp bright rim â€” compressed to top 5px for iOS-glass "lip" -->
         <Border IsHitTestVisible="False"
                 Height="5"
                 VerticalAlignment="Top"
@@ -109,7 +109,7 @@
           </Border.Background>
         </Border>
 
-        <!-- Layer 3: Prismatic shimmer — diagonal rainbow tint at very low alpha -->
+        <!-- Layer 3: Prismatic shimmer â€” diagonal rainbow tint at very low alpha -->
         <Border IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
@@ -159,7 +159,7 @@
             </ItemsControl>
           </ScrollViewer>
 
-          <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
+          <!-- â”€â”€ Liquid Glass specular stack (pointer-transparent, 3 layers) â”€â”€ -->
 
           <!-- Layer 1: Broad diagonal wash from top-left corner -->
           <Border IsHitTestVisible="False"
@@ -173,7 +173,7 @@
             </Border.Background>
           </Border>
 
-          <!-- Layer 2: Left-edge rim — compressed to leading 4px for glass thickness -->
+          <!-- Layer 2: Left-edge rim â€” compressed to leading 4px for glass thickness -->
           <Border IsHitTestVisible="False"
                   Width="4"
                   HorizontalAlignment="Left"
@@ -187,7 +187,7 @@
             </Border.Background>
           </Border>
 
-          <!-- Layer 3: Prismatic shimmer — diagonal iridescent tint -->
+          <!-- Layer 3: Prismatic shimmer â€” diagonal iridescent tint -->
           <Border IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
@@ -228,6 +228,12 @@
             </DataTemplate>
             <DataTemplate DataType="vm:OptimizationViewModel">
               <views:OptimizationView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:GamingModeViewModel">
+              <views:GamingModeView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:AlertsViewModel">
+              <views:AlertsView />
             </DataTemplate>
             <DataTemplate DataType="vm:DiskAnalyzerViewModel">
               <views:DiskAnalyzerView />

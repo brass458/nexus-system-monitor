@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -9,6 +9,8 @@ using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Mock;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Alerts;
+using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
@@ -73,7 +75,7 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    // ── System-tray icon ────────────────────────────────────────────
+    // â”€â”€ System-tray icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void SetupTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -162,6 +164,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  WindowsNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             WindowsStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    WindowsForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider, WindowsPowerPlanProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
@@ -169,6 +172,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MacOSNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -176,6 +180,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  LinuxNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
@@ -183,6 +188,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MockStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MockForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
 #endif
 
         // -- Core services --
@@ -197,6 +203,10 @@ public class App : Application
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<RulesPersistence>();
 
+        // -- Gaming and Alerts services --
+        services.AddSingleton<GamingModeService>();
+        services.AddSingleton<AlertsService>();
+
         // -- ViewModels --
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<ProcessesViewModel>();
@@ -207,6 +217,8 @@ public class App : Application
         services.AddSingleton<OptimizationViewModel>();
         services.AddSingleton<ProBalanceViewModel>();
         services.AddSingleton<RulesViewModel>();
+        services.AddSingleton<GamingModeViewModel>();
+        services.AddSingleton<AlertsViewModel>();
         services.AddSingleton<DiskAnalyzerViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<OverlayViewModel>();

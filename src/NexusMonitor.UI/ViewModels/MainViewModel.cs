@@ -31,6 +31,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("Optimization", "\ue993", () => services.GetRequiredService<OptimizationViewModel>(), eager: false),
             new NavItem("ProBalance",   "\ue996", () => services.GetRequiredService<ProBalanceViewModel>(),   eager: false),
             new NavItem("Rules",        "\ue994", () => services.GetRequiredService<RulesViewModel>(),        eager: false),
+            new NavItem("Gaming Mode",   "\ue995", () => services.GetRequiredService<GamingModeViewModel>(), eager: false),
+            new NavItem("Alerts",        "\ue997", () => services.GetRequiredService<AlertsViewModel>(),     eager: false),
             new NavItem("Disk Analyzer","\ue9e5", () => services.GetRequiredService<DiskAnalyzerViewModel>(), eager: false),
             new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),     eager: false),
         ];

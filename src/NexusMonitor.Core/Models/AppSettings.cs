@@ -1,3 +1,4 @@
+using NexusMonitor.Core.Alerts;
 using NexusMonitor.Core.Rules;
 
 namespace NexusMonitor.Core.Models;
@@ -38,4 +39,12 @@ public class AppSettings
 
     // Rules
     public List<ProcessRule> Rules { get; set; } = new();
+
+    // Gaming Mode
+    public bool          GamingModeEnabled     { get; set; } = false;
+    public string        GamingModeGameProcess { get; set; } = "";
+    public List<string>  GamingModeExclusions  { get; set; } = new();
+
+    // Alerts
+    public List<AlertRule> AlertRules { get; set; } = new();
 }
