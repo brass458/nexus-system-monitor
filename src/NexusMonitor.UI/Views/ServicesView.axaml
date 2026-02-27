@@ -117,7 +117,7 @@
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Status" Width="80" SortMemberPath="State">
+            <DataGridTemplateColumn Header="Status" Width="130" MinWidth="130" SortMemberPath="State">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="models:ServiceInfo">
                   <Border CornerRadius="4" Padding="5,2" Margin="4,2"
@@ -128,11 +128,11 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="180" IsReadOnly="True"/>
-            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="240" IsReadOnly="True"/>
-            <DataGridTextColumn Header="Start Type"   Binding="{Binding StartType}"   Width="140" IsReadOnly="True"/>
-            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   Width="70"  IsReadOnly="True"/>
-            <DataGridTextColumn Header="Account"      Binding="{Binding UserAccount}" Width="140" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="180" MinWidth="100" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="240" MinWidth="190" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Start Type"   Binding="{Binding StartType}"   Width="170" MinWidth="170" IsReadOnly="True"/>
+            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   Width="80"  MinWidth="80"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="Account"      Binding="{Binding UserAccount}" Width="150" MinWidth="150" IsReadOnly="True"/>
             <DataGridTextColumn Header="Binary Path"  Binding="{Binding BinaryPath}"  Width="*"   IsReadOnly="True"/>
           </DataGrid.Columns>
         </DataGrid>

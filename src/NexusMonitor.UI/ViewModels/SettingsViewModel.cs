@@ -36,7 +36,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Typography ────────────────────────────────────────────────────────────
     [ObservableProperty] private string _fontFamily  = "";
-    [ObservableProperty] private double _fontScale   = 1.0;
+    [ObservableProperty] private double _fontScale   = 1.5;
 
     // ── Performance ───────────────────────────────────────────────────────────
     [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s

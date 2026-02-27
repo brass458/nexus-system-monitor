@@ -211,7 +211,7 @@
 
           <DataGridTextColumn Header="PID"
                               Binding="{Binding Pid}"
-                              Width="64"
+                              Width="80" MinWidth="80"
                               IsReadOnly="True"/>
 
           <DataGridTemplateColumn Header="CPU" Width="80" SortMemberPath="CpuPercent">
@@ -240,7 +240,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Memory" Width="90" SortMemberPath="WorkingSetBytes">
+          <DataGridTemplateColumn Header="Memory" Width="130" MinWidth="130" SortMemberPath="WorkingSetBytes">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding WorkingSetBytes, Converter={StaticResource BytesFmt}}"
@@ -267,17 +267,17 @@
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
-                              Width="70"
+                              Width="140" MinWidth="140"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Handles"
                               Binding="{Binding HandleCount}"
-                              Width="70"
+                              Width="140" MinWidth="140"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="User"
                               Binding="{Binding UserName}"
-                              Width="90"
+                              Width="110" MinWidth="110"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Description"
