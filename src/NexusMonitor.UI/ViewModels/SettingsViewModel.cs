@@ -36,7 +36,6 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Typography ────────────────────────────────────────────────────────────
     [ObservableProperty] private string _fontFamily  = "";
-    [ObservableProperty] private double _fontScale   = 1.5;
 
     // ── Performance ───────────────────────────────────────────────────────────
     [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s
@@ -79,8 +78,9 @@ public partial class SettingsViewModel : ViewModelBase
 
     private static readonly string[] _closeActionValues = ["", "Tray", "Exit"];
 
-    /// <summary>All system font families enumerated once via SkiaSharp (sorted).</summary>
-    public static IReadOnlyList<string> SystemFonts { get; } = LoadSystemFonts();
+    /// <summary>All system font families — enumerated lazily on first access (deferred past startup).</summary>
+    private static readonly Lazy<IReadOnlyList<string>> _lazySystemFonts = new(LoadSystemFonts);
+    public static IReadOnlyList<string> SystemFonts => _lazySystemFonts.Value;
 
     private static IReadOnlyList<string> LoadSystemFonts()
     {
@@ -118,7 +118,6 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch { _pickerAccentColor = Color.Parse("#0A84FF"); }
         _fontFamily         = settings.Current.FontFamily;
-        _fontScale          = settings.Current.FontScale;
         _showOverlayWidget             = settings.Current.ShowOverlayWidget;
         _desktopNotificationsEnabled   = settings.Current.DesktopNotificationsEnabled;
 
@@ -138,7 +137,6 @@ public partial class SettingsViewModel : ViewModelBase
         ApplyAccentColor(_accentColorHex);
         ApplyTextAccent(_accentColorHex, _textAccentColorHex);
         ApplyFont(_fontFamily);
-        ApplyFontScale(_fontScale);
     }
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
@@ -221,13 +219,6 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Current.FontFamily = value;
         _settings.Save();
         ApplyFont(value);
-    }
-
-    partial void OnFontScaleChanged(double value)
-    {
-        _settings.Current.FontScale = value;
-        _settings.Save();
-        ApplyFontScale(value);
     }
 
     partial void OnCloseActionIndexChanged(int value)
@@ -455,42 +446,9 @@ public partial class SettingsViewModel : ViewModelBase
             ? Avalonia.Media.FontFamily.Default
             : new Avalonia.Media.FontFamily(family);
 
-        if (desktop.MainWindow is Window main) main.FontFamily = ff;
-        if (_overlayWindow      is Window ow)  ow.FontFamily   = ff;
-    }
-
-    /// <summary>
-    /// Scales the base font size (14pt) of all open windows.
-    /// Range: 0.75 (compact) → 1.5 (large).
-    /// Also updates the <c>NxFontSm/Base/Md</c> DynamicResource tokens so every
-    /// styled control (Button, TextBox, DataGrid, etc.) scales in real time.
-    /// </summary>
-    private void ApplyFontScale(double scale)
-    {
-        // ── 1. Update global font-size resource tokens ────────────────────────
-        // Controls.axaml uses {DynamicResource NxFontSm/Base/Md} so writing here
-        // cascades instantly to every styled control — no MainWindow needed.
-        if (Application.Current is not null)
-        {
-            Application.Current.Resources["NxFontSm"]   = Math.Round(11.0 * scale, 1);
-            Application.Current.Resources["NxFontBase"]  = Math.Round(12.0 * scale, 1);
-            Application.Current.Resources["NxFontMd"]    = Math.Round(13.0 * scale, 1);
-            // Per-size tokens used by all TextBlocks with explicit FontSize="X" in views —
-            // replacing those with {DynamicResource NxFontX} makes them scale in real time.
-            Application.Current.Resources["NxFont10"]    = Math.Round(10.0 * scale, 1);
-            Application.Current.Resources["NxFont11"]    = Math.Round(11.0 * scale, 1);
-            Application.Current.Resources["NxFont12"]    = Math.Round(12.0 * scale, 1);
-            Application.Current.Resources["NxFont13"]    = Math.Round(13.0 * scale, 1);
-            Application.Current.Resources["NxFont14"]    = Math.Round(14.0 * scale, 1);
-            Application.Current.Resources["NxFont16"]    = Math.Round(16.0 * scale, 1);
-        }
-
-        // ── 2. Also set Window.FontSize for unstyled / inherited text ─────────
-        if (Application.Current?.ApplicationLifetime
-                is not IClassicDesktopStyleApplicationLifetime desktop) return;
-        double sz = Math.Round(14.0 * scale, 1);
-        if (desktop.MainWindow is Window main) main.FontSize = sz;
-        if (_overlayWindow is Window ow)       ow.FontSize   = sz;
+        const double BaseFontSize = 14.0; // matches NxFont13 token
+        if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = BaseFontSize; }
+        if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = BaseFontSize; }
     }
 
     private static void SetBrush(string key, Color baseColor, byte alpha)

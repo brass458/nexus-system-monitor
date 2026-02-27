@@ -121,24 +121,6 @@
                      TextTrimming="CharacterEllipsis"/>
         </Border>
 
-        <!-- Font Scale slider -->
-        <StackPanel Spacing="2" Margin="0,4,0,0">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Grid.Column="0" Text="Font Size Scale" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
-            <TextBlock Grid.Column="1"
-                       Text="{Binding FontScale, StringFormat='{}{0:P0}'}"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
-          </Grid>
-          <Slider Minimum="0.75" Maximum="1.5"
-                  Value="{Binding FontScale}"
-                  TickFrequency="0.05" IsSnapToTickEnabled="True"
-                  Margin="0,2,0,0"/>
-          <TextBlock Text="75% = compact  ·  100% = default  ·  150% = large"
-                     FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
-                     Margin="0,0,0,4"/>
-        </StackPanel>
-
       </StackPanel>
     </Border>
 
@@ -496,7 +478,7 @@
       <StackPanel Spacing="4">
         <TextBlock Text="Nexus Monitor" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
-        <TextBlock Text="Version 0.1.0 — Phase 6 (Per-Device Performance + Liquid Glass)"
+        <TextBlock Text="Version 0.7.0 — System Info · Handle Viewer · Toast Alerts"
                    FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
         <TextBlock Text="MIT License · Open Source · Cross-Platform"
                    FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0"/>

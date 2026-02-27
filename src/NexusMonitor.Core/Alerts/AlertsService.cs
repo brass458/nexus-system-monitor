@@ -59,7 +59,7 @@ public sealed class AlertsService : IDisposable
 
     private void OnTick(SystemMetrics m)
     {
-        var rules = _settings.AlertRules;
+        var rules = _settings.AlertRules ?? [];
         if (rules.Count == 0) return;
 
         // Extract current values for each metric
