@@ -65,6 +65,15 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private IReadOnlyList<EnvironmentEntry> _processEnvironment = [];
 
+    [ObservableProperty]
+    private IReadOnlyList<HandleInfo> _processHandles = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<MemoryRegionInfo> _processMemoryMap = [];
+
+    [ObservableProperty]
+    private string _handleCountLabel = "";
+
     public ProcessesViewModel(IProcessProvider processProvider)
     {
         _processProvider = processProvider;
@@ -247,14 +256,19 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
         OnPropertyChanged(nameof(IsDetailPanelShown));
-        ProcessModules = [];
-        ProcessThreads = [];
+        ProcessModules     = [];
+        ProcessThreads     = [];
         ProcessEnvironment = [];
+        ProcessHandles     = [];
+        ProcessMemoryMap   = [];
+        HandleCountLabel   = "";
         if (value is not null)
         {
             _ = LoadModulesAsync(value.Pid);
             _ = LoadThreadsAsync(value.Pid);
             _ = LoadEnvironmentAsync(value.Pid);
+            _ = LoadHandlesAsync(value.Pid);
+            _ = LoadMemoryMapAsync(value.Pid);
         }
     }
 
@@ -320,6 +334,53 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             {
                 if (SelectedProcess?.Pid == pid)
                     ProcessEnvironment = [];
+            });
+        }
+    }
+
+    private async Task LoadHandlesAsync(int pid)
+    {
+        try
+        {
+            var handles = await _processProvider.GetHandlesAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                {
+                    ProcessHandles   = handles;
+                    HandleCountLabel = $"{handles.Count} handles";
+                }
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessHandles = [];
+            });
+        }
+    }
+
+    private async Task LoadMemoryMapAsync(int pid)
+    {
+        try
+        {
+            var regions = await _processProvider.GetMemoryMapAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessMemoryMap = regions;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessMemoryMap = [];
             });
         }
     }

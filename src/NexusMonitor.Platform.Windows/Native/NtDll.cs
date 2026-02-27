@@ -37,9 +37,10 @@ internal static partial class NtDll
 
     public enum SYSTEM_INFORMATION_CLASS
     {
-        SystemBasicInformation      = 0,
-        SystemPerformanceInformation = 2,
-        SystemProcessInformation    = 5,
+        SystemBasicInformation          = 0,
+        SystemPerformanceInformation    = 2,
+        SystemProcessInformation        = 5,
+        SystemExtendedHandleInformation = 64,
     }
 
     [LibraryImport(Dll)]
@@ -47,5 +48,31 @@ internal static partial class NtDll
         SYSTEM_INFORMATION_CLASS SystemInformationClass,
         nint SystemInformation,
         uint SystemInformationLength,
+        out uint ReturnLength);
+
+    // ─── Handle / Object Query ────────────────────────────────────────────────
+
+    public enum OBJECT_INFORMATION_CLASS
+    {
+        ObjectNameInformation = 1,
+        ObjectTypeInformation = 2,
+    }
+
+    [LibraryImport(Dll)]
+    public static partial int NtDuplicateObject(
+        nint  SourceProcessHandle,
+        nuint SourceHandle,
+        nint  TargetProcessHandle,
+        out nint TargetHandle,
+        uint  DesiredAccess,
+        uint  HandleAttributes,
+        uint  Options);
+
+    [LibraryImport(Dll)]
+    public static partial int NtQueryObject(
+        nint Handle,
+        OBJECT_INFORMATION_CLASS ObjectInformationClass,
+        nint ObjectInformation,
+        uint ObjectInformationLength,
         out uint ReturnLength);
 }

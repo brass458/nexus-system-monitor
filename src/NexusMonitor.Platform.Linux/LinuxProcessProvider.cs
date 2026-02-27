@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using NexusMonitor.Core.Abstractions;
@@ -438,6 +438,13 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 
         return result;
     }
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HandleInfo>>([]);
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
+
 
     // ── IDisposable ────────────────────────────────────────────────────────────
     public void Dispose()

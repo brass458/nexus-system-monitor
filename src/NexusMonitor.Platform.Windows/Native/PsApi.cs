@@ -39,6 +39,16 @@ internal static partial class PsApi
     public static partial bool GetPerformanceInfo(
         ref PERFORMANCE_INFORMATION pPerformanceInformation,
         uint cb);
+
+    // ─── Memory-mapped file name ──────────────────────────────────────────────
+    // Uses DllImport for reliable char[] output marshalling.
+
+    [DllImport(Dll, SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern uint GetMappedFileNameW(
+        nint hProcess,
+        nint lpv,
+        [Out] char[] lpFilename,
+        uint nSize);
 }
 
 [StructLayout(LayoutKind.Sequential)]

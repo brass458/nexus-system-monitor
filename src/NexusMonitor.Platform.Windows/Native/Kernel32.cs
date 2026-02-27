@@ -51,6 +51,7 @@ internal static partial class Kernel32
     public const uint PROCESS_SET_INFORMATION       = 0x0200;
     public const uint SYNCHRONIZE                   = 0x00100000;
     public const uint PROCESS_ALL_ACCESS            = 0x1F0FFF;
+    public const uint PROCESS_DUP_HANDLE            = 0x0040;
 
     [LibraryImport(Dll, SetLastError = true)]
     public static partial nint OpenProcess(uint dwDesiredAccess,
@@ -126,4 +127,14 @@ internal static partial class Kernel32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetSystemTimes(
         out long lpIdleTime, out long lpKernelTime, out long lpUserTime);
+
+    // ─── Virtual Memory Query ─────────────────────────────────────────────────
+    // Uses DllImport for reliable struct out-param marshalling.
+
+    [DllImport(Dll, SetLastError = true)]
+    public static extern nint VirtualQueryEx(
+        nint hProcess,
+        nint lpAddress,
+        out MEMORY_BASIC_INFORMATION lpBuffer,
+        nint dwLength);
 }

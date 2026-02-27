@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -67,6 +67,13 @@ public sealed class MockProcessProvider : IProcessProvider
             new("TEMP",     @"C:\Users\User\AppData\Local\Temp"),
             new("USERNAME", "User"),
         });
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HandleInfo>>([]);
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
+
 
     private static ProcessInfo[] GetAnimatedSnapshot()
     {

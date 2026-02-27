@@ -19,6 +19,8 @@ public interface IProcessProvider
     Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default);
     Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(int pid, CancellationToken ct = default);
     Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default);
+    Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default);
+    Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default);
 }
 
 public enum ProcessPriority { Idle, BelowNormal, Normal, AboveNormal, High, RealTime }

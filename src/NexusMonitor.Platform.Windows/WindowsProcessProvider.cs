@@ -686,6 +686,257 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         }, ct);
     }
 
+    // ── Handle Viewer ─────────────────────────────────────────────────────────
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<HandleInfo>>(() => EnumHandles(pid), ct);
+
+    private static IReadOnlyList<HandleInfo> EnumHandles(int pid)
+    {
+        var result = new List<HandleInfo>();
+
+        // 1. Grow buffer until NtQuerySystemInformation returns STATUS_SUCCESS
+        int  bufSize = 4 * 1024 * 1024;
+        nint buf     = nint.Zero;
+        try
+        {
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                buf = Marshal.AllocHGlobal(bufSize);
+                int status = NtDll.NtQuerySystemInformation(
+                    NtDll.SYSTEM_INFORMATION_CLASS.SystemExtendedHandleInformation,
+                    buf, (uint)bufSize, out uint needed);
+                if (status == NtDll.STATUS_SUCCESS) break;
+                Marshal.FreeHGlobal(buf);
+                buf = nint.Zero;
+                bufSize = (int)Math.Max(needed + 65536, (uint)(bufSize * 2L));
+                if (bufSize > 256 * 1024 * 1024) return result;
+            }
+            if (buf == nint.Zero) return result;
+
+            // 2. Header: ulong Count at offset 0, ulong Reserved at +8
+            ulong count = (ulong)Marshal.ReadInt64(buf, 0);
+            if (count == 0) return result;
+
+            int entrySize  = Marshal.SizeOf<SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX>();
+            int headerSize = 16; // count(8) + reserved(8)
+
+            // 3. Collect entries for this PID (cap at 500)
+            var entries = new List<SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX>();
+            for (ulong i = 0; i < count; i++)
+            {
+                nint entryPtr = buf + headerSize + (nint)(i * (ulong)entrySize);
+                var  entry    = Marshal.PtrToStructure<SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX>(entryPtr);
+                if ((uint)entry.UniqueProcessId == (uint)pid)
+                {
+                    entries.Add(entry);
+                    if (entries.Count >= 500) break;
+                }
+            }
+            if (entries.Count == 0) return result;
+
+            // 4. Open target process for handle duplication
+            nint hTarget = Kernel32.OpenProcess(Kernel32.PROCESS_DUP_HANDLE, false, (uint)pid);
+            if (hTarget == nint.Zero) return result;
+
+            nint hSelf = System.Diagnostics.Process.GetCurrentProcess().Handle;
+            try
+            {
+                foreach (var entry in entries)
+                {
+                    try
+                    {
+                        // 5a. Duplicate handle into current process
+                        int dupStatus = NtDll.NtDuplicateObject(
+                            hTarget, entry.HandleValue,
+                            hSelf,   out nint dupHandle,
+                            0, 0, 0);
+                        if (dupStatus != NtDll.STATUS_SUCCESS || dupHandle == nint.Zero)
+                            continue;
+
+                        string typeName   = "";
+                        string objectName = "";
+                        try
+                        {
+                            // 5b. Get type name
+                            typeName = QueryObjectTypeName(dupHandle);
+                            // 5c. Only query object name for non-blocking handle types
+                            if (typeName is "Key" or "Mutant" or "Event" or
+                                "Semaphore" or "Timer" or "Section" or "Directory")
+                                objectName = QueryObjectName(dupHandle);
+                        }
+                        finally { Kernel32.CloseHandle(dupHandle); }
+
+                        result.Add(new HandleInfo(
+                            (ulong)entry.HandleValue,
+                            typeName,
+                            objectName,
+                            $"0x{entry.GrantedAccess:X8}"));
+                    }
+                    catch { /* skip inaccessible handles */ }
+                }
+            }
+            finally { Kernel32.CloseHandle(hTarget); }
+        }
+        finally
+        {
+            if (buf != nint.Zero)
+                Marshal.FreeHGlobal(buf);
+        }
+
+        // 6. Sort by TypeName, then ObjectName
+        result.Sort((a, b) =>
+        {
+            int c = string.Compare(a.TypeName, b.TypeName, StringComparison.OrdinalIgnoreCase);
+            return c != 0 ? c : string.Compare(a.ObjectName, b.ObjectName, StringComparison.OrdinalIgnoreCase);
+        });
+        return result;
+    }
+
+    private static string QueryObjectTypeName(nint handle)
+    {
+        const int bufSize = 512;
+        nint buf = Marshal.AllocHGlobal(bufSize);
+        try
+        {
+            int status = NtDll.NtQueryObject(
+                handle, NtDll.OBJECT_INFORMATION_CLASS.ObjectTypeInformation,
+                buf, bufSize, out _);
+            if (status != NtDll.STATUS_SUCCESS) return "";
+            var us = Marshal.PtrToStructure<UNICODE_STRING>(buf);
+            if (us.Length == 0 || us.Buffer == nint.Zero) return "";
+            return Marshal.PtrToStringUni(us.Buffer, us.Length / 2) ?? "";
+        }
+        catch { return ""; }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    private static string QueryObjectName(nint handle)
+    {
+        const int bufSize = 1024;
+        nint buf = Marshal.AllocHGlobal(bufSize);
+        try
+        {
+            int status = NtDll.NtQueryObject(
+                handle, NtDll.OBJECT_INFORMATION_CLASS.ObjectNameInformation,
+                buf, bufSize, out _);
+            if (status != NtDll.STATUS_SUCCESS) return "";
+            var us = Marshal.PtrToStructure<UNICODE_STRING>(buf);
+            if (us.Length == 0 || us.Buffer == nint.Zero) return "";
+            return Marshal.PtrToStringUni(us.Buffer, us.Length / 2) ?? "";
+        }
+        catch { return ""; }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    // ── Memory Map ────────────────────────────────────────────────────────────
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<MemoryRegionInfo>>(() => EnumMemoryMap(pid), ct);
+
+    private static IReadOnlyList<MemoryRegionInfo> EnumMemoryMap(int pid)
+    {
+        var result = new List<MemoryRegionInfo>();
+        nint hProc = Kernel32.OpenProcess(Kernel32.PROCESS_QUERY_LIMITED_INFO, false, (uint)pid);
+        if (hProc == nint.Zero) return result;
+        try
+        {
+            nint mbiSize = (nint)Marshal.SizeOf<MEMORY_BASIC_INFORMATION>();
+            nint addr    = nint.Zero;
+            const ulong MaxAddr = 0x7FFFFFFFFFFFUL;
+
+            while ((ulong)addr < MaxAddr && result.Count < 300)
+            {
+                nint ret = Kernel32.VirtualQueryEx(hProc, addr, out var mbi, mbiSize);
+                if (ret == nint.Zero) break;
+
+                ulong regionSize = (ulong)mbi.RegionSize;
+                if (regionSize == 0) break;
+
+                // Advance address before anything else (avoid infinite loop)
+                addr = (nint)((ulong)addr + regionSize);
+
+                const uint MEM_FREE = 0x10000;
+                if (mbi.State == MEM_FREE) continue;
+
+                string description = "";
+                const uint MEM_IMAGE = 0x1000000;
+                if (mbi.Type == MEM_IMAGE)
+                    description = GetMappedImagePath(hProc, mbi.BaseAddress);
+
+                result.Add(new MemoryRegionInfo(
+                    (ulong)mbi.BaseAddress,
+                    regionSize,
+                    DecodeState(mbi.State),
+                    DecodeType(mbi.Type),
+                    DecodeProtect(mbi.Protect),
+                    description));
+            }
+        }
+        finally { Kernel32.CloseHandle(hProc); }
+        return result;
+    }
+
+    private static string GetMappedImagePath(nint hProc, nint addr)
+    {
+        var buf = new char[512];
+        uint len = PsApi.GetMappedFileNameW(hProc, addr, buf, (uint)buf.Length);
+        if (len == 0) return "";
+        var path = new string(buf, 0, (int)len);
+        // Convert NT device path → drive letter where possible
+        foreach (var drive in System.IO.Directory.GetLogicalDrives())
+        {
+            string letter = drive.TrimEnd('\\');
+            var sb = new System.Text.StringBuilder(512);
+            if (QueryDosDevice(letter, sb, (uint)sb.Capacity) > 0)
+            {
+                string device = sb.ToString();
+                if (path.StartsWith(device, StringComparison.OrdinalIgnoreCase))
+                    return letter + path[device.Length..];
+            }
+        }
+        return path;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint QueryDosDevice(
+        string lpDeviceName, System.Text.StringBuilder lpTargetPath, uint ucchMax);
+
+    private static string DecodeState(uint state) => state switch
+    {
+        0x1000 => "Committed",
+        0x2000 => "Reserved",
+        _      => $"0x{state:X}",
+    };
+
+    private static string DecodeType(uint type) => type switch
+    {
+        0x1000000 => "Image",
+        0x40000   => "Mapped",
+        0x20000   => "Private",
+        _         => $"0x{type:X}",
+    };
+
+    private static string DecodeProtect(uint protect)
+    {
+        uint   baseFlags = protect & 0xFF;
+        bool   isGuard   = (protect & 0x100) != 0;
+        string prot = baseFlags switch
+        {
+            0x01 => "No Access",
+            0x02 => "R",
+            0x04 => "RW",
+            0x08 => "WC",
+            0x10 => "RX",
+            0x20 => "RWX",
+            0x40 => "RX+C",
+            0x80 => "RWX+C",
+            0    => "-",
+            _    => $"0x{protect:X2}",
+        };
+        return isGuard ? prot + "+G" : prot;
+    }
+
     // ── Phase 7 P/Invoke ──────────────────────────────────────────────────────
 
     [DllImport("kernel32.dll", SetLastError = true)]
