@@ -32,6 +32,18 @@ public sealed class MockProcessProvider : IProcessProvider
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default)
         => Task.CompletedTask;
 
+    public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default)
+        => Task.CompletedTask;
+
     public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<ModuleInfo>>(new List<ModuleInfo>
         {

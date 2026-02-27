@@ -54,6 +54,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NexusMonitor.Core\NexusMonitor.Core.csproj" />
+    <ProjectReference Include="..\NexusMonitor.DiskAnalyzer\NexusMonitor.DiskAnalyzer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,3 +1,5 @@
+using NexusMonitor.Core.Abstractions;
+
 namespace NexusMonitor.Core.Models;
 
 public enum ProcessCategory
@@ -59,4 +61,10 @@ public record ProcessInfo
     public bool IsElevated { get; init; }
     public bool IsCritical { get; init; }
     public bool AccessDenied { get; init; }
+
+    // Extended (Phase 7)
+    public long AffinityMask { get; init; }
+    public IoPriority CurrentIoPriority { get; init; }
+    public MemoryPriority CurrentMemoryPriority { get; init; }
+    public bool IsEfficiencyMode { get; init; }
 }

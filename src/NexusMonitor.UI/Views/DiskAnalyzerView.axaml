@@ -1,0 +1,339 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:ctrl="using:NexusMonitor.UI.Controls"
+             xmlns:models="clr-namespace:NexusMonitor.DiskAnalyzer.Models;assembly=NexusMonitor.DiskAnalyzer"
+             x:Class="NexusMonitor.UI.Views.DiskAnalyzerView"
+             x:DataType="vm:DiskAnalyzerViewModel"
+             x:CompileBindings="False"
+             Background="{DynamicResource BgBaseBrush}">
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ── Top toolbar ────────────────────────────────────────────────── -->
+    <Border Grid.Row="0" Padding="16,12" Background="{DynamicResource BgPrimaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,8,*,8,Auto,8,Auto,8,Auto">
+
+        <!-- Drive ComboBox -->
+        <ComboBox Grid.Column="0"
+                  ItemsSource="{Binding AvailableDrives}"
+                  SelectedItem="{Binding SelectedPath}"
+                  Width="110"
+                  VerticalAlignment="Center"/>
+
+        <!-- Path TextBox -->
+        <TextBox Grid.Column="2"
+                 Text="{Binding SelectedPath}"
+                 Watermark="Enter path to scan..."
+                 VerticalAlignment="Center"/>
+
+        <!-- Scan button (shown when not scanning) -->
+        <Button Grid.Column="4"
+                Content="Scan"
+                Command="{Binding StartScanCommand}"
+                IsVisible="{Binding !IsScanning}"
+                Padding="16,8"
+                VerticalAlignment="Center">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}"/>
+              <Setter Property="Foreground" Value="White"/>
+              <Setter Property="CornerRadius" Value="8"/>
+            </Style>
+            <Style Selector="Button:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="{DynamicResource AccentBlueHoverBrush}"/>
+            </Style>
+          </Button.Styles>
+        </Button>
+
+        <!-- Cancel button (shown when scanning) -->
+        <Button Grid.Column="4"
+                Content="Cancel"
+                Command="{Binding CancelScanCommand}"
+                IsVisible="{Binding IsScanning}"
+                Padding="16,8"
+                VerticalAlignment="Center">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="{StaticResource ColorDangerBrush}"/>
+              <Setter Property="Foreground" Value="White"/>
+              <Setter Property="CornerRadius" Value="8"/>
+            </Style>
+          </Button.Styles>
+        </Button>
+
+        <!-- Find Duplicates button -->
+        <Button Grid.Column="6"
+                Content="Find Duplicates"
+                Command="{Binding FindDuplicatesCommand}"
+                IsEnabled="{Binding HasScanResult}"
+                Padding="14,8"
+                VerticalAlignment="Center">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+              <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+              <Setter Property="CornerRadius" Value="8"/>
+            </Style>
+          </Button.Styles>
+        </Button>
+
+        <!-- Status text -->
+        <TextBlock Grid.Column="8"
+                   Text="{Binding ScanStatus}"
+                   VerticalAlignment="Center"
+                   Foreground="{StaticResource TextTertiaryBrush}"
+                   FontSize="12"
+                   MaxWidth="260"
+                   TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </Border>
+
+    <!-- ── Main content area ──────────────────────────────────────────── -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,1,300">
+
+      <!-- ── Left: Treemap + breadcrumb + file list ───────────────────── -->
+      <Grid Grid.Column="0" RowDefinitions="Auto,*,4,200">
+
+        <!-- Breadcrumb navigation -->
+        <Border Grid.Row="0" Padding="10,7"
+                Background="{DynamicResource BgPrimaryBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Content="Up"
+                    Command="{Binding NavigateUpCommand}"
+                    Padding="8,4"
+                    IsEnabled="{Binding SelectedNode.Parent, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <Button.Styles>
+                <Style Selector="Button">
+                  <Setter Property="CornerRadius" Value="6"/>
+                  <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+                  <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                </Style>
+              </Button.Styles>
+            </Button>
+            <ItemsControl ItemsSource="{Binding Breadcrumb}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="0"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:DiskNode">
+                  <StackPanel Orientation="Horizontal" Spacing="2">
+                    <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center" FontSize="11"/>
+                    <Button Content="{Binding Name}"
+                            Command="{Binding $parent[UserControl].DataContext.NavigateToBreadcrumbCommand}"
+                            CommandParameter="{Binding}"
+                            Padding="5,3">
+                      <Button.Styles>
+                        <Style Selector="Button">
+                          <Setter Property="Background" Value="Transparent"/>
+                          <Setter Property="Foreground" Value="{DynamicResource AccentBlueBrush}"/>
+                          <Setter Property="CornerRadius" Value="5"/>
+                          <Setter Property="FontSize" Value="12"/>
+                        </Style>
+                      </Button.Styles>
+                    </Button>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- Treemap canvas area -->
+        <Border Grid.Row="1" Background="#0A0A0C" ClipToBounds="True">
+          <Panel>
+            <!-- Idle hint -->
+            <TextBlock Text="Click 'Scan' to analyze disk usage"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="14"
+                       IsVisible="{Binding !HasScanResult}"/>
+
+            <!-- Scanning progress bar at bottom -->
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsScanning}"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Bottom"
+                         Height="3"
+                         Background="Transparent"
+                         Foreground="{DynamicResource AccentBlueBrush}"/>
+
+            <!-- SkiaSharp treemap control -->
+            <ctrl:TreemapControl x:Name="TheTreemap"
+                                 RootNode="{Binding RootNode}"
+                                 SelectedNode="{Binding SelectedNode}"
+                                 IsVisible="{Binding HasScanResult}"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"/>
+          </Panel>
+        </Border>
+
+        <!-- Splitter between treemap and file list -->
+        <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch"
+                      Background="{StaticResource BorderSubtleBrush}"/>
+
+        <!-- File list DataGrid -->
+        <DataGrid Grid.Row="3"
+                  ItemsSource="{Binding FileRows}"
+                  SelectedItem="{Binding SelectedFile}"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  CanUserSortColumns="True"
+                  FontSize="12"
+                  Background="{DynamicResource BgPrimaryBrush}">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Name"     Binding="{Binding Name}"        Width="*" MinWidth="140"/>
+            <DataGridTextColumn Header="Size"     Binding="{Binding SizeDisplay}" Width="90"/>
+            <DataGridTextColumn Header="Files"    Binding="{Binding FileCountDisplay}" Width="80"/>
+            <DataGridTextColumn Header="Modified" Binding="{Binding LastModified, StringFormat='yyyy-MM-dd'}" Width="100"/>
+            <DataGridTextColumn Header="Type"     Binding="{Binding Extension}"   Width="60"/>
+          </DataGrid.Columns>
+          <DataGrid.ContextMenu>
+            <ContextMenu>
+              <MenuItem Header="Open Location"
+                        Command="{Binding $parent[UserControl].DataContext.OpenFileLocationCommand}"
+                        CommandParameter="{Binding}"/>
+              <MenuItem Header="Copy Path"
+                        Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}"
+                        CommandParameter="{Binding}"/>
+              <MenuItem Header="Navigate Into"
+                        Command="{Binding $parent[UserControl].DataContext.NavigateIntoCommand}"
+                        CommandParameter="{Binding}"
+                        IsEnabled="{Binding IsDirectory}"/>
+            </ContextMenu>
+          </DataGrid.ContextMenu>
+        </DataGrid>
+      </Grid>
+
+      <!-- Vertical divider -->
+      <GridSplitter Grid.Column="1"
+                    Width="1"
+                    VerticalAlignment="Stretch"
+                    Background="{StaticResource BorderSubtleBrush}"/>
+
+      <!-- ── Right panel: file details + duplicates ──────────────────── -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+
+        <!-- Selected file details card -->
+        <Border Grid.Row="0"
+                Padding="14"
+                Background="{DynamicResource BgPrimaryBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding SelectedFile.Name, FallbackValue='— No selection —'}"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+
+            <Grid ColumnDefinitions="80,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto"
+                  IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size"
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+              <TextBlock Grid.Row="0" Grid.Column="1"
+                         Text="{Binding SelectedFile.SizeDisplay}"
+                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path"
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+              <TextBlock Grid.Row="1" Grid.Column="1"
+                         Text="{Binding SelectedFile.FullPath}"
+                         FontSize="10" TextWrapping="Wrap"
+                         Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3"/>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Modified"
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11" Margin="0,0,0,3"/>
+              <TextBlock Grid.Row="2" Grid.Column="1"
+                         Text="{Binding SelectedFile.LastModified, StringFormat='yyyy-MM-dd HH:mm'}"
+                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
+
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="% of parent"
+                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="11"/>
+              <TextBlock Grid.Row="3" Grid.Column="1"
+                         Text="{Binding SelectedFile.PercentOfParent, StringFormat='{}{0:F1}%'}"
+                         FontSize="11" Foreground="{StaticResource TextPrimaryBrush}"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Duplicates panel -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*">
+
+          <!-- Duplicates header -->
+          <Border Grid.Row="0"
+                  Padding="14,10"
+                  Background="{DynamicResource BgPrimaryBrush}"
+                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderThickness="0,0,0,1">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Duplicate Files"
+                         FontSize="13"
+                         FontWeight="SemiBold"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="{Binding DuplicateSummary}"
+                         FontSize="11"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         TextWrapping="Wrap"/>
+              <ProgressBar IsIndeterminate="True"
+                           IsVisible="{Binding IsDuplicateScanning}"
+                           Height="2"
+                           Background="Transparent"
+                           Foreground="{DynamicResource AccentBlueBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Duplicate groups list -->
+          <ScrollViewer Grid.Row="1">
+            <ItemsControl ItemsSource="{Binding Duplicates}" Padding="8">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:DuplicateGroup">
+                  <Border Margin="0,0,0,8"
+                          Padding="10"
+                          CornerRadius="8"
+                          Background="#0DEBEBF5"
+                          BorderBrush="{StaticResource BorderSubtleBrush}"
+                          BorderThickness="1">
+                    <StackPanel Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding WastedDisplay}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource ColorWarningBrush}"
+                                   FontSize="12"/>
+                        <TextBlock Text="wasted"
+                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   FontSize="12"/>
+                        <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
+                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   FontSize="12"/>
+                      </StackPanel>
+                      <ItemsControl ItemsSource="{Binding Files}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="models:DiskNode">
+                            <TextBlock Text="{Binding FullPath}"
+                                       FontSize="10"
+                                       Foreground="{StaticResource TextTertiaryBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -1,4 +1,4 @@
-using Avalonia.Threading;
+﻿using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -21,15 +21,18 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         NavItems =
         [
-            // eager: true  →  ViewModel created immediately at app startup so its
+            // eager: true  â†’  ViewModel created immediately at app startup so its
             // data streams are live before the user ever clicks the tab.
-            new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),   eager: true),
-            new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(), eager: true),
-            new NavItem("Services",     "\ue9a0", () => services.GetRequiredService<ServicesViewModel>(),    eager: false),
-            new NavItem("Startup",      "\ue9b0", () => services.GetRequiredService<StartupViewModel>(),     eager: false),
-            new NavItem("Network",      "\ue9c8", () => services.GetRequiredService<NetworkViewModel>(),     eager: false),
+            new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),    eager: true),
+            new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(),  eager: true),
+            new NavItem("Services",     "\ue9a0", () => services.GetRequiredService<ServicesViewModel>(),     eager: false),
+            new NavItem("Startup",      "\ue9b0", () => services.GetRequiredService<StartupViewModel>(),      eager: false),
+            new NavItem("Network",      "\ue9c8", () => services.GetRequiredService<NetworkViewModel>(),      eager: false),
             new NavItem("Optimization", "\ue993", () => services.GetRequiredService<OptimizationViewModel>(), eager: false),
-            new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),    eager: false),
+            new NavItem("ProBalance",   "\ue996", () => services.GetRequiredService<ProBalanceViewModel>(),   eager: false),
+            new NavItem("Rules",        "\ue994", () => services.GetRequiredService<RulesViewModel>(),        eager: false),
+            new NavItem("Disk Analyzer","\ue9e5", () => services.GetRequiredService<DiskAnalyzerViewModel>(), eager: false),
+            new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),     eager: false),
         ];
 
         _selectedNavItem = NavItems[0];
@@ -52,7 +55,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (item == SelectedNavItem) return;
 
-        // Each NavItem caches its ViewModel — we never dispose on navigation.
+        // Each NavItem caches its ViewModel â€” we never dispose on navigation.
         // The instance keeps its Rx subscription and history alive in the
         // background, so data is always ready when the user returns to a tab.
         SelectedNavItem = item;

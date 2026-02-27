@@ -112,11 +112,15 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         try { imagePath = p.MainModule?.FileName ?? string.Empty; } catch { }
 
         // ── P/Invoke supplement: IO counters, parent PID, elevation, username, cmdline ──
-        long   ioReadSec   = 0, ioWriteSec = 0;
-        int    parentPid   = 0;
-        bool   isElevated  = false;
-        string userName    = string.Empty;
-        string commandLine = string.Empty;
+        long          ioReadSec         = 0, ioWriteSec = 0;
+        int           parentPid         = 0;
+        bool          isElevated        = false;
+        string        userName          = string.Empty;
+        string        commandLine       = string.Empty;
+        long          affinityMask      = 0;
+        IoPriority    ioPriority        = IoPriority.Normal;
+        MemoryPriority memoryPriority   = MemoryPriority.Normal;
+        bool          isEfficiencyMode  = false;
 
         nint hProcess = Kernel32.OpenProcess(
             Kernel32.PROCESS_QUERY_LIMITED_INFO | Kernel32.PROCESS_VM_READ,
@@ -158,6 +162,26 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             finally { Kernel32.CloseHandle(hProcess); }
         }
 
+        // ── Phase 7: affinity, IO priority, memory priority, efficiency mode ──
+        // These require PROCESS_QUERY_INFORMATION (not LIMITED), so use a separate handle
+        nint hQuery = Kernel32.OpenProcess(
+            Kernel32.PROCESS_QUERY_INFORMATION,
+            false, (uint)pid);
+
+        if (hQuery != nint.Zero)
+        {
+            try
+            {
+                if (GetProcessAffinityMask(hQuery, out nuint procAffinity, out _))
+                    affinityMask = (long)procAffinity;
+                ioPriority       = ReadIoPriority(hQuery);
+                memoryPriority   = ReadMemoryPriority(hQuery);
+                isEfficiencyMode = ReadEfficiencyMode(hQuery);
+            }
+            catch { /* access denied or process exited */ }
+            finally { Kernel32.CloseHandle(hQuery); }
+        }
+
         // ── File description (version info) ───────────────────────────────────
         string description = string.Empty;
         if (!string.IsNullOrEmpty(imagePath))
@@ -170,26 +194,30 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
 
         return new ProcessInfo
         {
-            Pid               = pid,
-            ParentPid         = parentPid,
-            Name              = name,
-            Description       = description,
-            ImagePath         = imagePath,
-            CommandLine       = commandLine,
-            UserName          = userName,
-            Category          = Classify(pid, name, imagePath),
-            State             = ProcessState.Running,
-            StartTime         = startTime,
-            CpuPercent        = cpuPercent,
-            ThreadCount       = threadCount,
-            HandleCount       = handleCount,
-            WorkingSetBytes   = wsBytes,
-            PrivateBytesBytes = privateBytes,
-            PagedPoolBytes    = pagedPool,
-            IoReadBytesPerSec  = Math.Max(0, ioReadSec),
-            IoWriteBytesPerSec = Math.Max(0, ioWriteSec),
-            IsElevated        = isElevated,
-            AccessDenied      = accessDenied,
+            Pid                   = pid,
+            ParentPid             = parentPid,
+            Name                  = name,
+            Description           = description,
+            ImagePath             = imagePath,
+            CommandLine           = commandLine,
+            UserName              = userName,
+            Category              = Classify(pid, name, imagePath),
+            State                 = ProcessState.Running,
+            StartTime             = startTime,
+            CpuPercent            = cpuPercent,
+            ThreadCount           = threadCount,
+            HandleCount           = handleCount,
+            WorkingSetBytes       = wsBytes,
+            PrivateBytesBytes     = privateBytes,
+            PagedPoolBytes        = pagedPool,
+            IoReadBytesPerSec     = Math.Max(0, ioReadSec),
+            IoWriteBytesPerSec    = Math.Max(0, ioWriteSec),
+            IsElevated            = isElevated,
+            AccessDenied          = accessDenied,
+            AffinityMask          = affinityMask,
+            CurrentIoPriority     = ioPriority,
+            CurrentMemoryPriority = memoryPriority,
+            IsEfficiencyMode      = isEfficiencyMode,
         };
     }
 
@@ -517,6 +545,74 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             finally { Kernel32.CloseHandle(h); }
         }, ct);
 
+    public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_SET_INFORMATION, false, (uint)pid);
+            if (h == nint.Zero) throw new InvalidOperationException($"Cannot open process {pid}");
+            try
+            {
+                int value = (int)priority;
+                NtSetInformationProcess(h, NtProcessInfoClass.ProcessIoPriority, ref value, sizeof(int));
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
+    public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_SET_INFORMATION, false, (uint)pid);
+            if (h == nint.Zero) throw new InvalidOperationException($"Cannot open process {pid}");
+            try
+            {
+                var info = new MEMORY_PRIORITY_INFORMATION { MemoryPriority = (uint)priority };
+                nint buf = Marshal.AllocHGlobal(Marshal.SizeOf<MEMORY_PRIORITY_INFORMATION>());
+                try
+                {
+                    Marshal.StructureToPtr(info, buf, false);
+                    SetProcessInformation(h, ProcessInformationClass.ProcessMemoryPriority,
+                        buf, (uint)Marshal.SizeOf<MEMORY_PRIORITY_INFORMATION>());
+                }
+                finally { Marshal.FreeHGlobal(buf); }
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
+    public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_SET_INFORMATION | Kernel32.PROCESS_QUERY_INFORMATION, false, (uint)pid);
+            if (h == nint.Zero) throw new InvalidOperationException($"Cannot open process {pid}");
+            try   { EmptyWorkingSet(h); }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
+    public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_SET_INFORMATION, false, (uint)pid);
+            if (h == nint.Zero) throw new InvalidOperationException($"Cannot open process {pid}");
+            try
+            {
+                // PROCESS_POWER_THROTTLING_EXECUTION_SPEED = 1
+                var state = new PROCESS_POWER_THROTTLING_STATE
+                {
+                    Version     = 1,
+                    ControlMask = 1,
+                    StateMask   = enabled ? 1u : 0u
+                };
+                nint buf = Marshal.AllocHGlobal(Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>());
+                try
+                {
+                    Marshal.StructureToPtr(state, buf, false);
+                    SetProcessInformation(h, ProcessInformationClass.ProcessPowerThrottling,
+                        buf, (uint)Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>());
+                }
+                finally { Marshal.FreeHGlobal(buf); }
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
     public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default)
     {
         return Task.Run(() =>
@@ -590,6 +686,73 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         }, ct);
     }
 
+    // ── Phase 7 P/Invoke ──────────────────────────────────────────────────────
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool EmptyWorkingSet(nint hProcess);
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtSetInformationProcess(nint hProcess, int infoClass, ref int info, int infoLen);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetProcessInformation(nint hProcess, int infoClass, nint info, uint infoSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetProcessInformation(nint hProcess, int infoClass, nint info, uint infoSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetProcessAffinityMask(nint hProcess,
+        out nuint lpProcessAffinityMask, out nuint lpSystemAffinityMask);
+
+    // ── Read current IO priority ───────────────────────────────────────────────
+
+    private static IoPriority ReadIoPriority(nint hProcess)
+    {
+        int value = (int)IoPriority.Normal;
+        NtQueryInformationProcessInt(hProcess, NtProcessInfoClass.ProcessIoPriority, ref value, sizeof(int));
+        return (IoPriority)Math.Clamp(value, 0, 3);
+    }
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtQueryInformationProcessInt(nint hProcess, int infoClass, ref int info, int infoLen);
+
+    // ── Read current memory priority ──────────────────────────────────────────
+
+    private static MemoryPriority ReadMemoryPriority(nint hProcess)
+    {
+        var info = new MEMORY_PRIORITY_INFORMATION { MemoryPriority = (uint)MemoryPriority.Normal };
+        nint buf = Marshal.AllocHGlobal(Marshal.SizeOf<MEMORY_PRIORITY_INFORMATION>());
+        try
+        {
+            Marshal.StructureToPtr(info, buf, false);
+            GetProcessInformation(hProcess, ProcessInformationClass.ProcessMemoryPriority,
+                buf, (uint)Marshal.SizeOf<MEMORY_PRIORITY_INFORMATION>());
+            var result = Marshal.PtrToStructure<MEMORY_PRIORITY_INFORMATION>(buf);
+            return (MemoryPriority)Math.Clamp((int)result.MemoryPriority, 1, 5);
+        }
+        catch { return MemoryPriority.Normal; }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    // ── Read efficiency mode ───────────────────────────────────────────────────
+
+    private static bool ReadEfficiencyMode(nint hProcess)
+    {
+        var state = new PROCESS_POWER_THROTTLING_STATE { Version = 1 };
+        nint buf = Marshal.AllocHGlobal(Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>());
+        try
+        {
+            Marshal.StructureToPtr(state, buf, false);
+            if (!GetProcessInformation(hProcess, ProcessInformationClass.ProcessPowerThrottling,
+                    buf, (uint)Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>()))
+                return false;
+            var result = Marshal.PtrToStructure<PROCESS_POWER_THROTTLING_STATE>(buf);
+            return (result.ControlMask & 1) != 0 && (result.StateMask & 1) != 0;
+        }
+        catch { return false; }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+
     public void Dispose()
     {
         _cpuSamples.Clear();
@@ -597,4 +760,31 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         _userNameCache.Clear();
         _commandLineCache.Clear();
     }
+}
+
+// ── Phase 7 helper types (file-scoped, inside the namespace) ─────────────────
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct MEMORY_PRIORITY_INFORMATION
+{
+    public uint MemoryPriority;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct PROCESS_POWER_THROTTLING_STATE
+{
+    public uint Version;     // = 1
+    public uint ControlMask;
+    public uint StateMask;
+}
+
+internal static class ProcessInformationClass
+{
+    public const int ProcessMemoryPriority  = 0;
+    public const int ProcessPowerThrottling = 4;
+}
+
+internal static class NtProcessInfoClass
+{
+    public const int ProcessIoPriority = 33; // 0x21
 }

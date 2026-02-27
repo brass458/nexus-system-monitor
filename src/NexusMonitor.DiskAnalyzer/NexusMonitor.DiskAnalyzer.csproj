@@ -5,11 +5,15 @@
     <LangVersion>12</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>NexusMonitor.Platform.Linux</AssemblyName>
-    <RootNamespace>NexusMonitor.Platform.Linux</RootNamespace>
+    <AssemblyName>NexusMonitor.DiskAnalyzer</AssemblyName>
+    <RootNamespace>NexusMonitor.DiskAnalyzer</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\NexusMonitor.Core\NexusMonitor.Core.csproj" />
   </ItemGroup>
 </Project>

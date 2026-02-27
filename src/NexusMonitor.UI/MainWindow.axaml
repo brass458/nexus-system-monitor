@@ -229,6 +229,15 @@
             <DataTemplate DataType="vm:OptimizationViewModel">
               <views:OptimizationView />
             </DataTemplate>
+            <DataTemplate DataType="vm:DiskAnalyzerViewModel">
+              <views:DiskAnalyzerView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ProBalanceViewModel">
+              <views:ProBalanceView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:RulesViewModel">
+              <views:RulesView />
+            </DataTemplate>
             <DataTemplate DataType="vm:SettingsViewModel">
               <views:SettingsView />
             </DataTemplate>

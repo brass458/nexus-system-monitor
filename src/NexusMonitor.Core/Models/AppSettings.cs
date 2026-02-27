@@ -1,3 +1,5 @@
+using NexusMonitor.Core.Rules;
+
 namespace NexusMonitor.Core.Models;
 
 public class AppSettings
@@ -28,4 +30,12 @@ public class AppSettings
 
     // Other
     public bool   ShowOverlayWidget  { get; set; } = false;
+
+    // ProBalance
+    public bool          ProBalanceEnabled      { get; set; } = false;
+    public double        ProBalanceCpuThreshold { get; set; } = 80.0;
+    public List<string>  ProBalanceExclusions   { get; set; } = new();
+
+    // Rules
+    public List<ProcessRule> Rules { get; set; } = new();
 }
