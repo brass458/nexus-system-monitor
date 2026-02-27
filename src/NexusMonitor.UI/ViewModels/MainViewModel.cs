@@ -25,6 +25,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             // data streams are live before the user ever clicks the tab.
             new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),    eager: true),
             new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(),  eager: true),
+            new NavItem("System Info",  "\ue9d8", () => services.GetRequiredService<SystemInfoViewModel>(),   eager: false),
             new NavItem("Services",     "\ue9a0", () => services.GetRequiredService<ServicesViewModel>(),     eager: false),
             new NavItem("Startup",      "\ue9b0", () => services.GetRequiredService<StartupViewModel>(),      eager: false),
             new NavItem("Network",      "\ue9c8", () => services.GetRequiredService<NetworkViewModel>(),      eager: false),
