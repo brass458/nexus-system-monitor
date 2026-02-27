@@ -49,6 +49,9 @@ public partial class SettingsViewModel : ViewModelBase
     // ── Other ─────────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _showOverlayWidget;
 
+    // ── Notifications ─────────────────────────────────────────────────────────
+    [ObservableProperty] private bool   _desktopNotificationsEnabled = true;
+
     // ── Static lists ─────────────────────────────────────────────────────────
 
     public static IReadOnlyList<string> AccentPresets { get; } =
@@ -116,7 +119,8 @@ public partial class SettingsViewModel : ViewModelBase
         catch { _pickerAccentColor = Color.Parse("#0A84FF"); }
         _fontFamily         = settings.Current.FontFamily;
         _fontScale          = settings.Current.FontScale;
-        _showOverlayWidget  = settings.Current.ShowOverlayWidget;
+        _showOverlayWidget             = settings.Current.ShowOverlayWidget;
+        _desktopNotificationsEnabled   = settings.Current.DesktopNotificationsEnabled;
 
         // Map stored CloseAction → index
         _closeActionIndex = Array.IndexOf(_closeActionValues, settings.Current.CloseAction);
@@ -273,6 +277,12 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Save();
         if (value) OverlayWindow?.Show();
         else        OverlayWindow?.Hide();
+    }
+
+    partial void OnDesktopNotificationsEnabledChanged(bool value)
+    {
+        _settings.Current.DesktopNotificationsEnabled = value;
+        _settings.Save();
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────

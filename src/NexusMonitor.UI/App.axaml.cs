@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -67,6 +67,7 @@ public class App : Application
                 Services.GetRequiredService<ProBalanceService>().Start();
 
             Services.GetRequiredService<RulesEngine>().Start();
+            Services.GetRequiredService<AlertsService>().Start();
 
             // System-tray icon
             SetupTrayIcon(desktop);
@@ -164,7 +165,9 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  WindowsNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             WindowsStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    WindowsForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider, WindowsPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           WindowsPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         WindowsNotificationService>();
+        services.AddSingleton<WindowsHardwareInfoProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
@@ -172,7 +175,8 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MacOSNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -180,7 +184,8 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  LinuxNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
@@ -188,7 +193,8 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MockStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MockForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider, MockPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
 #endif
 
         // -- Core services --
@@ -211,6 +217,7 @@ public class App : Application
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<ProcessesViewModel>();
         services.AddSingleton<PerformanceViewModel>();
+        services.AddSingleton<SystemInfoViewModel>();
         services.AddSingleton<ServicesViewModel>();
         services.AddSingleton<StartupViewModel>();
         services.AddSingleton<NetworkViewModel>();

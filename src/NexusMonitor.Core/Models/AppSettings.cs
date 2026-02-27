@@ -33,6 +33,9 @@ public class AppSettings
     // Other
     public bool   ShowOverlayWidget  { get; set; } = false;
 
+    // Notifications
+    public bool   DesktopNotificationsEnabled { get; set; } = true;
+
     // ProBalance
     public bool          ProBalanceEnabled      { get; set; } = false;
     public double        ProBalanceCpuThreshold { get; set; } = 80.0;

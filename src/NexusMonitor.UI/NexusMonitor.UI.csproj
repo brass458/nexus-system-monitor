@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <!-- Build only for the current host OS during development.
          CI pipelines for macOS/Linux should override with -f net8.0-macos or -f net8.0 -->
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net8.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net8.0-windows10.0.17763.0</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net8.0-macos</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net8.0</TargetFrameworks>
     <Nullable>enable</Nullable>

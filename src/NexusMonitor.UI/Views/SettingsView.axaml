@@ -418,6 +418,31 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== NOTIFICATIONS ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Notifications" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Desktop Alert Notifications" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Show a Windows toast when an alert rule threshold is triggered"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding DesktopNotificationsEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+      </StackPanel>
+    </Border>
+
     <!-- ===== SYSTEM TRAY ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

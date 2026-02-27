@@ -2,6 +2,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Services;
 
 namespace NexusMonitor.Core.Alerts;
 
@@ -11,8 +12,9 @@ namespace NexusMonitor.Core.Alerts;
 /// </summary>
 public sealed class AlertsService : IDisposable
 {
-    private readonly ISystemMetricsProvider _metrics;
-    private readonly AppSettings            _settings;
+    private readonly ISystemMetricsProvider  _metrics;
+    private readonly AppSettings             _settings;
+    private readonly INotificationService    _notifications;
 
     // Sustain tracking: first moment this rule's value crossed the threshold
     private readonly Dictionary<Guid, DateTime> _firstSeen  = new();
@@ -28,10 +30,12 @@ public sealed class AlertsService : IDisposable
     public bool                    IsRunning  => _running;
     public int                     AlertCount => _alertCount;
 
-    public AlertsService(ISystemMetricsProvider metrics, AppSettings settings)
+    public AlertsService(ISystemMetricsProvider metrics, AppSettings settings,
+                         INotificationService notifications)
     {
-        _metrics  = metrics;
-        _settings = settings;
+        _metrics       = metrics;
+        _settings      = settings;
+        _notifications = notifications;
     }
 
     /// <summary>Start the monitoring loop. Safe to call multiple times.</summary>
@@ -107,6 +111,10 @@ public sealed class AlertsService : IDisposable
                     _events.OnNext(alertEvent);
                     _lastFired[rule.Id] = now;
                     System.Threading.Interlocked.Increment(ref _alertCount);
+
+                    // Fire desktop toast notification if enabled
+                    if (_settings.DesktopNotificationsEnabled)
+                        _notifications.ShowAlert(rule.Name, alertEvent.ValueDisplay, rule.Severity);
                 }
             }
             else
