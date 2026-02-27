@@ -16,7 +16,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Gaming Mode"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
@@ -90,7 +90,7 @@
               <TextBlock Text="THROTTLED" FontSize="10" FontWeight="Medium"
                          LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding ThrottledCount}"
-                         FontSize="28" FontWeight="Bold" Foreground="#FF9F0A"/>
+                         FontSize="28" FontWeight="Bold" Foreground="{StaticResource ColorWarningBrush}"/>
               <TextBlock Text="background processes" FontSize="10"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
             </StackPanel>

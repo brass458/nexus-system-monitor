@@ -42,6 +42,13 @@
   <Style Selector="Button.nx-btn-ghost:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
   </Style>
+  <!-- Active nav item — accent background + accent text -->
+  <Style Selector="Button.nx-btn-ghost.active">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBlueBrush}" />
+  </Style>
+  <Style Selector="Button.nx-btn-ghost.active /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBlueDimBrush}" />
+  </Style>
 
   <!-- ===== TEXT INPUT ===== -->
   <Style Selector="TextBox.nx-input">

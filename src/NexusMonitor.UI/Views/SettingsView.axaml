@@ -37,16 +37,16 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="24" Spacing="16">
     <TextBlock Text="Settings"
-               FontSize="20" FontWeight="SemiBold"
+               FontSize="16" FontWeight="SemiBold"
                Foreground="{StaticResource TextPrimaryBrush}"/>
 
     <!-- ===== APPEARANCE ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="14">
+      <StackPanel Spacing="12">
         <TextBlock Text="Appearance" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
@@ -87,12 +87,12 @@
     </Border>
 
     <!-- ===== TYPOGRAPHY ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="14">
+      <StackPanel Spacing="12">
         <TextBlock Text="Typography" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
@@ -144,18 +144,18 @@
     </Border>
 
     <!-- ===== ACCENT COLORS ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="14">
+      <StackPanel Spacing="12">
         <TextBlock Text="Accent Colors" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Primary accent palette -->
-        <TextBlock Text="PRIMARY ACCENT" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+        <TextBlock Text="PRIMARY ACCENT" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                    Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
         <TextBlock Text="Affects: buttons, chart lines, active nav item, toggle state, selections"
                    FontSize="10" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
@@ -235,7 +235,7 @@
         </Border>
 
         <!-- Text accent sub-theme -->
-        <TextBlock Text="TEXT ACCENT" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+        <TextBlock Text="TEXT ACCENT" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                    Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
         <TextBlock Text="Separate color for highlighted text, links, and active labels. Leave empty to derive from primary accent."
                    FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
@@ -283,7 +283,7 @@
         </TextBlock>
 
         <!-- ── Custom Color Wheel Picker ──────────────────────────────── -->
-        <TextBlock Text="CUSTOM COLOR PICKER" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+        <TextBlock Text="CUSTOM COLOR PICKER" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                    Foreground="{StaticResource TextTertiaryBrush}" Margin="0,12,0,4"/>
         <TextBlock Text="Drag the wheel to choose hue &amp; saturation. Drag the brightness strip to adjust lightness."
                    FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
@@ -303,7 +303,7 @@
                     BorderThickness="2"/>
             <!-- Hex readout -->
             <StackPanel Spacing="2">
-              <TextBlock Text="HEX" FontSize="9" FontWeight="Medium" LetterSpacing="0.6"
+              <TextBlock Text="HEX" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding AccentColorHex}"
                          FontSize="12"
@@ -320,12 +320,12 @@
     </Border>
 
     <!-- ===== LIQUID GLASS ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="14">
+      <StackPanel Spacing="12">
         <TextBlock Text="Liquid Glass" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
@@ -374,7 +374,7 @@
         </Grid>
 
         <!-- Specular highlights sub-section -->
-        <TextBlock Text="SPECULAR HIGHLIGHTS" FontSize="10" FontWeight="Medium" LetterSpacing="0.8"
+        <TextBlock Text="SPECULAR HIGHLIGHTS" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                    Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
         <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="8">
           <Grid ColumnDefinitions="*,Auto">
@@ -405,7 +405,7 @@
     </Border>
 
     <!-- ===== DESKTOP OVERLAY ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
@@ -429,12 +429,12 @@
     </Border>
 
     <!-- ===== SYSTEM TRAY ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="14">
+      <StackPanel Spacing="12">
         <TextBlock Text="System Tray" FontSize="14" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"/>
         <Separator/>
@@ -473,7 +473,7 @@
     </Border>
 
     <!-- ===== ABOUT ===== -->
-    <Border Padding="20"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"

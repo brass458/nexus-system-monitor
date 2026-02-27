@@ -16,7 +16,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Process Rules"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
@@ -168,7 +168,7 @@
             <DockPanel>
               <TextBlock DockPanel.Dock="Left"
                          Text="{Binding EditorTitle}"
-                         FontSize="15" FontWeight="SemiBold"
+                         FontSize="14" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}"
                          VerticalAlignment="Center"/>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
@@ -193,7 +193,7 @@
                               Converter={x:Static BoolConverters.Not},
                               ConverterParameter=0}">
             <TextBlock Text="{Binding ValidationError}"
-                       FontSize="12" Foreground="#FF453A"/>
+                       FontSize="12" Foreground="{StaticResource ColorDangerBrush}"/>
           </Border>
 
           <ScrollViewer Padding="16">
@@ -229,7 +229,7 @@
                               Content="Rule is enabled"/>
                     <CheckBox IsChecked="{Binding EditDisallowed}"
                               Content="Disallowed (terminate on launch)"
-                              Foreground="#FF453A"/>
+                              Foreground="{StaticResource ColorDangerBrush}"/>
                     <CheckBox IsChecked="{Binding EditKeepRunning}"
                               Content="Keep running (restart on exit)"
                               Foreground="#30D158"/>

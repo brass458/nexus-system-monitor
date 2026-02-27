@@ -143,6 +143,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:NavItem">
                   <Button Classes="nx-btn-ghost"
+                          Classes.active="{Binding IsActive}"
                           HorizontalAlignment="Stretch"
                           HorizontalContentAlignment="Left"
                           Padding="12,9"

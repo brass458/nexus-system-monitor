@@ -16,7 +16,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Optimization"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
 
@@ -43,7 +43,7 @@
 
     <!-- ══ Status bar ═══════════════════════════════════════════════════════ -->
     <Border DockPanel.Dock="Bottom"
-            Padding="16,7"
+            Padding="16,6"
             Background="{StaticResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
@@ -67,7 +67,7 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="TOTAL CPU" FontSize="10" FontWeight="Medium" LetterSpacing="0.6"
+              <TextBlock Text="TOTAL CPU" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding TotalCpuDisplay}"
                          FontSize="26" FontWeight="Bold"
@@ -85,7 +85,7 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="TOP RAM CONSUMER" FontSize="10" FontWeight="Medium" LetterSpacing="0.6"
+              <TextBlock Text="TOP RAM CONSUMER" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
               <TextBlock Text="{Binding TopRamProcess}"
                          FontSize="12" FontWeight="SemiBold"
@@ -104,18 +104,18 @@
                   BorderThickness="1"
                   CornerRadius="{StaticResource CornerLG}">
             <StackPanel Spacing="4">
-              <TextBlock Text="ATTENTION" FontSize="10" FontWeight="Medium" LetterSpacing="0.6"
+              <TextBlock Text="ATTENTION" FontSize="11" FontWeight="Medium" LetterSpacing="0.6"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
               <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <TextBlock Text="🔴" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding CriticalCount}" FontSize="14" FontWeight="Bold"
-                           Foreground="#FF453A" VerticalAlignment="Center"/>
+                           Foreground="{StaticResource ColorDangerBrush}" VerticalAlignment="Center"/>
                 <TextBlock Text="🟠" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding HighCount}" FontSize="14" FontWeight="Bold"
-                           Foreground="#FF9F0A" VerticalAlignment="Center"/>
+                           Foreground="{StaticResource ColorWarningBrush}" VerticalAlignment="Center"/>
                 <TextBlock Text="🟡" FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding MediumCount}" FontSize="14" FontWeight="Bold"
-                           Foreground="#FFD60A" VerticalAlignment="Center"/>
+                           Foreground="{StaticResource ProcCurrentBrush}" VerticalAlignment="Center"/>
               </StackPanel>
               <TextBlock Text="critical · high · medium"
                          FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"/>
@@ -138,17 +138,17 @@
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16"
                         HorizontalAlignment="Right" VerticalAlignment="Center">
               <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="8" Height="8" CornerRadius="4" Background="#FF453A" VerticalAlignment="Center"/>
+                <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource ColorDanger}" VerticalAlignment="Center"/>
                 <TextBlock Text="Critical  CPU &gt;25% or RAM &gt;1 GB" FontSize="10"
                            Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="8" Height="8" CornerRadius="4" Background="#FF9F0A" VerticalAlignment="Center"/>
+                <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource ColorWarning}" VerticalAlignment="Center"/>
                 <TextBlock Text="High  CPU &gt;8% or RAM &gt;512 MB" FontSize="10"
                            Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="8" Height="8" CornerRadius="4" Background="#FFD60A" VerticalAlignment="Center"/>
+                <Border Width="8" Height="8" CornerRadius="4" Background="{StaticResource ProcCurrent}" VerticalAlignment="Center"/>
                 <TextBlock Text="Medium  CPU &gt;2% or RAM &gt;200 MB" FontSize="10"
                            Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
               </StackPanel>

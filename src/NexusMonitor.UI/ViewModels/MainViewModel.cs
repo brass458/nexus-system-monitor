@@ -38,6 +38,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         ];
 
         _selectedNavItem = NavItems[0];
+        NavItems[0].IsActive = true;
         _currentPage     = NavItems[0].GetOrCreate();   // Processes VM already exists
         Title = "Nexus Monitor";
 
@@ -46,8 +47,11 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             Dispatcher.UIThread.Post(() =>
             {
                 var nav = NavItems.First(n => n.Label == "Processes");
-                SelectedNavItem = nav;
-                CurrentPage     = nav.GetOrCreate();
+                if (SelectedNavItem is not null)
+                    SelectedNavItem.IsActive = false;
+                SelectedNavItem  = nav;
+                nav.IsActive     = true;
+                CurrentPage      = nav.GetOrCreate();
             });
         });
     }
@@ -57,11 +61,16 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (item == SelectedNavItem) return;
 
+        // Deactivate the previously selected item
+        if (SelectedNavItem is not null)
+            SelectedNavItem.IsActive = false;
+
         // Each NavItem caches its ViewModel — we never dispose on navigation.
         // The instance keeps its Rx subscription and history alive in the
         // background, so data is always ready when the user returns to a tab.
-        SelectedNavItem = item;
-        CurrentPage     = item.GetOrCreate();
+        SelectedNavItem  = item;
+        item.IsActive    = true;
+        CurrentPage      = item.GetOrCreate();
     }
 
     /// <summary>
@@ -83,10 +92,18 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 /// created immediately (and its data streams start) rather than waiting for
 /// the user to navigate to the tab.
 /// </summary>
-public sealed class NavItem
+public sealed class NavItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public string Label { get; }
     public string Icon  { get; }
+
+    private bool _isActive;
+    /// <summary>True when this item is the currently selected navigation page.</summary>
+    public bool IsActive
+    {
+        get => _isActive;
+        internal set => SetProperty(ref _isActive, value);
+    }
 
     private readonly Func<ViewModelBase> _factory;
     private ViewModelBase? _cached;

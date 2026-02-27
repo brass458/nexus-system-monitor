@@ -16,7 +16,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="System Alerts"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
@@ -97,7 +97,7 @@
                              LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
                   <TextBlock Text="{Binding CriticalCount}"
                              FontSize="28" FontWeight="Bold"
-                             Foreground="#FF453A"/>
+                             Foreground="{StaticResource ColorDangerBrush}"/>
                   <TextBlock Text="this session" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"/>
                 </StackPanel>
@@ -114,7 +114,7 @@
                              LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
                   <TextBlock Text="{Binding WarningCount}"
                              FontSize="28" FontWeight="Bold"
-                             Foreground="#FF9F0A"/>
+                             Foreground="{StaticResource ColorWarningBrush}"/>
                   <TextBlock Text="this session" FontSize="10"
                              Foreground="{StaticResource TextTertiaryBrush}"/>
                 </StackPanel>
@@ -392,7 +392,7 @@
             <DockPanel>
               <TextBlock DockPanel.Dock="Left"
                          Text="{Binding EditorTitle}"
-                         FontSize="15" FontWeight="SemiBold"
+                         FontSize="14" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}"
                          VerticalAlignment="Center"/>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">

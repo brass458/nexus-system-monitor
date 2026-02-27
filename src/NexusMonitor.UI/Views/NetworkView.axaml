@@ -23,7 +23,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Network Connections"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>
@@ -140,7 +140,7 @@
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Local endpoint -->
-            <TextBlock Text="LOCAL ENDPOINT" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="LOCAL ENDPOINT" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -152,7 +152,7 @@
             </Grid>
 
             <!-- Remote endpoint -->
-            <TextBlock Text="REMOTE ENDPOINT" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="REMOTE ENDPOINT" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -164,7 +164,7 @@
             </Grid>
 
             <!-- Throughput -->
-            <TextBlock Text="THROUGHPUT" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="THROUGHPUT" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 

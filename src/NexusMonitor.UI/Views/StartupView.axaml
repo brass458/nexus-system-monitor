@@ -22,7 +22,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Startup Programs"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>

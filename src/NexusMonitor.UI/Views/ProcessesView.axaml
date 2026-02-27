@@ -309,7 +309,7 @@
 
             <!-- Header: process name + PID -->
             <TextBlock Text="{Binding Name}"
-                       FontSize="15" FontWeight="SemiBold"
+                       FontSize="14" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,2"/>
@@ -323,7 +323,7 @@
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Section: Identity -->
-            <TextBlock Text="IDENTITY" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="IDENTITY" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -339,7 +339,7 @@
             </Grid>
 
             <!-- Section: Performance -->
-            <TextBlock Text="PERFORMANCE" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="PERFORMANCE" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -359,7 +359,7 @@
             </Grid>
 
             <!-- Section: I/O -->
-            <TextBlock Text="DISK I/O" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="DISK I/O" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -371,7 +371,7 @@
             </Grid>
 
             <!-- Section: Image -->
-            <TextBlock Text="IMAGE" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="IMAGE" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -391,7 +391,7 @@
             <!-- Section: Loaded Modules -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
 
-            <TextBlock Text="MODULES" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="MODULES" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -411,7 +411,7 @@
 
             <!-- Section: Threads -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
-            <TextBlock Text="THREADS" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="THREADS" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="140">
@@ -437,7 +437,7 @@
 
             <!-- Section: Environment Variables -->
             <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
-            <TextBlock Text="ENVIRONMENT" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="ENVIRONMENT" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="160">

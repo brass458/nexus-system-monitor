@@ -84,7 +84,7 @@
                        Foreground="#BF5AF2"/>
             <TextBlock Text="{Binding NetSendDisplay}"
                        FontSize="10"
-                       Foreground="#FF453A"/>
+                       Foreground="{StaticResource ColorDangerBrush}"/>
           </StackPanel>
         </Grid>
 
@@ -99,7 +99,7 @@
           <TextBlock Grid.Column="2"
                      Text="{Binding GpuDisplay}"
                      FontSize="13" FontWeight="Bold"
-                     Foreground="#FFD60A"
+                     Foreground="{StaticResource ColorWarningBrush}"
                      HorizontalAlignment="Right"
                      VerticalAlignment="Center"/>
         </Grid>

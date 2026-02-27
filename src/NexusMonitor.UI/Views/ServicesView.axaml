@@ -23,7 +23,7 @@
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Services"
-                   FontSize="18" FontWeight="SemiBold"
+                   FontSize="16" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,12,0"/>
@@ -185,7 +185,7 @@
             </Border>
 
             <!-- Section: Identity -->
-            <TextBlock Text="IDENTITY" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="IDENTITY" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -201,7 +201,7 @@
             </Grid>
 
             <!-- Section: Description -->
-            <TextBlock Text="DESCRIPTION" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="DESCRIPTION" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
@@ -212,7 +212,7 @@
                        Margin="0,0,0,12"/>
 
             <!-- Section: Binary Path -->
-            <TextBlock Text="BINARY PATH" FontSize="9" FontWeight="Medium"
+            <TextBlock Text="BINARY PATH" FontSize="11" FontWeight="Medium"
                        Foreground="{StaticResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
