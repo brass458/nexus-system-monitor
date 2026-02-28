@@ -14,7 +14,7 @@ Nexus System Monitor exists to end that fragmentation.
 
 The goal is a **synonymous user experience across every desktop platform**. The same layout, the same depth of detail, the same workflows — regardless of whether you're sitting in front of a Windows workstation, a MacBook, or a Linux desktop. You learn the tool once, and it works everywhere.
 
-This isn't a lowest-common-denominator approach. Nexus aims for the **union** of features found in the best system tools available today — the real-time metrics of Windows Task Manager, the process control of Process Lasso, the deep inspection of System Informer, and the hardware detail of system profilers — unified under a modern, visually consistent UI inspired by iOS 26's Liquid Glass design language.
+This isn't a lowest-common-denominator approach. Nexus aims for the **union** of features found in the best system tools available today — the real-time metrics of Windows Task Manager, the process control of Process Lasso, the deep inspection of System Informer, and the hardware detail of system profilers — unified under a modern, visually consistent UI inspired by Apple's iOS 26, MacOS, Windows 11, and the freedom that is expected with Linux customization.
 
 ---
 
