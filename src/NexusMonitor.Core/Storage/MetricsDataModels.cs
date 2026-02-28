@@ -52,6 +52,13 @@ public record StoredEvent(
     string?        Description,
     string?        MetadataJson);
 
+/// <summary>Aggregate summary for a process over a queried time range.</summary>
+public record ProcessSummary(
+    string Name,
+    double AvgCpuPercent,
+    double PeakCpuPercent,
+    double AvgMemMb);
+
 /// <summary>Event severity constants for use when writing to the events table.</summary>
 public static class EventSeverity
 {

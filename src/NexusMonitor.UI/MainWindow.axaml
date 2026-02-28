@@ -314,6 +314,9 @@
             <DataTemplate DataType="vm:RulesViewModel">
               <views:RulesView />
             </DataTemplate>
+            <DataTemplate DataType="vm:HistoryViewModel">
+              <views:HistoryView />
+            </DataTemplate>
             <DataTemplate DataType="vm:SettingsViewModel">
               <views:SettingsView />
             </DataTemplate>

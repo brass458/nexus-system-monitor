@@ -267,6 +267,7 @@ public class App : Application
         services.AddSingleton<AlertsViewModel>();
         services.AddSingleton<DiskAnalyzerViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<HistoryViewModel>();
         services.AddSingleton<OverlayViewModel>();
 
         return services.BuildServiceProvider();

@@ -506,6 +506,39 @@ public sealed class MetricsStore : IMetricsReader, IDisposable
                 DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1)));
         }, ct);
 
+    public Task<IReadOnlyList<ProcessSummary>> GetTopProcessSummariesAsync(
+        DateTimeOffset from, DateTimeOffset to, int topN = 10, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            var fromMs = from.ToUnixTimeMilliseconds();
+            var toMs   = to.ToUnixTimeMilliseconds();
+
+            using var cmd = _db.Connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT name,
+                       AVG(cpu_percent)      AS avg_cpu,
+                       MAX(cpu_percent)      AS peak_cpu,
+                       AVG(mem_bytes)/1048576.0 AS avg_mem_mb
+                FROM process_snapshots
+                WHERE ts >= $from AND ts < $to
+                GROUP BY name
+                ORDER BY avg_cpu DESC
+                LIMIT $topN";
+            cmd.Parameters.AddWithValue("$from",  fromMs);
+            cmd.Parameters.AddWithValue("$to",    toMs);
+            cmd.Parameters.AddWithValue("$topN",  topN);
+
+            var result = new List<ProcessSummary>();
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                result.Add(new ProcessSummary(
+                    Name:          reader.GetString(0),
+                    AvgCpuPercent: reader.GetDouble(1),
+                    PeakCpuPercent:reader.GetDouble(2),
+                    AvgMemMb:      reader.GetDouble(3)));
+            return (IReadOnlyList<ProcessSummary>)result;
+        }, ct);
+
     public long GetDatabaseSizeBytes() => _db.GetDatabaseSizeBytes();
 
     // ── IDisposable ────────────────────────────────────────────────────────────

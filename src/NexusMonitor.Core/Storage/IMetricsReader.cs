@@ -36,6 +36,13 @@ public interface IMetricsReader
     Task<(DateTimeOffset oldest, DateTimeOffset newest)> GetDataRangeAsync(
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns the top N processes by average CPU in the given time range,
+    /// aggregated from the process_snapshots table.
+    /// </summary>
+    Task<IReadOnlyList<ProcessSummary>> GetTopProcessSummariesAsync(
+        DateTimeOffset from, DateTimeOffset to, int topN = 10, CancellationToken ct = default);
+
     /// <summary>Returns the current size of the metrics.db file in bytes.</summary>
     long GetDatabaseSizeBytes();
 }
