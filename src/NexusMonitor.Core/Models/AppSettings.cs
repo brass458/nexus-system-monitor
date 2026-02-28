@@ -55,4 +55,7 @@ public class AppSettings
 
     // Alerts
     public List<AlertRule> AlertRules { get; set; } = new();
+
+    // Sidebar navigation order — empty = default order
+    public List<string> NavOrder { get; set; } = new();
 }

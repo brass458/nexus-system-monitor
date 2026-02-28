@@ -8,7 +8,9 @@ public record TreemapRect(DiskNode Node, SKRect Bounds, int Depth);
 /// <summary>Squarified treemap layout algorithm.</summary>
 public static class TreemapLayout
 {
-    private const float MinRectSize = 3f; // skip rects smaller than 3px — not visible anyway
+    private const float MinRectSize = 3f;    // skip rects smaller than 3px — not visible anyway
+    private const int   MaxDepth    = 2;     // only expand folders 2 levels deep to prevent OOM
+    private const int   MaxRects    = 8_000; // cap total rect count for UI performance
 
     public static List<TreemapRect> Layout(DiskNode root, SKRect bounds)
     {
@@ -25,6 +27,8 @@ public static class TreemapLayout
         List<TreemapRect> output,
         int depth)
     {
+        if (depth >= MaxDepth) return;           // don't recurse beyond MaxDepth
+        if (output.Count >= MaxRects) return;    // stop when rect budget is exhausted
         if (children.Count == 0 || totalSize == 0) return;
         if (bounds.Width < MinRectSize || bounds.Height < MinRectSize) return;
 
@@ -137,12 +141,13 @@ public static class TreemapLayout
             float cellY = y;
             foreach (var node in row)
             {
+                if (output.Count >= MaxRects) break;
                 float cellH = bounds.Height * ((float)node.Size / rowSize);
                 var rect = new SKRect(x, cellY, x + rowWidth, cellY + cellH);
                 if (rect.Width >= MinRectSize && rect.Height >= MinRectSize)
                 {
                     output.Add(new TreemapRect(node, rect, depth));
-                    if (node.IsDirectory && node.Children.Count > 0)
+                    if (node.IsDirectory && node.Children.Count > 0 && output.Count < MaxRects)
                     {
                         var innerRect = new SKRect(rect.Left + 1, rect.Top + 16, rect.Right - 1, rect.Bottom - 1);
                         if (innerRect.Width > MinRectSize && innerRect.Height > MinRectSize)
@@ -158,12 +163,13 @@ public static class TreemapLayout
             float cellX = x;
             foreach (var node in row)
             {
+                if (output.Count >= MaxRects) break;
                 float cellW = bounds.Width * ((float)node.Size / rowSize);
                 var rect = new SKRect(cellX, y, cellX + cellW, y + rowHeight);
                 if (rect.Width >= MinRectSize && rect.Height >= MinRectSize)
                 {
                     output.Add(new TreemapRect(node, rect, depth));
-                    if (node.IsDirectory && node.Children.Count > 0)
+                    if (node.IsDirectory && node.Children.Count > 0 && output.Count < MaxRects)
                     {
                         var innerRect = new SKRect(rect.Left + 1, rect.Top + 16, rect.Right - 1, rect.Bottom - 1);
                         if (innerRect.Width > MinRectSize && innerRect.Height > MinRectSize)

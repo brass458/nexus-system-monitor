@@ -138,23 +138,38 @@
         <Panel>
           <ScrollViewer VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding NavItems}"
+            <ItemsControl x:Name="NavItemsControl"
+                          ItemsSource="{Binding NavItems}"
                           Margin="8,12">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:NavItem">
-                  <Button Classes="nx-btn-ghost"
-                          Classes.active="{Binding IsActive}"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Left"
-                          Padding="12,9"
-                          Margin="0,1"
-                          CornerRadius="8"
-                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
-                          CommandParameter="{Binding}">
-                    <TextBlock Text="{Binding Label}"
-                               FontSize="{DynamicResource NxFont13}"
-                               VerticalAlignment="Center" />
-                  </Button>
+                  <Grid ColumnDefinitions="20,*">
+                    <!-- Drag grip — visual handle for drag-to-reorder -->
+                    <TextBlock Grid.Column="0"
+                               Text="&#x2807;"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Opacity="0.3"
+                               Cursor="SizeNS"
+                               IsHitTestVisible="False"/>
+                    <!-- Navigation button -->
+                    <Button Grid.Column="1"
+                            Classes="nx-btn-ghost"
+                            Classes.active="{Binding IsActive}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,9"
+                            Margin="0,1"
+                            CornerRadius="8"
+                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
+                            CommandParameter="{Binding}">
+                      <TextBlock Text="{Binding Label}"
+                                 FontSize="{DynamicResource NxFont13}"
+                                 VerticalAlignment="Center" />
+                    </Button>
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

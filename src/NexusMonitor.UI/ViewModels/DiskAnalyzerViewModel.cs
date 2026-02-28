@@ -8,6 +8,14 @@ using NexusMonitor.DiskAnalyzer.Scanning;
 
 namespace NexusMonitor.UI.ViewModels;
 
+/// <summary>Per-extension aggregated stats for the File Types panel.</summary>
+public record FileTypeStatRow(string Extension, long SizeBytes, long FileCount, double Percent)
+{
+    public string SizeDisplay    => DiskNode.FormatSize(SizeBytes);
+    public string PercentDisplay => $"{Percent:F1}%";
+    public string CountDisplay   => $"{FileCount:N0}";
+}
+
 public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
 {
     private CancellationTokenSource _cts = new();
@@ -25,13 +33,33 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private DiskNode? _selectedFile;   // selected row in file list
     [ObservableProperty] private string _summaryText = string.Empty;
 
-    // File list (flat view of SelectedNode's children, sorted by size)
+    // Folder view: flat view of SelectedNode's children sorted by size
     [ObservableProperty] private ObservableCollection<DiskNode> _fileRows = [];
 
     // Breadcrumb navigation
     [ObservableProperty] private ObservableCollection<DiskNode> _breadcrumb = [];
 
-    // Duplicate finder
+    // ── Tab state ────────────────────────────────────────────────────────────
+    [ObservableProperty] private bool _isFolderViewActive = true;
+    [ObservableProperty] private bool _isFileViewActive;
+
+    // ── Volume stats ─────────────────────────────────────────────────────────
+    [ObservableProperty] private string _volumeTotalDisplay = string.Empty;
+    [ObservableProperty] private string _volumeUsedDisplay  = string.Empty;
+    [ObservableProperty] private string _volumeFreeDisplay  = string.Empty;
+    [ObservableProperty] private double _volumeUsedPercent;
+
+    // ── File View ────────────────────────────────────────────────────────────
+    // Flat sorted list of all files (top 50k, built once after scan)
+    private readonly List<DiskNode> _allFilesSorted = new(1024);
+    [ObservableProperty] private ObservableCollection<DiskNode> _filteredFiles = [];
+    [ObservableProperty] private string _fileSearchText  = string.Empty;
+    [ObservableProperty] private string _fileViewSummary = string.Empty;
+
+    // ── File Type stats ──────────────────────────────────────────────────────
+    [ObservableProperty] private ObservableCollection<FileTypeStatRow> _fileTypeStats = [];
+
+    // ── Duplicate finder ─────────────────────────────────────────────────────
     [ObservableProperty] private bool _isDuplicateScanning;
     [ObservableProperty] private ObservableCollection<DuplicateGroup> _duplicates = [];
     [ObservableProperty] private string _duplicateSummary = string.Empty;
@@ -40,6 +68,22 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<string> AvailableDrives { get; } = GetAvailableDrives();
 
     public DiskAnalyzerViewModel() { Title = "Disk Analyzer"; }
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private void SelectFolderView()
+    {
+        IsFolderViewActive = true;
+        IsFileViewActive   = false;
+    }
+
+    [RelayCommand]
+    private void SelectFileView()
+    {
+        IsFolderViewActive = false;
+        IsFileViewActive   = true;
+    }
 
     // ── Scan ─────────────────────────────────────────────────────────────────
 
@@ -51,17 +95,15 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         _cts.Dispose();
         _cts = new CancellationTokenSource();
 
-        IsScanning         = true;
-        HasScanResult      = false;
-        ScanProgressValue  = 0;
-        ScanStatus         = $"Scanning {SelectedPath}\u2026";
+        IsScanning        = true;
+        HasScanResult     = false;
+        ScanProgressValue = 0;
+        ScanStatus        = $"Scanning {SelectedPath}\u2026";
         Duplicates.Clear();
-        DuplicateSummary   = string.Empty;
+        DuplicateSummary  = string.Empty;
 
         var progress = new Progress<ScanProgress>(p =>
         {
-            // Throttle UI updates: only refresh every 100 files (or the first 5)
-            // to prevent flooding the UI thread and causing button reflow/flicker.
             if (p.FilesScanned > 5 && p.FilesScanned % 100 != 0) return;
             ScanProgressText = $"{p.FilesScanned:N0} files \u2014 {DiskNode.FormatSize(p.BytesCounted)}";
             ScanStatus = $"Scanning: {Path.GetFileName(p.CurrentPath)}";
@@ -69,8 +111,6 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // MftScanner reads the NTFS Master File Table directly for near-instant results
-            // on NTFS drives. Falls back to RecursiveScanner on non-NTFS / non-Windows.
             var scanner = new MftScanner();
             var result  = await scanner.ScanAsync(SelectedPath, new ScanOptions(), progress, _cts.Token);
 
@@ -82,6 +122,32 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
             SummaryText = $"{result.TotalFiles:N0} files, {result.TotalFolders:N0} folders \u2014 " +
                           $"{DiskNode.FormatSize(result.TotalSize)} in {result.Duration.TotalSeconds:F1}s";
             ScanStatus  = SummaryText;
+
+            // Volume stats
+            if (result.VolumeTotal > 0)
+            {
+                long used = result.VolumeTotal - result.VolumeFree;
+                VolumeTotalDisplay = DiskNode.FormatSize(result.VolumeTotal);
+                VolumeUsedDisplay  = DiskNode.FormatSize(used);
+                VolumeFreeDisplay  = DiskNode.FormatSize(result.VolumeFree);
+                VolumeUsedPercent  = (double)used / result.VolumeTotal * 100.0;
+            }
+            else
+            {
+                VolumeTotalDisplay = DiskNode.FormatSize(result.TotalSize);
+                VolumeUsedDisplay  = DiskNode.FormatSize(result.TotalSize);
+                VolumeFreeDisplay  = "\u2014";
+                VolumeUsedPercent  = 100.0;
+            }
+
+            // Build flat file list + type stats off the UI thread (can be slow on large drives)
+            var capturedRoot = result.Root;
+            var capturedSize = result.TotalSize;
+            await Task.Run(() =>
+            {
+                BuildAllFiles(capturedRoot);
+                BuildFileTypeStats(capturedRoot, capturedSize);
+            }, _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -128,7 +194,7 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
 
     private void BuildBreadcrumb(DiskNode node)
     {
-        var crumbs = new List<DiskNode>();
+        var crumbs  = new List<DiskNode>();
         var current = node;
         while (current is not null) { crumbs.Insert(0, current); current = current.Parent; }
         Breadcrumb.Clear();
@@ -178,6 +244,27 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         finally                            { IsDuplicateScanning = false; }
     }
 
+    // ── File search (File View tab) ───────────────────────────────────────────
+
+    partial void OnFileSearchTextChanged(string value) => FilterFiles();
+
+    private void FilterFiles()
+    {
+        FilteredFiles.Clear();
+        IEnumerable<DiskNode> query = _allFilesSorted;
+        if (!string.IsNullOrWhiteSpace(FileSearchText))
+            query = query.Where(f =>
+                f.Name.Contains(FileSearchText, StringComparison.OrdinalIgnoreCase) ||
+                f.FullPath.Contains(FileSearchText, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var f in query.Take(10_000))
+            FilteredFiles.Add(f);
+
+        FileViewSummary = _allFilesSorted.Count > 0
+            ? $"Showing {FilteredFiles.Count:N0} of {_allFilesSorted.Count:N0} files"
+            : string.Empty;
+    }
+
     // ── File actions ──────────────────────────────────────────────────────────
 
     [RelayCommand]
@@ -189,7 +276,7 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName       = path,
+                FileName        = path,
                 UseShellExecute = true,
             });
         }
@@ -209,7 +296,76 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         catch { }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Private build helpers ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Collects all non-directory nodes into a flat list sorted by size descending,
+    /// capped at 50,000 entries for UI performance.
+    /// Must be called from a background thread; calls FilterFiles which marshals to UI.
+    /// </summary>
+    private void BuildAllFiles(DiskNode root)
+    {
+        _allFilesSorted.Clear();
+        CollectFiles(root, _allFilesSorted);
+        _allFilesSorted.Sort((a, b) => b.Size.CompareTo(a.Size));
+        if (_allFilesSorted.Count > 50_000)
+            _allFilesSorted.RemoveRange(50_000, _allFilesSorted.Count - 50_000);
+
+        // FilterFiles must update ObservableCollection → run on UI thread
+        Avalonia.Threading.Dispatcher.UIThread.Post(FilterFiles);
+    }
+
+    private static void CollectFiles(DiskNode node, List<DiskNode> files)
+    {
+        foreach (var child in node.Children)
+        {
+            if (!child.IsDirectory)
+                files.Add(child);
+            else
+                CollectFiles(child, files);
+        }
+    }
+
+    /// <summary>Builds per-extension aggregated stats; updates FileTypeStats on UI thread.</summary>
+    private void BuildFileTypeStats(DiskNode root, long totalSize)
+    {
+        var dict = new Dictionary<string, (long Size, long Count)>(StringComparer.OrdinalIgnoreCase);
+        AccumulateExtensions(root, dict);
+
+        var rows = dict.OrderByDescending(k => k.Value.Size).Take(20)
+            .Select(kvp =>
+            {
+                double pct = totalSize > 0 ? (double)kvp.Value.Size / totalSize * 100.0 : 0;
+                return new FileTypeStatRow(
+                    string.IsNullOrEmpty(kvp.Key) ? "(no ext)" : kvp.Key,
+                    kvp.Value.Size,
+                    kvp.Value.Count,
+                    pct);
+            }).ToList();
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            FileTypeStats.Clear();
+            foreach (var r in rows) FileTypeStats.Add(r);
+        });
+    }
+
+    private static void AccumulateExtensions(DiskNode node, Dictionary<string, (long Size, long Count)> dict)
+    {
+        foreach (var child in node.Children)
+        {
+            if (!child.IsDirectory)
+            {
+                var ext = child.Extension;
+                dict.TryGetValue(ext, out var curr);
+                dict[ext] = (curr.Size + child.Size, curr.Count + 1);
+            }
+            else
+            {
+                AccumulateExtensions(child, dict);
+            }
+        }
+    }
 
     private static string GetDefaultPath()
     {

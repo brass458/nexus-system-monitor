@@ -188,7 +188,7 @@
 
         <DataGrid.Columns>
 
-          <DataGridTemplateColumn Header="Name" Width="220" SortMemberPath="Name">
+          <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="120" SortMemberPath="Name">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid ColumnDefinitions="4,Auto,*" Margin="4,0">
@@ -211,10 +211,10 @@
 
           <DataGridTextColumn Header="PID"
                               Binding="{Binding Pid}"
-                              Width="80" MinWidth="80"
+                              Width="0.7*" MinWidth="55"
                               IsReadOnly="True"/>
 
-          <DataGridTemplateColumn Header="CPU" Width="80" SortMemberPath="CpuPercent">
+          <DataGridTemplateColumn Header="CPU" Width="0.7*" MinWidth="60" SortMemberPath="CpuPercent">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid Margin="6,0" RowDefinitions="Auto,3">
@@ -240,7 +240,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Memory" Width="130" MinWidth="130" SortMemberPath="WorkingSetBytes">
+          <DataGridTemplateColumn Header="Memory" Width="1.1*" MinWidth="80" SortMemberPath="WorkingSetBytes">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding WorkingSetBytes, Converter={StaticResource BytesFmt}}"
@@ -252,7 +252,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="I/O" Width="140" SortMemberPath="IoReadBytesPerSec">
+          <DataGridTemplateColumn Header="I/O" Width="1.1*" MinWidth="80" SortMemberPath="IoReadBytesPerSec">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding IoDisplay}"
@@ -267,22 +267,22 @@
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
-                              Width="140" MinWidth="140"
+                              Width="0.8*" MinWidth="65"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Handles"
                               Binding="{Binding HandleCount}"
-                              Width="140" MinWidth="140"
+                              Width="0.8*" MinWidth="65"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="User"
                               Binding="{Binding UserName}"
-                              Width="110" MinWidth="110"
+                              Width="0.9*" MinWidth="70"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Description"
                               Binding="{Binding Description}"
-                              Width="*"
+                              Width="2*" MinWidth="80"
                               IsReadOnly="True"/>
 
         </DataGrid.Columns>

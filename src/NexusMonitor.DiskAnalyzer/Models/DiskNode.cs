@@ -20,10 +20,11 @@ public sealed class DiskNode
     public List<DiskNode> Children { get; } = new();
 
     // Computed display helpers
-    public double PercentOfParent => Parent?.Size > 0
-        ? (double)Size / Parent.Size * 100.0 : 100.0;
-    public string SizeDisplay => FormatSize(Size);
-    public string FileCountDisplay => IsDirectory ? $"{FileCount:N0} files" : string.Empty;
+    public double PercentOfParent  => Parent?.Size > 0 ? (double)Size / Parent.Size * 100.0 : 100.0;
+    public string SizeDisplay      => FormatSize(Size);
+    public string AllocatedDisplay => FormatSize(AllocatedSize);
+    public string FileCountDisplay   => IsDirectory ? $"{FileCount:N0} files" : string.Empty;
+    public string FolderCountDisplay => IsDirectory ? $"{FolderCount:N0} dirs" : string.Empty;
 
     public static string FormatSize(long bytes) => bytes switch
     {

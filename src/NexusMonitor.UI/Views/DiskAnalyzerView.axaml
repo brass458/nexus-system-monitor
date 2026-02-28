@@ -8,33 +8,35 @@
              x:CompileBindings="False"
              Background="{DynamicResource BgBaseBrush}">
 
-  <Grid RowDefinitions="Auto,*">
+  <!-- RowDefinitions:
+       0 = Toolbar  (drive picker, path, scan/cancel, status)
+       1 = Stats bar (Total / Used / Free)   — visible only after scan
+       2 = Tab bar  (Folder View | File View)
+       3 = Body     (switches between views)
+       4 = Splitter
+       5 = Treemap  (always visible, full width) -->
+  <Grid RowDefinitions="Auto,Auto,Auto,*,4,220">
 
-    <!-- ── Top toolbar ────────────────────────────────────────────────── -->
+    <!-- ── Row 0: Toolbar ─────────────────────────────────────────────── -->
     <Border Grid.Row="0" Padding="16,10" Background="{DynamicResource BgPrimaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,8,*,8,Auto,8,Auto,8,240">
+      <Grid ColumnDefinitions="Auto,8,*,8,Auto,8,Auto,8,Auto,*">
 
-        <!-- Drive ComboBox -->
         <ComboBox Grid.Column="0"
                   ItemsSource="{Binding AvailableDrives}"
                   SelectedItem="{Binding SelectedPath}"
-                  Width="110"
-                  VerticalAlignment="Center"/>
+                  Width="110" VerticalAlignment="Center"/>
 
-        <!-- Path TextBox -->
         <TextBox Grid.Column="2"
                  Text="{Binding SelectedPath}"
-                 Watermark="Enter path to scan..."
+                 Watermark="Enter path to scan…"
                  VerticalAlignment="Center"/>
 
-        <!-- Scan button (shown when not scanning) -->
-        <Button Grid.Column="4"
-                Content="Scan"
+        <!-- Scan (hidden while scanning) -->
+        <Button Grid.Column="4" Content="Scan"
                 Command="{Binding StartScanCommand}"
                 IsVisible="{Binding !IsScanning}"
-                Padding="16,8"
-                VerticalAlignment="Center">
+                Padding="16,8" VerticalAlignment="Center">
           <Button.Styles>
             <Style Selector="Button">
               <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}"/>
@@ -47,13 +49,11 @@
           </Button.Styles>
         </Button>
 
-        <!-- Cancel button (shown when scanning) -->
-        <Button Grid.Column="4"
-                Content="Cancel"
+        <!-- Cancel (visible while scanning) -->
+        <Button Grid.Column="4" Content="Cancel"
                 Command="{Binding CancelScanCommand}"
                 IsVisible="{Binding IsScanning}"
-                Padding="16,8"
-                VerticalAlignment="Center">
+                Padding="16,8" VerticalAlignment="Center">
           <Button.Styles>
             <Style Selector="Button">
               <Setter Property="Background" Value="{StaticResource ColorDangerBrush}"/>
@@ -63,13 +63,11 @@
           </Button.Styles>
         </Button>
 
-        <!-- Find Duplicates button -->
-        <Button Grid.Column="6"
-                Content="Find Duplicates"
+        <!-- Find Duplicates -->
+        <Button Grid.Column="6" Content="Find Duplicates"
                 Command="{Binding FindDuplicatesCommand}"
                 IsEnabled="{Binding HasScanResult}"
-                Padding="14,8"
-                VerticalAlignment="Center">
+                Padding="14,8" VerticalAlignment="Center">
           <Button.Styles>
             <Style Selector="Button">
               <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
@@ -79,120 +77,439 @@
           </Button.Styles>
         </Button>
 
-        <!-- Status text -->
+        <!-- Status -->
         <TextBlock Grid.Column="8"
                    Text="{Binding ScanStatus}"
                    VerticalAlignment="Center"
                    Foreground="{StaticResource TextTertiaryBrush}"
                    FontSize="{DynamicResource NxFont12}"
-                   MaxWidth="260"
+                   Margin="8,0,0,0"
+                   MaxWidth="280"
                    TextTrimming="CharacterEllipsis"/>
+
+        <!-- Inline scanning progress bar -->
+        <ProgressBar Grid.Column="9"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding IsScanning}"
+                     Height="3"
+                     Background="Transparent"
+                     Foreground="{DynamicResource AccentBlueBrush}"
+                     VerticalAlignment="Center"
+                     Margin="12,0,0,0"/>
       </Grid>
     </Border>
 
-    <!-- ── Main content area ──────────────────────────────────────────── -->
-    <Grid Grid.Row="1" ColumnDefinitions="*,1,300">
+    <!-- ── Row 1: Volume stats bar ────────────────────────────────────── -->
+    <Border Grid.Row="1" Padding="16,8"
+            Background="{DynamicResource BgSecondaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1"
+            IsVisible="{Binding HasScanResult}">
+      <Grid ColumnDefinitions="*,1,*,1,*">
 
-      <!-- ── Left: Treemap + breadcrumb + file list ───────────────────── -->
-      <Grid Grid.Column="0" RowDefinitions="Auto,*,4,200">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+          <TextBlock Text="Total:"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding VolumeTotalDisplay}"
+                     FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                     Foreground="{StaticResource TextPrimaryBrush}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
 
-        <!-- Breadcrumb navigation -->
-        <Border Grid.Row="0" Padding="10,7"
-                Background="{DynamicResource BgPrimaryBrush}"
-                BorderBrush="{StaticResource BorderSubtleBrush}"
-                BorderThickness="0,0,0,1">
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <Button Content="Up"
-                    Command="{Binding NavigateUpCommand}"
-                    Padding="8,4"
-                    IsEnabled="{Binding SelectedNode.Parent, Converter={x:Static ObjectConverters.IsNotNull}}">
-              <Button.Styles>
-                <Style Selector="Button">
-                  <Setter Property="CornerRadius" Value="6"/>
-                  <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
-                  <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-                </Style>
-              </Button.Styles>
-            </Button>
-            <ItemsControl ItemsSource="{Binding Breadcrumb}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" Spacing="0"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
+        <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource BorderSubtleBrush}"/>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+          <TextBlock Text="Used:"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding VolumeUsedDisplay}"
+                     FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                     Foreground="{DynamicResource AccentBlueBrush}"
+                     VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding VolumeUsedPercent, StringFormat='({0:F1}%)'}"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <Rectangle Grid.Column="3" Width="1" Fill="{StaticResource BorderSubtleBrush}"/>
+
+        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+          <TextBlock Text="Free:"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding VolumeFreeDisplay}"
+                     FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                     Foreground="{StaticResource ColorSuccessBrush}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+      </Grid>
+    </Border>
+
+    <!-- ── Row 2: Tab bar ─────────────────────────────────────────────── -->
+    <Border Grid.Row="2" Padding="12,0"
+            Background="{DynamicResource BgPrimaryBrush}"
+            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal">
+        <Button Command="{Binding SelectFolderViewCommand}" Padding="16,9" CornerRadius="0">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="BorderThickness" Value="0"/>
+            </Style>
+            <Style Selector="Button:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+            </Style>
+          </Button.Styles>
+          <Panel>
+            <TextBlock Text="Folder View"
+                       FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <Border Height="2" VerticalAlignment="Bottom"
+                    Background="{DynamicResource AccentBlueBrush}"
+                    IsVisible="{Binding IsFolderViewActive}"/>
+          </Panel>
+        </Button>
+        <Button Command="{Binding SelectFileViewCommand}" Padding="16,9" CornerRadius="0">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="BorderThickness" Value="0"/>
+            </Style>
+            <Style Selector="Button:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+            </Style>
+          </Button.Styles>
+          <Panel>
+            <TextBlock Text="File View"
+                       FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <Border Height="2" VerticalAlignment="Bottom"
+                    Background="{DynamicResource AccentBlueBrush}"
+                    IsVisible="{Binding IsFileViewActive}"/>
+          </Panel>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <!-- ── Row 3: Body ────────────────────────────────────────────────── -->
+    <Panel Grid.Row="3">
+
+      <!-- ═══════ FOLDER VIEW ═══════ -->
+      <Grid IsVisible="{Binding IsFolderViewActive}" ColumnDefinitions="*,4,280">
+
+        <!-- Left: breadcrumb + folder DataGrid -->
+        <Grid Grid.Column="0" RowDefinitions="Auto,*">
+
+          <Border Grid.Row="0" Padding="10,7"
+                  Background="{DynamicResource BgPrimaryBrush}"
+                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Button Content="Up" Command="{Binding NavigateUpCommand}" Padding="8,4"
+                      IsEnabled="{Binding SelectedNode.Parent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Button.Styles>
+                  <Style Selector="Button">
+                    <Setter Property="CornerRadius" Value="6"/>
+                    <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                  </Style>
+                </Button.Styles>
+              </Button>
+              <ItemsControl ItemsSource="{Binding Breadcrumb}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="0"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="models:DiskNode">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                      <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}"
+                                 VerticalAlignment="Center" FontSize="{DynamicResource NxFont11}"/>
+                      <Button Content="{Binding Name}"
+                              Command="{Binding $parent[UserControl].DataContext.NavigateToBreadcrumbCommand}"
+                              CommandParameter="{Binding}" Padding="5,3">
+                        <Button.Styles>
+                          <Style Selector="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentBlueBrush}"/>
+                            <Setter Property="CornerRadius" Value="5"/>
+                            <Setter Property="FontSize" Value="{DynamicResource NxFont12}"/>
+                          </Style>
+                        </Button.Styles>
+                      </Button>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Folder / file tree -->
+          <DataGrid Grid.Row="1"
+                    ItemsSource="{Binding FileRows}"
+                    SelectedItem="{Binding SelectedFile}"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserSortColumns="True"
+                    CanUserResizeColumns="True"
+                    FontSize="{DynamicResource NxFont12}"
+                    Background="{DynamicResource BgPrimaryBrush}">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="Name" Width="2.5*" MinWidth="120" SortMemberPath="Name">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate DataType="models:DiskNode">
+                    <StackPanel Orientation="Horizontal" Spacing="5" Margin="4,0">
+                      <TextBlock Text="&#x1F4C1;"
+                                 FontSize="11"
+                                 VerticalAlignment="Center"
+                                 IsVisible="{Binding IsDirectory}"/>
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="{DynamicResource NxFont12}"
+                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                 VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="%"         Binding="{Binding PercentOfParent, StringFormat='{}{0:F1}%'}" Width="0.55*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Size"      Binding="{Binding SizeDisplay}"        Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Allocated" Binding="{Binding AllocatedDisplay}"   Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Files"     Binding="{Binding FileCountDisplay}"   Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Folders"   Binding="{Binding FolderCountDisplay}" Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Modified"  Binding="{Binding LastModified, StringFormat='yyyy-MM-dd'}" Width="0.9*" MinWidth="75" IsReadOnly="True"/>
+            </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Navigate Into"
+                          Command="{Binding $parent[UserControl].DataContext.NavigateIntoCommand}"
+                          CommandParameter="{Binding}"
+                          IsEnabled="{Binding IsDirectory}"/>
+                <Separator/>
+                <MenuItem Header="Open Location"
+                          Command="{Binding $parent[UserControl].DataContext.OpenFileLocationCommand}"
+                          CommandParameter="{Binding}"/>
+                <MenuItem Header="Copy Path"
+                          Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}"
+                          CommandParameter="{Binding}"/>
+              </ContextMenu>
+            </DataGrid.ContextMenu>
+          </DataGrid>
+        </Grid>
+
+        <!-- Vertical splitter -->
+        <GridSplitter Grid.Column="1" Width="4" VerticalAlignment="Stretch"
+                      Background="{StaticResource BorderSubtleBrush}"/>
+
+        <!-- Right panel: File Types + Selected File + Duplicates -->
+        <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
+
+          <!-- File Types header -->
+          <Border Grid.Row="0" Padding="12,10"
+                  Background="{DynamicResource BgPrimaryBrush}"
+                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderThickness="0,0,0,1">
+            <TextBlock Text="FILE TYPES"
+                       FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                       LetterSpacing="0.8"
+                       Foreground="{StaticResource TextTertiaryBrush}"/>
+          </Border>
+
+          <!-- File type list -->
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding FileTypeStats}" Padding="8,4">
               <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="models:DiskNode">
-                  <StackPanel Orientation="Horizontal" Spacing="2">
-                    <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center" FontSize="{DynamicResource NxFont11}"/>
-                    <Button Content="{Binding Name}"
-                            Command="{Binding $parent[UserControl].DataContext.NavigateToBreadcrumbCommand}"
-                            CommandParameter="{Binding}"
-                            Padding="5,3">
-                      <Button.Styles>
-                        <Style Selector="Button">
-                          <Setter Property="Background" Value="Transparent"/>
-                          <Setter Property="Foreground" Value="{DynamicResource AccentBlueBrush}"/>
-                          <Setter Property="CornerRadius" Value="5"/>
-                          <Setter Property="FontSize" Value="{DynamicResource NxFont12}"/>
-                        </Style>
-                      </Button.Styles>
-                    </Button>
-                  </StackPanel>
+                <DataTemplate DataType="vm:FileTypeStatRow">
+                  <Grid ColumnDefinitions="54,*,Auto" Margin="0,2">
+                    <Border Grid.Column="0"
+                            CornerRadius="4" Padding="4,2"
+                            Background="{StaticResource BgElevatedBrush}"
+                            HorizontalAlignment="Left">
+                      <TextBlock Text="{Binding Extension}"
+                                 FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="6,0">
+                      <TextBlock Text="{Binding SizeDisplay}"
+                                 FontSize="{DynamicResource NxFont11}"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding PercentDisplay}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextTertiaryBrush}"
+                               VerticalAlignment="Center"/>
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-        </Border>
+          </ScrollViewer>
 
-        <!-- Treemap canvas area -->
-        <Border Grid.Row="1" Background="#0A0A0C" ClipToBounds="True">
-          <Panel>
-            <!-- Idle hint -->
-            <TextBlock Text="Click 'Scan' to analyze disk usage"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
+          <!-- Selected file mini-details -->
+          <Border Grid.Row="2" Padding="12,10"
+                  Background="{DynamicResource BgPrimaryBrush}"
+                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderThickness="0,1,0,1"
+                  IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding SelectedFile.Name, FallbackValue=''}"
+                         FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
+                         TextWrapping="Wrap"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <Grid ColumnDefinitions="70,*" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Size"
+                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1"
+                           Text="{Binding SelectedFile.SizeDisplay}"
+                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Modified"
+                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                <TextBlock Grid.Row="1" Grid.Column="1"
+                           Text="{Binding SelectedFile.LastModified, StringFormat='yyyy-MM-dd HH:mm'}"
+                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="% Parent"
+                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                <TextBlock Grid.Row="2" Grid.Column="1"
+                           Text="{Binding SelectedFile.PercentOfParent, StringFormat='{}{0:F1}%'}"
+                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+              </Grid>
+              <TextBlock Text="{Binding SelectedFile.FullPath}"
+                         FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
+                         Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Duplicates panel -->
+          <Grid Grid.Row="3" RowDefinitions="Auto,180">
+            <Border Grid.Row="0" Padding="12,8"
+                    Background="{DynamicResource BgPrimaryBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderThickness="0,0,0,1">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="DUPLICATE FILES"
+                           FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                           LetterSpacing="0.8"
+                           Foreground="{StaticResource TextTertiaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Button DockPanel.Dock="Right"
+                        Content="Find"
+                        Command="{Binding FindDuplicatesCommand}"
+                        IsEnabled="{Binding HasScanResult}"
+                        Padding="8,3" CornerRadius="6"
+                        FontSize="{DynamicResource NxFont11}">
+                  <Button.Styles>
+                    <Style Selector="Button">
+                      <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+                      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                    </Style>
+                  </Button.Styles>
+                </Button>
+                <TextBlock Text="{Binding DuplicateSummary}"
+                           FontSize="{DynamicResource NxFont10}"
+                           Foreground="{StaticResource TextTertiaryBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="8,0"
+                           IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </DockPanel>
+            </Border>
+            <ScrollViewer Grid.Row="1">
+              <ItemsControl ItemsSource="{Binding Duplicates}" Padding="8">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="models:DuplicateGroup">
+                    <Border Margin="0,0,0,6" Padding="8"
+                            CornerRadius="8"
+                            Background="#0DEBEBF5"
+                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                            BorderThickness="1">
+                      <StackPanel Spacing="3">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <TextBlock Text="{Binding WastedDisplay}"
+                                     FontWeight="SemiBold"
+                                     Foreground="{StaticResource ColorWarningBrush}"
+                                     FontSize="{DynamicResource NxFont11}"/>
+                          <TextBlock Text="wasted"
+                                     Foreground="{StaticResource TextTertiaryBrush}"
+                                     FontSize="{DynamicResource NxFont11}"/>
+                          <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
+                                     Foreground="{StaticResource TextTertiaryBrush}"
+                                     FontSize="{DynamicResource NxFont11}"/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Files}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:DiskNode">
+                              <TextBlock Text="{Binding FullPath}"
+                                         FontSize="{DynamicResource NxFont10}"
+                                         Foreground="{StaticResource TextTertiaryBrush}"
+                                         TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+
+        </Grid><!-- end right panel -->
+      </Grid><!-- end folder view -->
+
+      <!-- ═══════ FILE VIEW ═══════ -->
+      <Grid IsVisible="{Binding IsFileViewActive}" RowDefinitions="Auto,Auto,*">
+
+        <Border Grid.Row="0" Padding="12,8"
+                Background="{DynamicResource BgSecondaryBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0"
+                     Classes="nx-input"
+                     Text="{Binding FileSearchText}"
+                     Watermark="Search file name or path…"
+                     MaxWidth="480"
+                     HorizontalAlignment="Left"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding FileViewSummary}"
+                       FontSize="{DynamicResource NxFont11}"
                        Foreground="{StaticResource TextTertiaryBrush}"
-                       FontSize="{DynamicResource NxFont14}"
-                       IsVisible="{Binding !HasScanResult}"/>
-
-            <!-- Scanning progress bar at bottom -->
-            <ProgressBar IsIndeterminate="True"
-                         IsVisible="{Binding IsScanning}"
-                         HorizontalAlignment="Stretch"
-                         VerticalAlignment="Bottom"
-                         Height="3"
-                         Background="Transparent"
-                         Foreground="{DynamicResource AccentBlueBrush}"/>
-
-            <!-- SkiaSharp treemap control -->
-            <ctrl:TreemapControl x:Name="TheTreemap"
-                                 RootNode="{Binding RootNode}"
-                                 SelectedNode="{Binding SelectedNode}"
-                                 IsVisible="{Binding HasScanResult}"
-                                 HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Stretch"/>
-          </Panel>
+                       VerticalAlignment="Center"
+                       Margin="12,0,4,0"/>
+          </Grid>
         </Border>
 
-        <!-- Splitter between treemap and file list -->
-        <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch"
-                      Background="{StaticResource BorderSubtleBrush}"/>
+        <TextBlock Grid.Row="1"
+                   Text="Run a scan to populate the file list."
+                   FontSize="{DynamicResource NxFont14}"
+                   Foreground="{StaticResource TextTertiaryBrush}"
+                   HorizontalAlignment="Center"
+                   Margin="0,24,0,0"
+                   IsVisible="{Binding !HasScanResult}"/>
 
-        <!-- File list DataGrid -->
-        <DataGrid Grid.Row="3"
-                  ItemsSource="{Binding FileRows}"
-                  SelectedItem="{Binding SelectedFile}"
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding FilteredFiles}"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
                   CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
                   FontSize="{DynamicResource NxFont12}"
                   Background="{DynamicResource BgPrimaryBrush}">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="Name"     Binding="{Binding Name}"        Width="*" MinWidth="140"/>
-            <DataGridTextColumn Header="Size"     Binding="{Binding SizeDisplay}" Width="90"/>
-            <DataGridTextColumn Header="Files"    Binding="{Binding FileCountDisplay}" Width="80"/>
-            <DataGridTextColumn Header="Modified" Binding="{Binding LastModified, StringFormat='yyyy-MM-dd'}" Width="100"/>
-            <DataGridTextColumn Header="Type"     Binding="{Binding Extension}"   Width="60"/>
+            <DataGridTextColumn Header="File Name"  Binding="{Binding Name}"       Width="3*"   MinWidth="120" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Path"       Binding="{Binding FullPath}"   Width="3.5*" MinWidth="150" IsReadOnly="True"/>
+            <DataGridTextColumn Header="% Parent"   Binding="{Binding PercentOfParent, StringFormat='{}{0:F1}%'}" Width="0.7*" MinWidth="55"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="Size"       Binding="{Binding SizeDisplay}"       Width="0.8*" MinWidth="60"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="Allocated"  Binding="{Binding AllocatedDisplay}"  Width="0.8*" MinWidth="60"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="Modified"   Binding="{Binding LastModified, StringFormat='yyyy-MM-dd'}" Width="1*" MinWidth="75" IsReadOnly="True"/>
           </DataGrid.Columns>
           <DataGrid.ContextMenu>
             <ContextMenu>
@@ -202,138 +519,34 @@
               <MenuItem Header="Copy Path"
                         Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}"
                         CommandParameter="{Binding}"/>
-              <MenuItem Header="Navigate Into"
-                        Command="{Binding $parent[UserControl].DataContext.NavigateIntoCommand}"
-                        CommandParameter="{Binding}"
-                        IsEnabled="{Binding IsDirectory}"/>
             </ContextMenu>
           </DataGrid.ContextMenu>
         </DataGrid>
-      </Grid>
 
-      <!-- Vertical divider -->
-      <GridSplitter Grid.Column="1"
-                    Width="1"
-                    VerticalAlignment="Stretch"
-                    Background="{StaticResource BorderSubtleBrush}"/>
+      </Grid><!-- end file view -->
 
-      <!-- ── Right panel: file details + duplicates ──────────────────── -->
-      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+    </Panel><!-- end body Panel -->
 
-        <!-- Selected file details card -->
-        <Border Grid.Row="0"
-                Padding="14"
-                Background="{DynamicResource BgPrimaryBrush}"
-                BorderBrush="{StaticResource BorderSubtleBrush}"
-                BorderThickness="0,0,0,1">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{Binding SelectedFile.Name, FallbackValue='— No selection —'}"
-                       FontSize="{DynamicResource NxFont13}"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+    <!-- ── Row 4: Splitter above treemap ──────────────────────────────── -->
+    <GridSplitter Grid.Row="4" Height="4" HorizontalAlignment="Stretch"
+                  Background="{StaticResource BorderSubtleBrush}"/>
 
-            <Grid ColumnDefinitions="80,*"
-                  RowDefinitions="Auto,Auto,Auto,Auto"
-                  IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
-              <TextBlock Grid.Row="0" Grid.Column="1"
-                         Text="{Binding SelectedFile.SizeDisplay}"
-                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
+    <!-- ── Row 5: Treemap (always visible) ───────────────────────────── -->
+    <Border Grid.Row="5" Background="#0A0A0C" ClipToBounds="True">
+      <Panel>
+        <TextBlock Text="Click 'Scan' to analyze disk usage"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextTertiaryBrush}"
+                   FontSize="{DynamicResource NxFont14}"
+                   IsVisible="{Binding !HasScanResult}"/>
+        <ctrl:TreemapControl x:Name="TheTreemap"
+                             RootNode="{Binding RootNode}"
+                             SelectedNode="{Binding SelectedNode}"
+                             IsVisible="{Binding HasScanResult}"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Stretch"/>
+      </Panel>
+    </Border>
 
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
-              <TextBlock Grid.Row="1" Grid.Column="1"
-                         Text="{Binding SelectedFile.FullPath}"
-                         FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                         Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3"/>
-
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Modified"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,3"/>
-              <TextBlock Grid.Row="2" Grid.Column="1"
-                         Text="{Binding SelectedFile.LastModified, StringFormat='yyyy-MM-dd HH:mm'}"
-                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,3"/>
-
-              <TextBlock Grid.Row="3" Grid.Column="0" Text="% of parent"
-                         Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
-              <TextBlock Grid.Row="3" Grid.Column="1"
-                         Text="{Binding SelectedFile.PercentOfParent, StringFormat='{}{0:F1}%'}"
-                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <!-- Duplicates panel -->
-        <Grid Grid.Row="1" RowDefinitions="Auto,*">
-
-          <!-- Duplicates header -->
-          <Border Grid.Row="0"
-                  Padding="14,10"
-                  Background="{DynamicResource BgPrimaryBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}"
-                  BorderThickness="0,0,0,1">
-            <StackPanel Spacing="4">
-              <TextBlock Text="Duplicate Files"
-                         FontSize="{DynamicResource NxFont13}"
-                         FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}"/>
-              <TextBlock Text="{Binding DuplicateSummary}"
-                         FontSize="{DynamicResource NxFont11}"
-                         Foreground="{StaticResource TextTertiaryBrush}"
-                         IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                         TextWrapping="Wrap"/>
-              <ProgressBar IsIndeterminate="True"
-                           IsVisible="{Binding IsDuplicateScanning}"
-                           Height="2"
-                           Background="Transparent"
-                           Foreground="{DynamicResource AccentBlueBrush}"
-                           Margin="0,4,0,0"/>
-            </StackPanel>
-          </Border>
-
-          <!-- Duplicate groups list -->
-          <ScrollViewer Grid.Row="1">
-            <ItemsControl ItemsSource="{Binding Duplicates}" Padding="8">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="models:DuplicateGroup">
-                  <Border Margin="0,0,0,8"
-                          Padding="10"
-                          CornerRadius="8"
-                          Background="#0DEBEBF5"
-                          BorderBrush="{StaticResource BorderSubtleBrush}"
-                          BorderThickness="1">
-                    <StackPanel Spacing="4">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding WastedDisplay}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource ColorWarningBrush}"
-                                   FontSize="{DynamicResource NxFont12}"/>
-                        <TextBlock Text="wasted"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
-                                   FontSize="{DynamicResource NxFont12}"/>
-                        <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
-                                   FontSize="{DynamicResource NxFont12}"/>
-                      </StackPanel>
-                      <ItemsControl ItemsSource="{Binding Files}">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate DataType="models:DiskNode">
-                            <TextBlock Text="{Binding FullPath}"
-                                       FontSize="{DynamicResource NxFont10}"
-                                       Foreground="{StaticResource TextTertiaryBrush}"
-                                       TextTrimming="CharacterEllipsis"/>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-        </Grid>
-      </Grid>
-    </Grid>
   </Grid>
 </UserControl>
