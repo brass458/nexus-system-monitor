@@ -106,7 +106,8 @@
                   CanUserSortColumns="True"
                   CanUserResizeColumns="True"
                   CanUserReorderColumns="True"
-                  IsReadOnly="True">
+                  IsReadOnly="True"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <DataGrid.ContextMenu>
             <ContextMenu>
               <MenuItem Header="Start"   Command="{Binding StartServiceCommand}"/>

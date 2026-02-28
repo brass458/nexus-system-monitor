@@ -15,13 +15,16 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
 {
     private readonly INetworkConnectionsProvider _provider;
     private IDisposable? _subscription;
+    private IDisposable? _adapterSubscription;
     private IReadOnlyList<NetworkConnection> _allConnections = [];
 
     [ObservableProperty] private ObservableCollection<NetworkConnection> _connections = [];
     [ObservableProperty] private int    _totalCount;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private NetworkConnection? _selectedConnection;
-    [ObservableProperty] private bool _isDetailPanelVisible = true;
+    [ObservableProperty] private bool   _isDetailPanelVisible = true;
+    [ObservableProperty] private string _adapterSendDisplay = "—";
+    [ObservableProperty] private string _adapterRecvDisplay = "—";
 
     /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
     public bool IsConnectionDetailShown => SelectedConnection is not null && IsDetailPanelVisible;
@@ -35,6 +38,15 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
             .GetConnectionStream(TimeSpan.FromSeconds(2))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(Update);
+
+        _adapterSubscription = provider
+            .GetAdapterThroughputStream(TimeSpan.FromSeconds(2))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(t =>
+            {
+                AdapterSendDisplay = t.SendDisplay;
+                AdapterRecvDisplay = t.RecvDisplay;
+            });
     }
 
     // Re-filter when search text changes
@@ -139,7 +151,11 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
             WeakReferenceMessenger.Default.Send(new NavigateToProcessMessage(pid));
     }
 
-    public void Dispose() => _subscription?.Dispose();
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        _adapterSubscription?.Dispose();
+    }
 }
 
 /// <summary>

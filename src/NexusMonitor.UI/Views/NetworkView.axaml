@@ -49,9 +49,40 @@
             Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
-      <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
-                 FontSize="{DynamicResource NxFont11}"
-                 Foreground="{StaticResource TextSecondaryBrush}"/>
+      <DockPanel>
+
+        <!-- Adapter throughput — right-aligned -->
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="&#x2191;"
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{DynamicResource AccentBlueBrush}"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding AdapterSendDisplay}"
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{DynamicResource AccentBlueBrush}"
+                       FontWeight="Medium"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="&#x2193;"
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{StaticResource ColorSuccessBrush}"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding AdapterRecvDisplay}"
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{StaticResource ColorSuccessBrush}"
+                       FontWeight="Medium"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
+                   FontSize="{DynamicResource NxFont11}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   VerticalAlignment="Center"/>
+
+      </DockPanel>
     </Border>
 
     <!-- Connection table + sidebar -->
@@ -66,7 +97,8 @@
                 CanUserSortColumns="True"
                 CanUserResizeColumns="True"
                 CanUserReorderColumns="True"
-                IsReadOnly="True">
+                IsReadOnly="True"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <DataGrid.ContextMenu>
           <ContextMenu>
             <MenuItem Header="Copy Local Address"  Command="{Binding CopyLocalAddressCommand}"/>

@@ -1,18 +1,25 @@
 using System.Diagnostics;
 using System.Reactive.Linq;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Helpers;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.MacOS;
 
 public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvider
 {
+    private readonly AdapterThroughputTracker _adapterTracker = new();
+
     public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval) =>
         Observable.Timer(TimeSpan.Zero, interval)
                   .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections());
 
     public Task<IReadOnlyList<NetworkConnection>> GetConnectionsAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<NetworkConnection>>(GetConnections, ct);
+
+    public IObservable<AdapterThroughput> GetAdapterThroughputStream(TimeSpan interval) =>
+        Observable.Timer(TimeSpan.Zero, interval)
+                  .Select(_ => _adapterTracker.Sample());
 
     private static IReadOnlyList<NetworkConnection> GetConnections()
     {

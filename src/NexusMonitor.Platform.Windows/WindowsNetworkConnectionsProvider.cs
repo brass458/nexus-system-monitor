@@ -3,6 +3,7 @@ using System.Net;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Helpers;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Platform.Windows.Native;
 
@@ -21,6 +22,9 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
     private const int AF_INET  = 2;
     private const int AF_INET6 = 23;
 
+    // ── Adapter-level throughput tracker (no elevation needed) ─────────────────
+    private readonly AdapterThroughputTracker _adapterTracker = new();
+
     // ── Per-connection EStats state ────────────────────────────────────────────
     // Key: (LocalAddr, LocalPort, RemoteAddr, RemotePort) for TCP4
     private readonly Dictionary<EStatsKey, EStatEntry> _stats = new();
@@ -36,6 +40,10 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
     public Task<IReadOnlyList<NetworkConnection>> GetConnectionsAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<NetworkConnection>>(() => Snapshot(), ct);
+
+    public IObservable<AdapterThroughput> GetAdapterThroughputStream(TimeSpan interval) =>
+        Observable.Timer(TimeSpan.Zero, interval)
+                  .Select(_ => _adapterTracker.Sample());
 
     // ─── Snapshot ─────────────────────────────────────────────────────────────
 

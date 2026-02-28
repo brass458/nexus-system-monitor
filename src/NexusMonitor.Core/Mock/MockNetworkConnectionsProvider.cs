@@ -21,4 +21,7 @@ public sealed class MockNetworkConnectionsProvider : INetworkConnectionsProvider
 
     public Task<IReadOnlyList<NetworkConnection>> GetConnectionsAsync(CancellationToken ct = default) =>
         Task.FromResult(_mock);
+
+    public IObservable<AdapterThroughput> GetAdapterThroughputStream(TimeSpan interval) =>
+        Observable.Return(AdapterThroughput.Zero);
 }

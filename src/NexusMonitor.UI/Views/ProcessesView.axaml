@@ -177,6 +177,7 @@
                 CanUserReorderColumns="True"
                 SelectionMode="Single"
                 AutoGenerateColumns="False"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 Margin="0">
 
         <!-- Row background tinting by process category.
