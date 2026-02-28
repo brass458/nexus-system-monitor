@@ -129,6 +129,18 @@ public class CpuNonZeroConverter : IValueConverter
         => AvaloniaProperty.UnsetValue;
 }
 
+/// <summary>Converts a boolean to "Yes" or "No" string.</summary>
+public class BoolToYesNoConverter : IValueConverter
+{
+    public static readonly BoolToYesNoConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? "Yes" : "No";
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => AvaloniaProperty.UnsetValue;
+}
+
 /// <summary>Formats bytes into human-readable string.</summary>
 public class BytesFormatConverter : IValueConverter
 {

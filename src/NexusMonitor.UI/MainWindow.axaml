@@ -21,11 +21,53 @@
     <conv:CpuHeatBrushConverter x:Key="CpuHeat" />
   </Window.Resources>
 
-  <Grid RowDefinitions="Auto,*">
+  <Window.Styles>
+
+    <!-- ── Drag grip: hidden by default, visible on row hover, prominent when dragging ── -->
+    <Style Selector="TextBlock.nav-grip">
+      <Setter Property="Opacity" Value="0"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Grid.nav-row:pointerover TextBlock.nav-grip">
+      <Setter Property="Opacity" Value="0.35"/>
+    </Style>
+    <Style Selector="Grid.nav-row.dragging TextBlock.nav-grip">
+      <Setter Property="Opacity" Value="0.7"/>
+    </Style>
+
+    <!-- ── Nav item root: smooth ease-out transitions for transform + opacity ── -->
+    <Style Selector="Grid.nav-row">
+      <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25">
+            <TransformOperationsTransition.Easing>
+              <CubicEaseOut/>
+            </TransformOperationsTransition.Easing>
+          </TransformOperationsTransition>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+      </Setter>
+    </Style>
+
+    <!-- ── Dragging state: subtly lifted, slightly translucent ── -->
+    <Style Selector="Grid.nav-row.dragging">
+      <Setter Property="RenderTransform" Value="scale(1.01)"/>
+      <Setter Property="Opacity" Value="0.94"/>
+      <Setter Property="ZIndex" Value="10"/>
+    </Style>
+
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*" PointerMoved="OnGlobalPointerMoved">
 
     <!-- ===== TITLEBAR ===== -->
     <Border Grid.Row="0"
-            Height="48"
+            Height="52"
             Background="{DynamicResource GlassBgBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="0,0,0,1"
@@ -33,15 +75,15 @@
             PointerPressed="OnTitleBarPointerPressed">
       <Panel>
         <Grid ColumnDefinitions="Auto,*,Auto"
-              Margin="16,0">
+              Margin="18,0">
 
           <!-- App icon + name -->
           <StackPanel Grid.Column="0"
                       Orientation="Horizontal"
                       Spacing="10"
                       VerticalAlignment="Center">
-            <Border Width="22" Height="22"
-                    CornerRadius="6"
+            <Border Width="24" Height="24"
+                    CornerRadius="7"
                     Background="{DynamicResource AccentBlueBrush}">
               <TextBlock Text="N"
                          FontSize="{DynamicResource NxFont13}"
@@ -60,19 +102,19 @@
           <!-- Window controls -->
           <StackPanel Grid.Column="2"
                       Orientation="Horizontal"
-                      Spacing="4"
+                      Spacing="2"
                       VerticalAlignment="Center">
-            <Button Classes="nx-btn-ghost" Padding="8,6"
+            <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnMinimize"
                     ToolTip.Tip="Minimize">
               <TextBlock Text="—" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
-            <Button Classes="nx-btn-ghost" Padding="8,6"
+            <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnMaximize"
                     ToolTip.Tip="Maximize">
               <TextBlock Text="⬜" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
-            <Button Classes="nx-btn-ghost" Padding="8,6"
+            <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnClose"
                     ToolTip.Tip="Close">
               <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
@@ -83,14 +125,15 @@
 
         <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
 
-        <!-- Layer 1: Broad soft wash — fills the whole titlebar top→bottom -->
-        <Border IsHitTestVisible="False"
+        <!-- Layer 1: Broad soft wash — pointer-tracked specular highlight -->
+        <Border x:Name="TitleSpecularWash"
+                IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
-            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-              <GradientStop Color="#50FFFFFF" Offset="0"/>
-              <GradientStop Color="#18FFFFFF" Offset="0.45"/>
-              <GradientStop Color="#00FFFFFF" Offset="0.85"/>
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+              <GradientStop Color="#58FFFFFF" Offset="0"/>
+              <GradientStop Color="#20FFFFFF" Offset="0.35"/>
+              <GradientStop Color="#00FFFFFF" Offset="0.7"/>
             </LinearGradientBrush>
           </Border.Background>
         </Border>
@@ -109,14 +152,15 @@
           </Border.Background>
         </Border>
 
-        <!-- Layer 3: Prismatic shimmer — diagonal rainbow tint at very low alpha -->
-        <Border IsHitTestVisible="False"
+        <!-- Layer 3: Prismatic shimmer — rotating rainbow tint (animated in code) -->
+        <Border x:Name="TitlePrismatic"
+                IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-              <GradientStop Color="#0CFF8888" Offset="0.0"/>
-              <GradientStop Color="#06FFFFFF" Offset="0.33"/>
-              <GradientStop Color="#0C88FFFF" Offset="0.66"/>
+              <GradientStop Color="#10FF8888" Offset="0.0"/>
+              <GradientStop Color="#08FFFFFF" Offset="0.33"/>
+              <GradientStop Color="#1088FFFF" Offset="0.66"/>
               <GradientStop Color="#00FFFFFF" Offset="1.0"/>
             </LinearGradientBrush>
           </Border.Background>
@@ -126,7 +170,7 @@
     </Border>
 
     <!-- ===== MAIN LAYOUT ===== -->
-    <Grid Grid.Row="1" ColumnDefinitions="200,*">
+    <Grid Grid.Row="1" ColumnDefinitions="210,*">
 
       <!-- ===== LEFT SIDEBAR ===== -->
       <Border Grid.Column="0"
@@ -140,29 +184,32 @@
                         HorizontalScrollBarVisibility="Disabled">
             <ItemsControl x:Name="NavItemsControl"
                           ItemsSource="{Binding NavItems}"
-                          Margin="8,12">
+                          Margin="10,14">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:NavItem">
-                  <Grid ColumnDefinitions="20,*">
-                    <!-- Drag grip — visual handle for drag-to-reorder -->
+                  <Grid ColumnDefinitions="18,*"
+                        Classes="nav-row"
+                        Classes.dragging="{Binding IsDragging}"
+                        Background="Transparent">
+                    <!-- Drag grip — hidden by default, appears on hover -->
                     <TextBlock Grid.Column="0"
+                               Classes="nav-grip"
                                Text="&#x2807;"
-                               FontSize="13"
+                               FontSize="12"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource TextTertiaryBrush}"
-                               Opacity="0.3"
-                               Cursor="SizeNorthSouth"
-                               IsHitTestVisible="False"/>
+                               Cursor="Hand"
+                               ToolTip.Tip="Drag to reorder"/>
                     <!-- Navigation button -->
                     <Button Grid.Column="1"
                             Classes="nx-btn-ghost"
                             Classes.active="{Binding IsActive}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
-                            Padding="8,9"
+                            Padding="10,10"
                             Margin="0,1"
-                            CornerRadius="8"
+                            CornerRadius="10"
                             Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
                             CommandParameter="{Binding}">
                       <TextBlock Text="{Binding Label}"
@@ -177,14 +224,15 @@
 
           <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
 
-          <!-- Layer 1: Broad diagonal wash from top-left corner -->
-          <Border IsHitTestVisible="False"
+          <!-- Layer 1: Broad diagonal wash — pointer-tracked specular highlight -->
+          <Border x:Name="SideSpecularWash"
+                  IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,0%" EndPoint="60%,100%">
-                <GradientStop Color="#38FFFFFF" Offset="0"/>
-                <GradientStop Color="#10FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#00FFFFFF" Offset="0.75"/>
+                <GradientStop Color="#40FFFFFF" Offset="0"/>
+                <GradientStop Color="#14FFFFFF" Offset="0.35"/>
+                <GradientStop Color="#00FFFFFF" Offset="0.7"/>
               </LinearGradientBrush>
             </Border.Background>
           </Border>
@@ -203,14 +251,15 @@
             </Border.Background>
           </Border>
 
-          <!-- Layer 3: Prismatic shimmer — diagonal iridescent tint -->
-          <Border IsHitTestVisible="False"
+          <!-- Layer 3: Prismatic shimmer — rotating iridescent tint (animated in code) -->
+          <Border x:Name="SidePrismatic"
+                  IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                <GradientStop Color="#0AFF8888" Offset="0.0"/>
-                <GradientStop Color="#06FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#0A88FFFF" Offset="0.75"/>
+                <GradientStop Color="#0EFF8888" Offset="0.0"/>
+                <GradientStop Color="#08FFFFFF" Offset="0.4"/>
+                <GradientStop Color="#0E88FFFF" Offset="0.75"/>
                 <GradientStop Color="#00FFFFFF" Offset="1.0"/>
               </LinearGradientBrush>
             </Border.Background>
@@ -222,10 +271,12 @@
 
       <!-- ===== CONTENT AREA ===== -->
       <Border Grid.Column="1" Background="{DynamicResource BgPrimaryBrush}">
-        <TransitioningContentControl Content="{Binding CurrentPage}">
-          <TransitioningContentControl.PageTransition>
-            <CrossFade Duration="0:0:0.15"/>
-          </TransitioningContentControl.PageTransition>
+        <Panel>
+          <!-- Content -->
+          <TransitioningContentControl Content="{Binding CurrentPage}">
+            <TransitioningContentControl.PageTransition>
+              <CrossFade Duration="0:0:0.18"/>
+            </TransitioningContentControl.PageTransition>
           <TransitioningContentControl.DataTemplates>
             <DataTemplate DataType="vm:ProcessesViewModel">
               <views:ProcessesView />
@@ -267,7 +318,40 @@
               <views:SettingsView />
             </DataTemplate>
           </TransitioningContentControl.DataTemplates>
-        </TransitioningContentControl>
+          </TransitioningContentControl>
+
+          <!-- ── Liquid Glass specular layers for content area (pointer-transparent) ── -->
+
+          <!-- Layer 1: Content specular wash — pointer-tracked light source -->
+          <Border x:Name="ContentSpecularWash"
+                  IsHitTestVisible="False"
+                  Height="80"
+                  VerticalAlignment="Top"
+                  Opacity="{DynamicResource GlassSpecularOpacity}">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#18FFFFFF" Offset="0"/>
+                <GradientStop Color="#08FFFFFF" Offset="0.35"/>
+                <GradientStop Color="#00FFFFFF" Offset="0.7"/>
+              </LinearGradientBrush>
+            </Border.Background>
+          </Border>
+
+          <!-- Layer 2: Prismatic shimmer — rotating iridescent tint (animated in code) -->
+          <Border x:Name="ContentPrismatic"
+                  IsHitTestVisible="False"
+                  Opacity="{DynamicResource GlassSpecularOpacity}">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#08FF8888" Offset="0.0"/>
+                <GradientStop Color="#04FFFFFF" Offset="0.4"/>
+                <GradientStop Color="#0888FFFF" Offset="0.8"/>
+                <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+              </LinearGradientBrush>
+            </Border.Background>
+          </Border>
+
+        </Panel>
       </Border>
 
     </Grid>

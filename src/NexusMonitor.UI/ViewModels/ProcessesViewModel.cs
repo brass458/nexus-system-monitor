@@ -6,10 +6,15 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReactiveUI;
 using NexusMonitor.UI.Messages;
 using NexusMonitor.UI.Helpers;
+using NexusMonitor.UI.Views;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -316,6 +321,95 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         var name = SelectedProcess?.Name ?? string.Empty;
         if (name.Length > 0)
             ShellHelper.OpenUrl($"https://www.google.com/search?q={Uri.EscapeDataString(name + " process")}");
+    }
+
+    [RelayCommand]
+    private async Task CreateDumpFile()
+    {
+        if (SelectedProcess is null) return;
+        try
+        {
+            LastError = string.Empty;
+            var mainWin = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            if (mainWin is null) return;
+
+            var sp = mainWin.StorageProvider;
+            var file = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = $"Save dump file for {SelectedProcess.Name}",
+                SuggestedFileName = $"{SelectedProcess.Name}_{SelectedProcess.Pid}.dmp",
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("Dump files") { Patterns = ["*.dmp"] },
+                    new FilePickerFileType("All files")  { Patterns = ["*"] },
+                ],
+            });
+            if (file is null) return;
+
+            var path = file.TryGetLocalPath();
+            if (string.IsNullOrEmpty(path)) return;
+
+            await _processProvider.CreateDumpFileAsync(SelectedProcess.Pid, path, _cts.Token);
+            LastError = $"Dump saved: {path}";
+        }
+        catch (Exception ex) { LastError = $"Dump failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task SetAffinity()
+    {
+        if (SelectedProcess is null) return;
+        try
+        {
+            LastError = string.Empty;
+            var (procMask, sysMask) = await _processProvider.GetAffinityMasksAsync(SelectedProcess.Pid, _cts.Token);
+
+            var mainWin = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            if (mainWin is null) return;
+
+            var dialog = new AffinityDialog(
+                $"{SelectedProcess.Name} (PID {SelectedProcess.Pid})",
+                procMask, sysMask);
+
+            var result = await dialog.ShowDialog<long?>(mainWin);
+            if (result is long newMask && newMask > 0)
+            {
+                await _processProvider.SetAffinityAsync(SelectedProcess.Pid, newMask, _cts.Token);
+            }
+        }
+        catch (Exception ex) { LastError = $"Set affinity failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task FindWindow()
+    {
+        try
+        {
+            LastError = string.Empty;
+            var overlay = new FindWindowOverlay();
+
+            var mainWin = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+            var result = await overlay.ShowDialog<int?>(mainWin!);
+            int pid = result ?? 0;
+            if (pid > 0)
+            {
+                // Navigate to that PID in the process list
+                if (_allRows.TryGetValue(pid, out var row))
+                    SelectedProcess = row;
+                else
+                    LastError = $"PID {pid} not found in process list";
+            }
+        }
+        catch (Exception ex) { LastError = $"Find window failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private void ShowProperties()
+    {
+        if (SelectedProcess is null) return;
+        // Ensure the detail panel is visible and selected process is focused
+        IsDetailPanelVisible = true;
     }
 
     // Filter from the in-memory cache — no async round-trip to the provider needed.

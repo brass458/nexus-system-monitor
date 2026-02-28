@@ -38,9 +38,9 @@ public partial class SettingsViewModel : ViewModelBase
     // ── Color picker state ────────────────────────────────────────────────────
     [ObservableProperty] private Color  _pickerAccentColor  = Color.Parse("#0A84FF");
     // Generic picker: shared by all surface pickers; set before opening dialog
-    [ObservableProperty] private Color  _pickerSurfaceColor = Color.Parse("#1C1C1E");
+    [ObservableProperty] private Color  _pickerSurfaceColor = Color.Parse("#131318");
     // Hex display string updated whenever PickerSurfaceColor changes (consumed by SurfaceColorPickerWindow)
-    [ObservableProperty] private string _pickerSurfaceHex   = "#1C1C1E";
+    [ObservableProperty] private string _pickerSurfaceHex   = "#131318";
     private bool _suppressColorSync;
 
     // ── Typography ────────────────────────────────────────────────────────────
@@ -352,9 +352,9 @@ public partial class SettingsViewModel : ViewModelBase
         if (Application.Current is null) return;
 
         // Resolve base colors — custom hex wins if valid; else fall back to defaults.
-        Color bgBase    = TryParseColor(customWindowBgHex,  Color.Parse("#0F0F12"));
-        Color bgSurface = TryParseColor(customSurfaceBgHex, Color.Parse("#1C1C1E"));
-        Color bgSidebar = TryParseColor(customSidebarBgHex, Color.Parse("#1C1C1E"));
+        Color bgBase    = TryParseColor(customWindowBgHex,  Color.Parse("#0A0A12"));
+        Color bgSurface = TryParseColor(customSurfaceBgHex, Color.Parse("#131318"));
+        Color bgSidebar = TryParseColor(customSidebarBgHex, Color.Parse("#131318"));
 
         // Derive slightly lighter variants from the custom surface base
         Color bgSecondary = LightenBy(bgSurface, 9);    // +9 brightness

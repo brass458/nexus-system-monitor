@@ -173,6 +173,13 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
         Devices.Add(_cpuDevice);
         Devices.Add(_memDevice);
         SelectedDevice = overview;
+        overview.IsSelected = true;
+    }
+
+    partial void OnSelectedDeviceChanged(PerfDeviceViewModel? oldValue, PerfDeviceViewModel? newValue)
+    {
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (newValue is not null) newValue.IsSelected = true;
     }
 
     // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.
@@ -220,13 +227,17 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             })
             .ToList();
 
-        // Network
+        // Network — prefer the adapter with the most activity (active NIC)
         if (m.NetworkAdapters.Count > 0)
         {
-            NetSendMbps = Math.Round(m.NetworkAdapters[0].SendBytesPerSec / 1e6, 2);
-            NetRecvMbps = Math.Round(m.NetworkAdapters[0].RecvBytesPerSec / 1e6, 2);
-            Push(_netSendValues, m.NetworkAdapters[0].SendBytesPerSec / 1e6);
-            Push(_netRecvValues, m.NetworkAdapters[0].RecvBytesPerSec / 1e6);
+            var activeNic = m.NetworkAdapters
+                .OrderByDescending(a => a.SendBytesPerSec + a.RecvBytesPerSec)
+                .ThenByDescending(a => a.IsConnected ? 1 : 0)
+                .First();
+            NetSendMbps = Math.Round(activeNic.SendBytesPerSec / 1e6, 2);
+            NetRecvMbps = Math.Round(activeNic.RecvBytesPerSec / 1e6, 2);
+            Push(_netSendValues, activeNic.SendBytesPerSec / 1e6);
+            Push(_netRecvValues, activeNic.RecvBytesPerSec / 1e6);
         }
 
         // GPU
@@ -275,7 +286,11 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     private void SyncNetworkDevices(IReadOnlyList<NetworkAdapterMetrics> adapters)
     {
         var activeKeys = new HashSet<string>(adapters.Select(n => n.Name.Length > 0 ? n.Name : n.Description));
-        foreach (var n in adapters)
+        // Sort: connected / highest-throughput adapters first in the sidebar
+        var sorted = adapters
+            .OrderByDescending(a => a.IsConnected ? 1 : 0)
+            .ThenByDescending(a => a.SendBytesPerSec + a.RecvBytesPerSec);
+        foreach (var n in sorted)
         {
             string key = n.Name.Length > 0 ? n.Name : n.Description;
             if (!Devices.OfType<NetworkDeviceViewModel>().Any(x => x.AdapterName == key))

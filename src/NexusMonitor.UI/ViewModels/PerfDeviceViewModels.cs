@@ -17,6 +17,8 @@ public abstract partial class PerfDeviceViewModel : ObservableObject
 
     [ObservableProperty] private string _valueDisplay    = "0%";
     [ObservableProperty] private string _subValueDisplay = string.Empty;
+    [ObservableProperty] private bool _isDragging;
+    [ObservableProperty] private bool _isSelected;
 
     // 20-point mini sparkline for the sidebar list item
     public ObservableCollection<ObservableValue> MiniHistory { get; } =
@@ -51,6 +53,14 @@ public abstract partial class PerfDeviceViewModel : ObservableObject
         col.RemoveAt(0);
         col.Add(new ObservableValue(value));
     }
+
+    protected static string FmtBytes(long bytes) => bytes switch
+    {
+        >= 1_073_741_824L => $"{bytes / 1_073_741_824.0:F1} GB",
+        >= 1_048_576L     => $"{bytes / 1_048_576.0:F1} MB",
+        >= 1_024L         => $"{bytes / 1_024.0:F0} KB",
+        _                 => $"{bytes} B",
+    };
 }
 
 // ── Overview ───────────────────────────────────────────────────────────────────
@@ -83,6 +93,17 @@ public sealed partial class CpuDeviceViewModel : PerfDeviceViewModel
     [ObservableProperty] private int    _physicalCores;
     [ObservableProperty] private string _uptimeDisplay = string.Empty;
     [ObservableProperty] private IReadOnlyList<CoreCellViewModel> _coreCells = [];
+
+    // ── Extended detail (Task Manager parity) ─────────────────────────────
+    [ObservableProperty] private string _baseSpeedDisplay  = string.Empty;
+    [ObservableProperty] private int    _sockets;
+    [ObservableProperty] private string _virtualization = string.Empty;
+    [ObservableProperty] private string _l1CacheDisplay = string.Empty;
+    [ObservableProperty] private string _l2CacheDisplay = string.Empty;
+    [ObservableProperty] private string _l3CacheDisplay = string.Empty;
+    [ObservableProperty] private int    _processCount;
+    [ObservableProperty] private int    _threadCount;
+    [ObservableProperty] private int    _handleCount;
 
     public CpuDeviceViewModel(string modelName) : base(new SKColor(10, 132, 255))
     {
@@ -122,6 +143,18 @@ public sealed partial class CpuDeviceViewModel : PerfDeviceViewModel
             ? $"{(int)up.TotalDays}d {up.Hours:D2}h {up.Minutes:D2}m"
             : $"{up.Hours:D2}h {up.Minutes:D2}m {up.Seconds:D2}s";
 
+        // Extended detail
+        BaseSpeedDisplay = m.Cpu.BaseSpeedMhz > 0
+            ? $"{m.Cpu.BaseSpeedMhz / 1000.0:F2} GHz" : string.Empty;
+        Sockets         = m.Cpu.Sockets;
+        Virtualization  = m.Cpu.VirtualizationStatus;
+        L1CacheDisplay  = m.Cpu.L1CacheBytes > 0 ? FmtBytes(m.Cpu.L1CacheBytes) : string.Empty;
+        L2CacheDisplay  = m.Cpu.L2CacheBytes > 0 ? FmtBytes(m.Cpu.L2CacheBytes) : string.Empty;
+        L3CacheDisplay  = m.Cpu.L3CacheBytes > 0 ? FmtBytes(m.Cpu.L3CacheBytes) : string.Empty;
+        ProcessCount    = m.Cpu.ProcessCount;
+        ThreadCount     = m.Cpu.ThreadCount;
+        HandleCount     = m.Cpu.HandleCount;
+
         ValueDisplay    = $"{UtilPercent:F1}%";
         SubValueDisplay = SpeedDisplay;
         Push(History,     m.Cpu.TotalPercent);
@@ -154,6 +187,14 @@ public sealed partial class MemoryDeviceViewModel : PerfDeviceViewModel
     [ObservableProperty] private double _nonPagedPoolGb;
     [ObservableProperty] private double _usedPercent;
 
+    // ── Extended detail ─────────────────────────────────────────────────────
+    [ObservableProperty] private string _committedDisplay   = string.Empty;
+    [ObservableProperty] private int    _speedMhz;
+    [ObservableProperty] private string _slotsDisplay       = string.Empty;
+    [ObservableProperty] private string _formFactor         = string.Empty;
+    [ObservableProperty] private string _hwReservedDisplay  = string.Empty;
+    [ObservableProperty] private string _compressedDisplay  = string.Empty;
+
     public MemoryDeviceViewModel() : base(new SKColor(52, 199, 89))
     {
         HistorySeries =
@@ -179,6 +220,19 @@ public sealed partial class MemoryDeviceViewModel : PerfDeviceViewModel
         PagedPoolGb    = Math.Round(m.Memory.PagedPoolBytes    / 1e9, 2);
         NonPagedPoolGb = Math.Round(m.Memory.NonPagedPoolBytes / 1e9, 2);
         UsedPercent    = Math.Round(m.Memory.UsedPercent, 1);
+
+        // Extended detail
+        CommittedDisplay = m.Memory.CommitLimitBytes > 0
+            ? $"{m.Memory.CommitTotalBytes / 1e9:F1} / {m.Memory.CommitLimitBytes / 1e9:F1} GB"
+            : string.Empty;
+        SpeedMhz         = m.Memory.SpeedMhz;
+        SlotsDisplay     = m.Memory.TotalSlots > 0
+            ? $"{m.Memory.SlotsUsed} of {m.Memory.TotalSlots}" : string.Empty;
+        FormFactor       = m.Memory.FormFactor;
+        HwReservedDisplay = m.Memory.HardwareReservedBytes > 0
+            ? FmtBytes(m.Memory.HardwareReservedBytes) : string.Empty;
+        CompressedDisplay = m.Memory.CompressedBytes > 0
+            ? FmtBytes(m.Memory.CompressedBytes) : string.Empty;
 
         ValueDisplay    = $"{UsedPercent:F1}%";
         SubValueDisplay = $"{UsedGb:F1} / {TotalGb:F0} GB";
@@ -211,6 +265,13 @@ public sealed partial class DiskDeviceViewModel : PerfDeviceViewModel
     [ObservableProperty] private double _freeGb;
     [ObservableProperty] private double _capacityUsedPercent;
     [ObservableProperty] private string _labelText = string.Empty;
+
+    // ── Extended detail ─────────────────────────────────────────────────────
+    [ObservableProperty] private string _diskType       = string.Empty;
+    [ObservableProperty] private string _avgResponseDisplay = string.Empty;
+    [ObservableProperty] private bool   _isSystemDisk;
+    [ObservableProperty] private bool   _hasPageFile;
+    [ObservableProperty] private IReadOnlyList<VolumeInfoViewModel> _volumes = [];
 
     public DiskDeviceViewModel(DiskMetrics d) : base(new SKColor(100, 210, 255))
     {
@@ -254,6 +315,22 @@ public sealed partial class DiskDeviceViewModel : PerfDeviceViewModel
         CapacityUsedPercent = Math.Round(d.UsedPercent, 1);
         LabelText           = d.Label;
 
+        // Extended detail
+        DiskType           = d.DiskType;
+        AvgResponseDisplay = d.AverageResponseMs > 0
+            ? $"{d.AverageResponseMs:F1} ms" : string.Empty;
+        IsSystemDisk       = d.IsSystemDisk;
+        HasPageFile        = d.HasPageFile;
+        Volumes = d.Volumes.Select(v => new VolumeInfoViewModel
+        {
+            DriveLetter = v.DriveLetter,
+            Label       = v.Label.Length > 0 ? v.Label : "(Unnamed)",
+            FileSystem  = v.FileSystem,
+            TotalGb     = Math.Round(v.TotalBytes / 1e9, 1),
+            FreeGb      = Math.Round(v.FreeBytes  / 1e9, 1),
+            UsedPercent = Math.Round(v.UsedPercent, 1),
+        }).ToList();
+
         ValueDisplay    = $"{ActivePercent:F0}%";
         SubValueDisplay = $"R:{ReadRateDisplay} W:{WriteRateDisplay}";
         Push(ReadHistory,  d.ReadBytesPerSec  / 1e6);
@@ -269,6 +346,17 @@ public sealed partial class DiskDeviceViewModel : PerfDeviceViewModel
     };
 }
 
+/// <summary>View model for per-volume info displayed in the disk detail panel.</summary>
+public sealed class VolumeInfoViewModel
+{
+    public string DriveLetter { get; init; } = string.Empty;
+    public string Label       { get; init; } = string.Empty;
+    public string FileSystem  { get; init; } = string.Empty;
+    public double TotalGb     { get; init; }
+    public double FreeGb      { get; init; }
+    public double UsedPercent { get; init; }
+}
+
 // ── Network ────────────────────────────────────────────────────────────────────
 public sealed partial class NetworkDeviceViewModel : PerfDeviceViewModel
 {
@@ -282,6 +370,12 @@ public sealed partial class NetworkDeviceViewModel : PerfDeviceViewModel
     [ObservableProperty] private string _linkSpeedDisplay = string.Empty;
     [ObservableProperty] private string _sendRateDisplay  = "0 B/s";
     [ObservableProperty] private string _recvRateDisplay  = "0 B/s";
+
+    // ── Extended detail ─────────────────────────────────────────────────────
+    [ObservableProperty] private string _dnsSuffix       = string.Empty;
+    [ObservableProperty] private string _connectionType  = string.Empty;
+    [ObservableProperty] private string _totalSentDisplay  = string.Empty;
+    [ObservableProperty] private string _totalRecvDisplay  = string.Empty;
 
     public ObservableCollection<ObservableValue> SendHistory { get; } =
         new(Enumerable.Range(0, 60).Select(_ => new ObservableValue(0)));
@@ -328,8 +422,15 @@ public sealed partial class NetworkDeviceViewModel : PerfDeviceViewModel
                          : n.LinkSpeedBps >= 1_000_000L     ? $"{n.LinkSpeedBps / 1_000_000.0:F0} Mbps"
                          : n.LinkSpeedBps > 0               ? $"{n.LinkSpeedBps / 1_000.0:F0} Kbps"
                          : string.Empty;
-        SendRateDisplay = FormatRate(n.SendBytesPerSec);
-        RecvRateDisplay = FormatRate(n.RecvBytesPerSec);
+        SendRateDisplay  = FormatRate(n.SendBytesPerSec);
+        RecvRateDisplay  = FormatRate(n.RecvBytesPerSec);
+
+        // Extended detail
+        DnsSuffix        = n.DnsSuffix;
+        ConnectionType   = n.ConnectionType;
+        TotalSentDisplay = FmtBytes(n.TotalSendBytes);
+        TotalRecvDisplay = FmtBytes(n.TotalRecvBytes);
+
         ValueDisplay    = RecvRateDisplay;
         SubValueDisplay = $"↑ {SendRateDisplay}";
         Push(SendHistory, n.SendBytesPerSec / 1e6);
@@ -368,6 +469,12 @@ public sealed partial class GpuDeviceViewModel : PerfDeviceViewModel
     [ObservableProperty] private double _sharedUsedGb;
     [ObservableProperty] private double _tempC;
 
+    // ── Extended detail ─────────────────────────────────────────────────────
+    [ObservableProperty] private double _sharedTotalGb;
+    [ObservableProperty] private string _driverVersion    = string.Empty;
+    [ObservableProperty] private string _directXVersion   = string.Empty;
+    [ObservableProperty] private string _physicalLocation = string.Empty;
+
     public GpuDeviceViewModel(GpuMetrics g) : base(new SKColor(255, 159, 10))
     {
         _gpuName = g.Name;
@@ -403,6 +510,12 @@ public sealed partial class GpuDeviceViewModel : PerfDeviceViewModel
         DedicatedTotalGb    = Math.Round(g.DedicatedMemoryTotalBytes / 1e9, 1);
         SharedUsedGb        = Math.Round(g.SharedMemoryUsedBytes / 1e9, 1);
         TempC               = Math.Round(g.TemperatureCelsius, 0);
+
+        // Extended detail
+        SharedTotalGb    = Math.Round(g.SharedMemoryTotalBytes / 1e9, 1);
+        DriverVersion    = g.DriverVersion;
+        DirectXVersion   = g.DirectXVersion;
+        PhysicalLocation = g.PhysicalLocation;
 
         ValueDisplay    = $"{UsagePercent:F1}%";
         SubValueDisplay = $"{DedicatedUsedGb:F1} / {DedicatedTotalGb:F0} GB VRAM";

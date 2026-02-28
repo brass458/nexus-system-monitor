@@ -89,7 +89,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void Navigate(NavItem item)
+    internal void Navigate(NavItem item)
     {
         if (item == SelectedNavItem) return;
 
@@ -138,6 +138,14 @@ public sealed class NavItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObj
     {
         get => _isActive;
         internal set => SetProperty(ref _isActive, value);
+    }
+
+    private bool _isDragging;
+    /// <summary>True while this item is being dragged to a new position.</summary>
+    public bool IsDragging
+    {
+        get => _isDragging;
+        internal set => SetProperty(ref _isDragging, value);
     }
 
     private readonly Func<ViewModelBase> _factory;

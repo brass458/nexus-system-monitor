@@ -21,6 +21,12 @@ public interface IProcessProvider
     Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default);
     Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default);
     Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default);
+
+    /// <summary>Creates a minidump of the process at the specified path.</summary>
+    Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default);
+
+    /// <summary>Returns (processAffinityMask, systemAffinityMask) for the given process.</summary>
+    Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default);
 }
 
 public enum ProcessPriority { Idle, BelowNormal, Normal, AboveNormal, High, RealTime }

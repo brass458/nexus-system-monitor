@@ -1004,6 +1004,41 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         finally { Marshal.FreeHGlobal(buf); }
     }
 
+    public Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(
+                Kernel32.PROCESS_QUERY_INFORMATION | Kernel32.PROCESS_VM_READ, false, (uint)pid);
+            if (h == nint.Zero)
+                throw new InvalidOperationException($"Cannot open process {pid} — access denied or process exited.");
+            try
+            {
+                using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+                bool ok = Native.DbgHelp.MiniDumpWriteDump(
+                    h, (uint)pid, fs.SafeFileHandle.DangerousGetHandle(),
+                    Native.DbgHelp.MiniDumpNormal | Native.DbgHelp.MiniDumpWithDataSegs,
+                    nint.Zero, nint.Zero, nint.Zero);
+                if (!ok)
+                    throw new InvalidOperationException(
+                        $"MiniDumpWriteDump failed (Win32 error {Marshal.GetLastWin32Error()})");
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
+    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_QUERY_LIMITED_INFO, false, (uint)pid);
+            if (h == nint.Zero)
+                throw new InvalidOperationException($"Cannot open process {pid}");
+            try
+            {
+                GetProcessAffinityMask(h, out var processMask, out var systemMask);
+                return ((long)processMask, (long)systemMask);
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
     public void Dispose()
     {
         _cpuSamples.Clear();

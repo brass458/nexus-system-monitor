@@ -21,14 +21,14 @@
     <!-- ===== TOOLBAR ===== -->
     <Border DockPanel.Dock="Top"
             Padding="16,10"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto">
 
         <!-- Search -->
         <Border Grid.Column="0"
-                Background="{StaticResource BgElevatedBrush}"
+                Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{StaticResource BorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource CornerMD}"
@@ -42,6 +42,7 @@
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextTertiaryBrush}"/>
             <TextBox Grid.Column="1"
+                     Name="SearchBox"
                      Classes="nx-input"
                      Text="{Binding SearchText}"
                      Watermark="Search processes…"
@@ -82,8 +83,20 @@
           </StackPanel>
         </Button>
 
-        <!-- More actions -->
+        <!-- Find Window crosshair -->
         <Button Grid.Column="4"
+                Classes="nx-btn"
+                Margin="0,0,4,0"
+                Command="{Binding FindWindowCommand}"
+                ToolTip.Tip="Click on any window to identify its process">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="⊕" FontSize="{DynamicResource NxFont13}"/>
+            <TextBlock Text="Find" FontSize="{DynamicResource NxFont11}"/>
+          </StackPanel>
+        </Button>
+
+        <!-- More actions -->
+        <Button Grid.Column="5"
                 Classes="nx-btn"
                 Margin="0,0,4,0"
                 ToolTip.Tip="More actions">
@@ -91,7 +104,7 @@
         </Button>
 
         <!-- Detail panel toggle -->
-        <ToggleButton Grid.Column="5"
+        <ToggleButton Grid.Column="6"
                       Classes="nx-toggle"
                       Margin="0"
                       IsChecked="{Binding IsDetailPanelVisible}"
@@ -105,7 +118,7 @@
     <!-- ===== STATUS BAR ===== -->
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <DockPanel>
@@ -195,13 +208,13 @@
               <MenuItem Header="High"         Command="{Binding SetPriorityCommand}" CommandParameter="High"/>
               <MenuItem Header="Real Time"    Command="{Binding SetPriorityCommand}" CommandParameter="RealTime"/>
             </MenuItem>
-            <MenuItem Header="Set CPU Affinity…"/>
+            <MenuItem Header="Set CPU Affinity…" Command="{Binding SetAffinityCommand}"/>
             <Separator/>
             <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
             <MenuItem Header="Search Online"      Command="{Binding SearchOnlineCommand}"/>
             <Separator/>
-            <MenuItem Header="Properties"/>
-            <MenuItem Header="Create Dump File…"/>
+            <MenuItem Header="Properties"         Command="{Binding ShowPropertiesCommand}"/>
+            <MenuItem Header="Create Dump File…"  Command="{Binding CreateDumpFileCommand}"/>
           </ContextMenu>
         </DataGrid.ContextMenu>
 
@@ -247,7 +260,7 @@
                     <Rectangle Grid.Column="0"
                                 Height="2" RadiusX="1" RadiusY="1"
                                 HorizontalAlignment="Stretch"
-                                Fill="{StaticResource BgHoverBrush}"/>
+                                Fill="{DynamicResource BgHoverBrush}"/>
                     <Rectangle Grid.Column="0"
                                 Height="2" RadiusX="1" RadiusY="1"
                                 HorizontalAlignment="Left"
@@ -320,7 +333,7 @@
       <!-- Width="280" on the Border causes the Auto column to collapse to 0 when IsVisible=false -->
       <Border Grid.Column="2"
               Width="280"
-              Background="{StaticResource BgSecondaryBrush}"
+              Background="{DynamicResource BgSecondaryBrush}"
               IsVisible="{Binding IsDetailPanelShown}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="0"
@@ -379,7 +392,7 @@
             </Grid>
 
             <!-- CPU history sparkline — updates every tick via PropertyChanged(null) -->
-            <Border Background="{StaticResource BgElevatedBrush}"
+            <Border Background="{DynamicResource BgElevatedBrush}"
                     CornerRadius="4"
                     ClipToBounds="True"
                     Height="46"

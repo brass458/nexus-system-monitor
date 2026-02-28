@@ -36,7 +36,16 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                 TemperatureCelsius = 45 + 15 * Math.Abs(Math.Sin(t * 0.3)),
                 LogicalCores = cores,
                 PhysicalCores = cores / 2,
-                ModelName = "AMD Ryzen 9 7950X"
+                ModelName = "AMD Ryzen 9 7950X",
+                BaseSpeedMhz = 4500,
+                Sockets = 1,
+                VirtualizationStatus = "Enabled",
+                L1CacheBytes = 1024 * 1024,            // 1 MB
+                L2CacheBytes = 16L * 1024 * 1024,      // 16 MB
+                L3CacheBytes = 64L * 1024 * 1024,       // 64 MB (Ryzen 9 7950X V-Cache territory)
+                ProcessCount = 312,
+                ThreadCount = 4817,
+                HandleCount = 156_420
             },
             Memory = new MemoryMetrics
             {
@@ -46,7 +55,13 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                 PagedPoolBytes = 512L * 1024 * 1024,
                 NonPagedPoolBytes = 256L * 1024 * 1024,
                 CommitTotalBytes = (long)(14L * 1024 * 1024 * 1024),
-                CommitLimitBytes = 48L * 1024 * 1024 * 1024
+                CommitLimitBytes = 48L * 1024 * 1024 * 1024,
+                SpeedMhz = 5600,
+                SlotsUsed = 2,
+                TotalSlots = 4,
+                FormFactor = "DIMM",
+                HardwareReservedBytes = 512L * 1024 * 1024,   // 512 MB
+                CompressedBytes = 128L * 1024 * 1024           // 128 MB
             },
             Disks =
             [
@@ -59,7 +74,23 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     ActivePercent = Math.Min(100, 5 + 15 * Math.Abs(Math.Sin(t * 0.7))),
                     TotalBytes = 2L * 1024 * 1024 * 1024 * 1024,
                     FreeBytes = 800L * 1024 * 1024 * 1024,
-                    DiskIndex = 0, PhysicalName = "Physical Drive 0", AllDriveLetters = "C:"
+                    DiskIndex = 0, PhysicalName = "Physical Drive 0", AllDriveLetters = "C:",
+                    DiskType = "NVMe",
+                    FormattedCapacity = "1.86 TB",
+                    AverageResponseMs = 0.3 + 0.2 * Math.Abs(Math.Sin(t * 0.5)),
+                    IsSystemDisk = true,
+                    HasPageFile = true,
+                    Volumes =
+                    [
+                        new VolumeInfo
+                        {
+                            DriveLetter = "C:",
+                            Label = "System",
+                            FileSystem = "NTFS",
+                            TotalBytes = 2L * 1024 * 1024 * 1024 * 1024,
+                            FreeBytes = 800L * 1024 * 1024 * 1024
+                        }
+                    ]
                 },
                 new DiskMetrics
                 {
@@ -70,7 +101,23 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     ActivePercent = Math.Min(100, 2 + 8 * Math.Abs(Math.Sin(t * 0.4))),
                     TotalBytes = 4L * 1024 * 1024 * 1024 * 1024,
                     FreeBytes = 2_500L * 1024 * 1024 * 1024,
-                    DiskIndex = 1, PhysicalName = "Physical Drive 1", AllDriveLetters = "D:"
+                    DiskIndex = 1, PhysicalName = "Physical Drive 1", AllDriveLetters = "D:",
+                    DiskType = "SSD",
+                    FormattedCapacity = "3.73 TB",
+                    AverageResponseMs = 0.8 + 0.5 * Math.Abs(Math.Sin(t * 0.3)),
+                    IsSystemDisk = false,
+                    HasPageFile = false,
+                    Volumes =
+                    [
+                        new VolumeInfo
+                        {
+                            DriveLetter = "D:",
+                            Label = "Data",
+                            FileSystem = "NTFS",
+                            TotalBytes = 4L * 1024 * 1024 * 1024 * 1024,
+                            FreeBytes = 2_500L * 1024 * 1024 * 1024
+                        }
+                    ]
                 }
             ],
             NetworkAdapters =
@@ -85,7 +132,9 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     TotalRecvBytes = 80L * 1024 * 1024 * 1024,
                     IsConnected = true,
                     IpAddress = "192.168.1.100",
-                    IPv4Address = "192.168.1.100", IPv6Address = "fe80::1", LinkSpeedBps = 1_000_000_000L, AdapterType = "Ethernet"
+                    IPv4Address = "192.168.1.100", IPv6Address = "fe80::1", LinkSpeedBps = 1_000_000_000L, AdapterType = "Ethernet",
+                    DnsSuffix = "home.local",
+                    ConnectionType = "Ethernet"
                 }
             ],
             Gpus =
@@ -97,7 +146,11 @@ public sealed class MockSystemMetricsProvider : ISystemMetricsProvider
                     DedicatedMemoryUsedBytes = (long)(4L * 1024 * 1024 * 1024 * Math.Abs(Math.Sin(t * 0.2)) + 2L * 1024 * 1024 * 1024),
                     DedicatedMemoryTotalBytes = 16L * 1024 * 1024 * 1024,
                     TemperatureCelsius = 40 + 20 * Math.Abs(Math.Sin(t * 0.3)),
-                    Engine3DPercent = Math.Min(100, 5 + 30 * Math.Abs(Math.Sin(t * 0.4))), EngineCopyPercent = 2.0, EngineVideoDecodePercent = 1.0, EngineVideoEncodePercent = 0.5, SharedMemoryUsedBytes = 512L * 1024 * 1024
+                    Engine3DPercent = Math.Min(100, 5 + 30 * Math.Abs(Math.Sin(t * 0.4))), EngineCopyPercent = 2.0, EngineVideoDecodePercent = 1.0, EngineVideoEncodePercent = 0.5, SharedMemoryUsedBytes = 512L * 1024 * 1024,
+                    SharedMemoryTotalBytes = 16L * 1024 * 1024 * 1024,  // 16 GB shared GPU memory
+                    DriverVersion = "572.16",
+                    DirectXVersion = "DirectX 12",
+                    PhysicalLocation = "PCI bus 1, device 0, function 0"
                 }
             ]
         };

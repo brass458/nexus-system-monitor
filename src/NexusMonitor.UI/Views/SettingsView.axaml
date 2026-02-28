@@ -113,7 +113,7 @@
         <!-- Current font preview -->
         <Border Padding="12,8"
                 Background="{DynamicResource BgSecondaryBrush}"
-                CornerRadius="8">
+                CornerRadius="10">
           <TextBlock Text="The quick brown fox jumps over the lazy dog  0123456789"
                      FontSize="{DynamicResource NxFont12}"
                      FontFamily="{Binding FontFamily}"
@@ -180,7 +180,7 @@
         <!-- Live preview row showing what the selected accent changes -->
         <Border Padding="12,8"
                 Background="{DynamicResource BgSecondaryBrush}"
-                CornerRadius="8">
+                CornerRadius="10">
           <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
               <Border Width="10" Height="10" CornerRadius="5"

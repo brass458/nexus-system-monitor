@@ -8,7 +8,7 @@
         <ResourceInclude Source="avares://NexusMonitor/Themes/Colors.axaml" />
         <ResourceInclude Source="avares://NexusMonitor/Themes/Typography.axaml" />
       </ResourceDictionary.MergedDictionaries>
-      <SolidColorBrush x:Key="AccentBlueHoverBrush" Color="#228BE6" />
+      <SolidColorBrush x:Key="AccentBlueHoverBrush" Color="#3D9FFF" />
     </ResourceDictionary>
   </Styles.Resources>
 

@@ -354,6 +354,12 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
 
+    public Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default) =>
+        throw new PlatformNotSupportedException("Process dump is not yet implemented on macOS.");
+
+    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult(((long)(1L << Environment.ProcessorCount) - 1, (long)(1L << Environment.ProcessorCount) - 1));
+
 
     // ── IDisposable ────────────────────────────────────────────────────────────
     public void Dispose()
