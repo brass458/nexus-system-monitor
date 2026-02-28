@@ -4,6 +4,8 @@
 
 Nexus System Monitor is a cross-platform desktop application that gives you deep, granular insight into your system's processes, performance, services, and hardware — with a single, consistent interface whether you're on Windows, macOS, or Linux.
 
+> **Testing on macOS or Linux?** → [TESTING.md](TESTING.md) — step-by-step setup, what to test, and how to report issues.
+
 ---
 
 ## Philosophy
@@ -247,6 +249,14 @@ All UI and business logic lives in the platform-agnostic `Core` and `UI` project
 - **IStartupProvider** — Startup item management
 
 Adding support for a new platform means implementing these interfaces against native APIs — the rest of the application works unchanged.
+
+---
+
+## Testing
+
+Early-access testing on macOS and Linux is open. See **[TESTING.md](TESTING.md)** for a step-by-step setup guide, a per-tab test checklist, known limitations, and instructions for filing issues.
+
+Report bugs and feedback at: https://github.com/brass458/nexus-system-monitor/issues
 
 ---
 
