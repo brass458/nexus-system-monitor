@@ -13,6 +13,7 @@ using NexusMonitor.Core.Alerts;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
+using NexusMonitor.Core.Storage;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 using SkiaSharp;
@@ -76,6 +77,14 @@ public class App : Application
 
             Services.GetRequiredService<RulesEngine>().Start();
             Services.GetRequiredService<AlertsService>().Start();
+
+            // Start metrics persistence
+            if (saved.Current.MetricsEnabled)
+            {
+                Services.GetRequiredService<MetricsStore>().Start(
+                    TimeSpan.FromMilliseconds(saved.Current.UpdateIntervalMs));
+                Services.GetRequiredService<MetricsRollupService>().Start();
+            }
 
             // System-tray icon
             SetupTrayIcon(desktop);
@@ -211,6 +220,28 @@ public class App : Application
         // receive the same object that SettingsService mutates on save.
         services.AddSingleton<AppSettings>(sp =>
             sp.GetRequiredService<SettingsService>().Current);
+
+        // -- Metrics persistence --
+        var dbPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "NexusMonitor", "metrics.db");
+        services.AddSingleton(new MetricsDatabase(dbPath));
+        services.AddSingleton<MetricsStoreConfig>(sp =>
+        {
+            var s = sp.GetRequiredService<AppSettings>();
+            return new MetricsStoreConfig
+            {
+                TopNProcesses          = s.MetricsTopNProcesses,
+                RecordNetworkSnapshots = s.MetricsRecordNetwork,
+                RawRetention           = TimeSpan.FromHours(s.MetricsRawRetentionHours),
+                Rollup1mRetention      = TimeSpan.FromDays(s.MetricsRollup1mDays),
+                Rollup5mRetention      = TimeSpan.FromDays(s.MetricsRollup5mDays),
+                Rollup1hRetention      = TimeSpan.FromDays(s.MetricsRollup1hDays),
+            };
+        });
+        services.AddSingleton<MetricsStore>();
+        services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
+        services.AddSingleton<MetricsRollupService>();
 
         // -- Automation services --
         services.AddSingleton<ProBalanceService>();

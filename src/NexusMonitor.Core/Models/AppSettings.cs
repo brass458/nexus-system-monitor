@@ -58,4 +58,13 @@ public class AppSettings
 
     // Sidebar navigation order — empty = default order
     public List<string> NavOrder { get; set; } = new();
+
+    // Metrics persistence (Phase 11)
+    public bool MetricsEnabled           { get; set; } = true;
+    public int  MetricsTopNProcesses     { get; set; } = 15;
+    public bool MetricsRecordNetwork     { get; set; } = true;
+    public int  MetricsRawRetentionHours { get; set; } = 1;
+    public int  MetricsRollup1mDays      { get; set; } = 7;
+    public int  MetricsRollup5mDays      { get; set; } = 30;
+    public int  MetricsRollup1hDays      { get; set; } = 365;
 }
