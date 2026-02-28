@@ -18,6 +18,11 @@ public class AppSettings
     public string AccentColorHex     { get; set; } = "#0A84FF";
     public string TextAccentColorHex { get; set; } = "";     // "" = derive from AccentColorHex
 
+    // Custom surface colors — "" = use built-in theme defaults
+    public string CustomWindowBgHex  { get; set; } = "";   // BgBaseBrush  (window chrome)
+    public string CustomSurfaceBgHex { get; set; } = "";   // BgPrimary/Secondary/Elevated (cards/panels)
+    public string CustomSidebarBgHex { get; set; } = "";   // GlassBgBrush (left sidebar / nav)
+
     // Typography
     public string FontFamily         { get; set; } = "";     // "" = system default
 

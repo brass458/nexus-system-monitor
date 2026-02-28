@@ -30,8 +30,17 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _accentColorHex     = "#0A84FF";
     [ObservableProperty] private string _textAccentColorHex = "";
 
+    // ── Custom surface colors ─────────────────────────────────────────────────
+    [ObservableProperty] private string _customWindowBgHex  = "";
+    [ObservableProperty] private string _customSurfaceBgHex = "";
+    [ObservableProperty] private string _customSidebarBgHex = "";
+
     // ── Color picker state ────────────────────────────────────────────────────
     [ObservableProperty] private Color  _pickerAccentColor  = Color.Parse("#0A84FF");
+    // Generic picker: shared by all surface pickers; set before opening dialog
+    [ObservableProperty] private Color  _pickerSurfaceColor = Color.Parse("#1C1C1E");
+    // Hex display string updated whenever PickerSurfaceColor changes (consumed by SurfaceColorPickerWindow)
+    [ObservableProperty] private string _pickerSurfaceHex   = "#1C1C1E";
     private bool _suppressColorSync;
 
     // ── Typography ────────────────────────────────────────────────────────────
@@ -117,6 +126,9 @@ public partial class SettingsViewModel : ViewModelBase
             _pickerAccentColor = Color.Parse(settings.Current.AccentColorHex);
         }
         catch { _pickerAccentColor = Color.Parse("#0A84FF"); }
+        _customWindowBgHex  = settings.Current.CustomWindowBgHex;
+        _customSurfaceBgHex = settings.Current.CustomSurfaceBgHex;
+        _customSidebarBgHex = settings.Current.CustomSidebarBgHex;
         _fontFamily         = settings.Current.FontFamily;
         _showOverlayWidget             = settings.Current.ShowOverlayWidget;
         _desktopNotificationsEnabled   = settings.Current.DesktopNotificationsEnabled;
@@ -131,7 +143,8 @@ public partial class SettingsViewModel : ViewModelBase
         if (_updateIntervalIndex < 0) _updateIntervalIndex = 1;
 
         // Restore at startup
-        ApplyGlass(_isGlassEnabled, _glassOpacity);
+        ApplyGlass(_isGlassEnabled, _glassOpacity,
+            _customWindowBgHex, _customSurfaceBgHex, _customSidebarBgHex);
         ApplySpecular(_isGlassEnabled, _isSpecularEnabled, _specularIntensity);
         ApplyBackdropMode(_isGlassEnabled, _backdropBlurMode);
         ApplyAccentColor(_accentColorHex);
@@ -154,7 +167,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settings.Current.IsGlassEnabled = value;
         _settings.Save();
-        ApplyGlass(value, GlassOpacity);
+        ApplyGlass(value, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex);
         ApplySpecular(value, IsSpecularEnabled, SpecularIntensity);
         ApplyBackdropMode(value, BackdropBlurMode);
     }
@@ -163,7 +176,28 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settings.Current.GlassOpacity = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, value);
+        ApplyGlass(IsGlassEnabled, value, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex);
+    }
+
+    partial void OnCustomWindowBgHexChanged(string value)
+    {
+        _settings.Current.CustomWindowBgHex = value;
+        _settings.Save();
+        ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex);
+    }
+
+    partial void OnCustomSurfaceBgHexChanged(string value)
+    {
+        _settings.Current.CustomSurfaceBgHex = value;
+        _settings.Save();
+        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex);
+    }
+
+    partial void OnCustomSidebarBgHexChanged(string value)
+    {
+        _settings.Current.CustomSidebarBgHex = value;
+        _settings.Save();
+        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value);
     }
 
     partial void OnBackdropBlurModeChanged(string value)
@@ -278,8 +312,11 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
-    [RelayCommand] private void SetLightTheme()           => IsDarkTheme = false;
+    [RelayCommand] private void SetLightTheme()            => IsDarkTheme = false;
     [RelayCommand] private void SetAccentColor(string h)  => AccentColorHex = h;
+    [RelayCommand] private void ResetWindowBg()           => CustomWindowBgHex  = "";
+    [RelayCommand] private void ResetSurfaceBg()          => CustomSurfaceBgHex = "";
+    [RelayCommand] private void ResetSidebarBg()          => CustomSidebarBgHex = "";
 
     /// <summary>Called by the ColorWheelControl binding when the user picks a color.</summary>
     partial void OnPickerAccentColorChanged(Color value)
@@ -290,44 +327,64 @@ public partial class SettingsViewModel : ViewModelBase
             AccentColorHex = hex;
     }
 
+    /// <summary>Keeps <see cref="PickerSurfaceHex"/> in sync with the color wheel in SurfaceColorPickerWindow.</summary>
+    partial void OnPickerSurfaceColorChanged(Color value)
+    {
+        PickerSurfaceHex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";
+    }
+
     // ── Static resource helpers ───────────────────────────────────────────────
     //   Write directly into Application.Current.Resources so every
     //   {DynamicResource …} binding across the whole app updates instantly.
 
     /// <summary>
     /// Updates ALL background and glass-surface brushes.
-    /// Also updates OverlayBgBrush with a 50% opacity floor so the widget
-    /// stays readable even at full transparency.
+    /// Custom color overrides (from the Settings color pickers) are respected when non-empty.
+    /// Empty strings fall back to the built-in dark-theme defaults.
     /// <paramref name="opacity"/> 0 = fully transparent, 1 = fully opaque.
     /// </summary>
-    private static void ApplyGlass(bool enabled, double opacity)
+    private static void ApplyGlass(
+        bool enabled, double opacity,
+        string? customWindowBgHex  = null,
+        string? customSurfaceBgHex = null,
+        string? customSidebarBgHex = null)
     {
         if (Application.Current is null) return;
 
+        // Resolve base colors — custom hex wins if valid; else fall back to defaults.
+        Color bgBase    = TryParseColor(customWindowBgHex,  Color.Parse("#0F0F12"));
+        Color bgSurface = TryParseColor(customSurfaceBgHex, Color.Parse("#1C1C1E"));
+        Color bgSidebar = TryParseColor(customSidebarBgHex, Color.Parse("#1C1C1E"));
+
+        // Derive slightly lighter variants from the custom surface base
+        Color bgSecondary = LightenBy(bgSurface, 9);    // +9 brightness
+        Color bgElevated  = LightenBy(bgSurface, 16);   // +16 brightness
+        Color bgHover     = LightenBy(bgSurface, 26);   // +26 brightness
+
         // Window-frame brush can go fully transparent (that IS the glass effect)
-        byte bg = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
-        SetBrush("BgBaseBrush", Color.Parse("#0F0F12"), bg);
+        byte bgAlpha = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
+        SetBrush("BgBaseBrush", bgBase, bgAlpha);
 
         // Content-area brushes: floor at 0xA0 (~63%) so text stays readable
-        // at any transparency level (light text on near-transparent = invisible on white BG)
-        byte contentBg = enabled
+        byte contentAlpha = enabled
             ? (byte)Math.Max(0xA0, (int)Math.Round(opacity * 255))
             : (byte)0xFF;
-        SetBrush("BgPrimaryBrush",   Color.Parse("#1C1C1E"), contentBg);
-        SetBrush("BgSecondaryBrush", Color.Parse("#252528"), contentBg);
-        SetBrush("BgElevatedBrush",  Color.Parse("#2C2C2E"), contentBg);
-        SetBrush("BgHoverBrush",     Color.Parse("#363638"), contentBg);
+        SetBrush("BgPrimaryBrush",   bgSurface,   contentAlpha);
+        SetBrush("BgSecondaryBrush", bgSecondary, contentAlpha);
+        SetBrush("BgElevatedBrush",  bgElevated,  contentAlpha);
+        SetBrush("BgHoverBrush",     bgHover,     contentAlpha);
 
-        // Glass surface layers (sidebar + titlebar) — keep proportional to
-        // their design-intent opacity (0xB2 = 70%) so they read as a separate
-        // material layer when partially transparent.
-        byte glass = enabled ? (byte)Math.Round(opacity * 0xB2) : (byte)0xB2;
-        SetBrush("GlassBgBrush", Color.Parse("#1C1C1E"), glass);
+        // Sidebar / nav glass layer
+        byte glassAlpha = enabled ? (byte)Math.Round(opacity * 0xB2) : (byte)0xB2;
+        SetBrush("GlassBgBrush", bgSidebar, glassAlpha);
 
-        // Glass border becomes brighter when glass is active so the rim shows
+        // Glass border — derive from sidebar base with low alpha
         byte borderAlpha = enabled ? (byte)0x60 : (byte)0x40;
         Application.Current.Resources["GlassBorderBrush"] =
-            new SolidColorBrush(new Color(borderAlpha, 0x3A, 0x3A, 0x3C));
+            new SolidColorBrush(new Color(borderAlpha,
+                (byte)Math.Min(255, bgSidebar.R + 0x20),
+                (byte)Math.Min(255, bgSidebar.G + 0x20),
+                (byte)Math.Min(255, bgSidebar.B + 0x20)));
 
         // Overlay widget: always semi-transparent; floor at alpha=0x80 (50%)
         byte overlayAlpha = enabled
@@ -336,6 +393,20 @@ public partial class SettingsViewModel : ViewModelBase
         Application.Current.Resources["OverlayBgBrush"] =
             new SolidColorBrush(new Color(overlayAlpha, 0x05, 0x05, 0x08));
     }
+
+    private static Color TryParseColor(string? hex, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return fallback;
+        try { return Color.Parse(hex); }
+        catch { return fallback; }
+    }
+
+    /// <summary>Adds <paramref name="amount"/> to each R, G, B channel, clamped to 255.</summary>
+    private static Color LightenBy(Color c, int amount) =>
+        new Color(c.A,
+            (byte)Math.Min(255, c.R + amount),
+            (byte)Math.Min(255, c.G + amount),
+            (byte)Math.Min(255, c.B + amount));
 
     /// <summary>
     /// Controls the opacity of ALL specular highlight overlays in MainWindow and OverlayWindow.

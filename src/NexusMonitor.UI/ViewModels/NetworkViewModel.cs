@@ -94,9 +94,11 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
                 // New — append; the DataGrid will sort it into place
                 Connections.Add(conn);
             }
-            else if (Connections[idx].State != conn.State)
+            else if (Connections[idx].State           != conn.State           ||
+                     Connections[idx].SendBytesPerSec != conn.SendBytesPerSec ||
+                     Connections[idx].RecvBytesPerSec != conn.RecvBytesPerSec)
             {
-                // State changed (e.g. ESTABLISHED → TIME_WAIT) — replace in-place
+                // State or throughput changed — replace in-place so DataGrid refreshes
                 Connections[idx] = conn;
             }
         }

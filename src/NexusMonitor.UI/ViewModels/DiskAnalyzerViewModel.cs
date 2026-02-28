@@ -69,7 +69,9 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var scanner = new RecursiveScanner();
+            // MftScanner reads the NTFS Master File Table directly for near-instant results
+            // on NTFS drives. Falls back to RecursiveScanner on non-NTFS / non-Windows.
+            var scanner = new MftScanner();
             var result  = await scanner.ScanAsync(SelectedPath, new ScanOptions(), progress, _cts.Token);
 
             RootNode      = result.Root;

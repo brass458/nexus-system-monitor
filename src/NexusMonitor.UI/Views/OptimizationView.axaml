@@ -321,6 +321,7 @@
 
         <!-- ── Priority guide card ───────────────────────────────────────── -->
         <Border Padding="16"
+                Margin="0,0,0,16"
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
                 BorderThickness="1"

@@ -239,6 +239,9 @@
             <DataTemplate DataType="vm:DiskAnalyzerViewModel">
               <views:DiskAnalyzerView />
             </DataTemplate>
+            <DataTemplate DataType="vm:SystemInfoViewModel">
+              <views:SystemInfoView />
+            </DataTemplate>
             <DataTemplate DataType="vm:ProBalanceViewModel">
               <views:ProBalanceView />
             </DataTemplate>
