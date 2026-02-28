@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NexusMonitor.UI.Views.FindWindowOverlay"
+        Title="Find Window"
+        SystemDecorations="None"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Cursor="Cross"
+        Focusable="True"
+        WindowState="Maximized">
+
+  <Panel>
+    <!-- Semi-transparent overlay to indicate crosshair mode -->
+    <Border Background="#18FFFFFF" IsHitTestVisible="False"/>
+
+    <!-- Info box at top-center -->
+    <Border HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,40,0,0"
+            Padding="16,10"
+            Background="#DD1A1A1E"
+            CornerRadius="8"
+            IsHitTestVisible="False">
+      <StackPanel Spacing="4" HorizontalAlignment="Center">
+        <TextBlock x:Name="InfoText"
+                   Text="Click on any window to identify its process"
+                   FontSize="14" FontWeight="Medium"
+                   Foreground="White"
+                   HorizontalAlignment="Center"/>
+        <TextBlock x:Name="PidText"
+                   Text=""
+                   FontSize="12"
+                   Foreground="#AAAAAA"
+                   HorizontalAlignment="Center"/>
+        <TextBlock Text="Press ESC to cancel"
+                   FontSize="11"
+                   Foreground="#777777"
+                   HorizontalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+  </Panel>
+</Window>

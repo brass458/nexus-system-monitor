@@ -74,6 +74,12 @@ public sealed class MockProcessProvider : IProcessProvider
     public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
 
+    public Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult((0xFFL, 0xFFL));
+
 
     private static ProcessInfo[] GetAnimatedSnapshot()
     {
