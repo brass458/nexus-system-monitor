@@ -56,8 +56,8 @@
 
     <!-- ── Dragging state: subtly lifted, slightly translucent ── -->
     <Style Selector="Grid.nav-row.dragging">
-      <Setter Property="RenderTransform" Value="scale(1.02)"/>
-      <Setter Property="Opacity" Value="0.90"/>
+      <Setter Property="RenderTransform" Value="scale(1.01)"/>
+      <Setter Property="Opacity" Value="0.94"/>
       <Setter Property="ZIndex" Value="10"/>
     </Style>
 

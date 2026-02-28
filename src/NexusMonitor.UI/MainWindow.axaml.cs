@@ -238,7 +238,7 @@ public partial class MainWindow : Window
             {
                 // Dragged item follows cursor directly
                 grid.RenderTransform = TransformOperations.Parse(
-                    $"translate(0px, {dy}px) scale(1.02)");
+                    $"translate(0px, {dy}px) scale(1.01)");
             }
             else
             {
@@ -301,7 +301,7 @@ public partial class MainWindow : Window
                 var settleGrid = FindNavRowGrid(settleContainer);
                 if (settleGrid is not null)
                 {
-                    settleGrid.RenderTransform = TransformOperations.Parse("scale(1.03)");
+                    settleGrid.RenderTransform = TransformOperations.Parse("scale(1.015)");
                     DispatcherTimer.RunOnce(() =>
                     {
                         settleGrid.RenderTransform = TransformOperations.Parse("scale(1.0)");

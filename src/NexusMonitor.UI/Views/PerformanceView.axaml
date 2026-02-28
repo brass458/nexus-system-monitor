@@ -79,7 +79,9 @@
       </TransitioningContentControl.PageTransition>
       <TransitioningContentControl.DataTemplates>
 
-        <!-- Overview: rebind DataContext to parent PerformanceViewModel -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             OVERVIEW PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:OverviewDeviceViewModel">
           <ContentControl Content="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
             <ContentControl.ContentTemplate>
@@ -93,7 +95,9 @@
                                Foreground="{StaticResource TextPrimaryBrush}"
                                Margin="0,0,0,16"/>
 
+                    <!-- Top summary cards -->
                     <WrapPanel Orientation="Horizontal" ItemWidth="180">
+                      <!-- CPU card -->
                       <Border Margin="0,0,12,12" Padding="16"
                               Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
@@ -123,6 +127,7 @@
                         </StackPanel>
                       </Border>
 
+                      <!-- Memory card -->
                       <Border Margin="0,0,12,12" Padding="16"
                               Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
@@ -142,6 +147,7 @@
                         </StackPanel>
                       </Border>
 
+                      <!-- GPU card -->
                       <Border Margin="0,0,12,12" Padding="16"
                               Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
@@ -165,6 +171,7 @@
                       </Border>
                     </WrapPanel>
 
+                    <!-- CPU Utilization chart -->
                     <Border Margin="0,0,0,12" Padding="16"
                             Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -191,6 +198,7 @@
                       </StackPanel>
                     </Border>
 
+                    <!-- Per-Core Utilization -->
                     <Border Margin="0,0,0,12" Padding="16"
                             Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -222,6 +230,7 @@
                       </StackPanel>
                     </Border>
 
+                    <!-- Memory Usage chart -->
                     <Border Margin="0,0,0,12" Padding="16"
                             Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -245,6 +254,7 @@
                       </StackPanel>
                     </Border>
 
+                    <!-- Disk I/O and Network side-by-side -->
                     <Grid ColumnDefinitions="*,12,*" Margin="0,0,0,12">
                       <Border Grid.Column="0" Padding="16"
                               Background="{DynamicResource BgElevatedBrush}"
@@ -280,9 +290,9 @@
                                        FontSize="{DynamicResource NxFont13}" FontWeight="Medium"
                                        Foreground="{StaticResource TextPrimaryBrush}"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                              <TextBlock Text="{Binding NetRecvMbps, StringFormat='↓ {0:F2} MB/s'}"
+                              <TextBlock Text="{Binding NetRecvMbps, StringFormat='&#x2193; {0:F2} MB/s'}"
                                          FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource ProcDotNetBrush}"/>
-                              <TextBlock Text="{Binding NetSendMbps, StringFormat='↑ {0:F2} MB/s'}"
+                              <TextBlock Text="{Binding NetSendMbps, StringFormat='&#x2191; {0:F2} MB/s'}"
                                          FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource ColorDangerBrush}"/>
                             </StackPanel>
                           </Grid>
@@ -294,6 +304,7 @@
                       </Border>
                     </Grid>
 
+                    <!-- Disk Drives summary -->
                     <Border Margin="0,0,0,12" Padding="16"
                             Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
@@ -346,261 +357,1005 @@
           </ContentControl>
         </DataTemplate>
 
-        <!-- CPU detail -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             CPU DETAIL PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:CpuDeviceViewModel">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="20">
+
+              <!-- Title -->
               <TextBlock Text="{Binding DeviceName}" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-              <lvc:CartesianChart Series="{Binding HistorySeries}"
-                                   XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
-                                   Height="140" Background="Transparent"
-                                   AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
-              <Grid ColumnDefinitions="*,*,*,*" Margin="0,4">
-                <StackPanel Grid.Column="0">
-                  <TextBlock Text="{Binding UtilPercent, StringFormat='{}{0:F1}%'}" FontSize="22" FontWeight="Bold"
-                             Foreground="{DynamicResource AccentBlueBrush}"/>
-                  <TextBlock Text="Utilization" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- Utilization chart -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="% Utilization"
+                               FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="100% max · 60s"
+                               FontSize="9" Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                  </Grid>
+                  <lvc:CartesianChart Series="{Binding HistorySeries}"
+                                       XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
+                                       Height="150" Background="Transparent"
+                                       AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock Text="{Binding SpeedDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                  <TextBlock Text="Speed" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <TextBlock Text="{Binding LogicalCores}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                  <TextBlock Text="Logical Cores" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="3">
-                  <TextBlock Text="{Binding UptimeDisplay}" FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                  <TextBlock Text="Up Time" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
+              </Border>
+
+              <!-- Top stats row -->
+              <Grid ColumnDefinitions="*,*,*,*">
+                <Border Grid.Column="0" Padding="12" Margin="0,0,6,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding UtilPercent, StringFormat='{}{0:F1}%'}" FontSize="24" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBlueBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Utilization" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="12" Margin="3,0,3,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding SpeedDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Speed" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="12" Margin="3,0,3,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding TempC, StringFormat='{}{0:F0}°C'}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                               Foreground="{StaticResource ColorWarningBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Temperature" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="3" Padding="12" Margin="6,0,0,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding UptimeDisplay}" FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Up time" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </Grid>
-              <TextBlock Text="Per-Core Utilization" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                         Foreground="{StaticResource TextPrimaryBrush}" Margin="0,8,0,4"/>
-              <ItemsControl ItemsSource="{Binding CoreCells}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border Width="52" Height="44" Margin="0,0,4,4" CornerRadius="8"
-                            Background="{Binding Percent, Converter={StaticResource CpuHeat}}">
-                      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="1">
-                        <TextBlock Text="{Binding Index, StringFormat='C{0}'}"
-                                   FontSize="8" Foreground="White" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding Percent, StringFormat='{}{0:F0}%'}"
-                                   FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold" Foreground="White"
-                                   HorizontalAlignment="Center"/>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+
+              <!-- Per-Core Utilization heatmap -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Per-Core Utilization" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                  <ItemsControl ItemsSource="{Binding CoreCells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Width="52" Height="44" Margin="0,0,4,4" CornerRadius="8"
+                                Background="{Binding Percent, Converter={StaticResource CpuHeat}}">
+                          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="1">
+                            <TextBlock Text="{Binding Index, StringFormat='C{0}'}"
+                                       FontSize="8" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding Percent, StringFormat='{}{0:F0}%'}"
+                                       FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold" Foreground="White"
+                                       HorizontalAlignment="Center"/>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <!-- System Info card -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="0">
+                  <TextBlock Text="System Info" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                             Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                  <!-- Base speed -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Base speed"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding BaseSpeedDisplay}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Sockets -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Sockets"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Sockets}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Cores -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Cores"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding PhysicalCores}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Logical processors -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Logical processors"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding LogicalCores}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Virtualization -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Virtualization"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Virtualization}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Separator -->
+                  <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+
+                  <!-- Processes -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Processes"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding ProcessCount}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Threads -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Threads"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding ThreadCount}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Handles -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Handles"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding HandleCount}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- Separator -->
+                  <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+
+                  <!-- L1 cache -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="L1 cache"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding L1CacheDisplay}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- L2 cache -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="L2 cache"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding L2CacheDisplay}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <!-- L3 cache -->
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                    <TextBlock Grid.Column="0" Text="L3 cache"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding L3CacheDisplay}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
           </ScrollViewer>
         </DataTemplate>
 
-        <!-- Memory detail -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             MEMORY DETAIL PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:MemoryDeviceViewModel">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="20">
+
+              <!-- Title -->
               <TextBlock Text="Memory" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}"/>
-              <lvc:CartesianChart Series="{Binding HistorySeries}"
-                                   XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
-                                   Height="140" Background="Transparent"
-                                   AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
-              <Grid ColumnDefinitions="*,*,*" Margin="0,4">
-                <StackPanel Grid.Column="0">
-                  <TextBlock Text="{Binding UsedPercent, StringFormat='{}{0:F1}%'}" FontSize="22" FontWeight="Bold"
-                             Foreground="{StaticResource ColorSuccessBrush}"/>
-                  <TextBlock Text="In use" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- Memory composition chart -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="Memory usage"
+                               FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont12}"
+                               Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center">
+                      <Run Text="{Binding TotalGb, StringFormat='{}{0:F0}'}"/>
+                      <Run Text=" GB total"/>
+                    </TextBlock>
+                  </Grid>
+                  <lvc:CartesianChart Series="{Binding HistorySeries}"
+                                       XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
+                                       Height="150" Background="Transparent"
+                                       AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}">
-                    <Run Text="{Binding UsedGb, StringFormat='{}{0:F1}'}"/>
-                    <Run Text=" / "/>
-                    <Run Text="{Binding TotalGb, StringFormat='{}{0:F0} GB'}"/>
-                  </TextBlock>
-                  <TextBlock Text="Used / Total" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <TextBlock Text="{Binding AvailGb, StringFormat='{}{0:F1} GB'}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                  <TextBlock Text="Available" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
+              </Border>
+
+              <!-- Top stats row -->
+              <Grid ColumnDefinitions="*,*,*">
+                <Border Grid.Column="0" Padding="12" Margin="0,0,6,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ColorSuccessBrush}" HorizontalAlignment="Center">
+                      <Run Text="{Binding UsedGb, StringFormat='{}{0:F1}'}"/>
+                      <Run Text=" GB" FontSize="{DynamicResource NxFont12}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding UsedPercent, StringFormat='In use ({0:F1}%)'}"
+                               FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="12" Margin="3,0,3,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding AvailGb, StringFormat='{}{0:F1} GB'}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Available" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="12" Margin="6,0,0,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding CommittedDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Committed" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </Grid>
-              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,8,0,0">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Cached"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CachedGb, StringFormat='{}{0:F1} GB'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Paged Pool"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PagedPoolGb, StringFormat='{}{0:F2} GB'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Non-Paged Pool"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,0"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding NonPagedPoolGb, StringFormat='{}{0:F2} GB'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+
+              <!-- Two-column layout: Composition + Hardware -->
+              <Grid ColumnDefinitions="*,12,*">
+
+                <!-- Composition card -->
+                <Border Grid.Column="0" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Composition" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="In use"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding UsedGb, StringFormat='{}{0:F1} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Compressed"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding CompressedDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Available"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding AvailGb, StringFormat='{}{0:F1} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Cached"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding CachedGb, StringFormat='{}{0:F1} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Paged pool"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding PagedPoolGb, StringFormat='{}{0:F2} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                      <TextBlock Grid.Column="0" Text="Non-paged pool"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding NonPagedPoolGb, StringFormat='{}{0:F2} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <!-- Hardware card -->
+                <Border Grid.Column="2" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Hardware" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Speed"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}"
+                                 Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right">
+                        <Run Text="{Binding SpeedMhz}"/>
+                        <Run Text=" MHz"/>
+                      </TextBlock>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Slots used"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding SlotsDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Form factor"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding FormFactor}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                      <TextBlock Grid.Column="0" Text="Hardware reserved"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding HwReservedDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
               </Grid>
+
             </StackPanel>
           </ScrollViewer>
         </DataTemplate>
 
-        <!-- Disk detail -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             DISK DETAIL PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:DiskDeviceViewModel">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="20">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding PhysicalName}" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Grid.Column="1" Text="{Binding DriveLetters}" FontSize="{DynamicResource NxFont12}"
-                           Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Bottom"/>
-              </Grid>
-              <lvc:CartesianChart Series="{Binding HistorySeries}"
-                                   XAxes="{Binding HistoryXAxes}"
-                                   Height="120" Background="Transparent"
-                                   AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
-              <Grid ColumnDefinitions="*,*,*" Margin="0,4">
-                <StackPanel Grid.Column="0">
-                  <TextBlock Text="{Binding ActivePercent, StringFormat='{}{0:F0}%'}" FontSize="22" FontWeight="Bold"
-                             Foreground="{StaticResource ColorInfoBrush}"/>
-                  <TextBlock Text="Active time" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- Title + subtitle -->
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding PhysicalName}" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding DriveLetters}" FontSize="{DynamicResource NxFont11}"
+                           Foreground="{StaticResource TextTertiaryBrush}"/>
+              </StackPanel>
+
+              <!-- Transfer rate chart -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="Disk transfer rate"
+                               FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="10" Height="3" CornerRadius="1" Background="{StaticResource ColorInfoBrush}"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="Read" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center"/>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="10" Height="3" CornerRadius="1" Background="{StaticResource ColorWarningBrush}"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="Write" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </Grid>
+                  <lvc:CartesianChart Series="{Binding HistorySeries}"
+                                       XAxes="{Binding HistoryXAxes}"
+                                       Height="140" Background="Transparent"
+                                       AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock Text="{Binding ReadRateDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource ColorInfoBrush}"/>
-                  <TextBlock Text="Read" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <TextBlock Text="{Binding WriteRateDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource ColorWarningBrush}"/>
-                  <TextBlock Text="Write" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
+              </Border>
+
+              <!-- Top stats row -->
+              <Grid ColumnDefinitions="*,*,*">
+                <Border Grid.Column="0" Padding="12" Margin="0,0,6,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding ActivePercent, StringFormat='{}{0:F0}%'}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ColorInfoBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Active time" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="12" Margin="3,0,3,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding ReadRateDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                               Foreground="{StaticResource ColorInfoBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Read" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="12" Margin="6,0,0,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding WriteRateDisplay}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                               Foreground="{StaticResource ColorWarningBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Write" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </Grid>
-              <TextBlock Text="Storage" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                         Foreground="{StaticResource TextPrimaryBrush}" Margin="0,8,0,4"/>
-              <ProgressBar Value="{Binding CapacityUsedPercent}" Minimum="0" Maximum="100" Height="8"/>
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
-                  <Run Text="{Binding TotalGb, StringFormat='{}{0:F0} GB total'}"/>
-                  <Run Text=" · "/>
-                  <Run Text="{Binding FreeGb, StringFormat='{}{0:F0} GB free'}"/>
-                </TextBlock>
-                <TextBlock Grid.Column="1" Text="{Binding CapacityUsedPercent, StringFormat='{}{0:F0}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- Two-column: Info + Storage -->
+              <Grid ColumnDefinitions="*,12,*">
+
+                <!-- Disk Info card -->
+                <Border Grid.Column="0" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Disk Info" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Type"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding DiskType}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Capacity"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding TotalGb, StringFormat='{}{0:F0} GB'}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Avg. response time"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding AvgResponseDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="System disk"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right">
+                        <TextBlock.Text>
+                          <Binding Path="IsSystemDisk">
+                            <Binding.Converter>
+                              <conv:BoolToYesNoConverter/>
+                            </Binding.Converter>
+                          </Binding>
+                        </TextBlock.Text>
+                      </TextBlock>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                      <TextBlock Grid.Column="0" Text="Page file"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right">
+                        <TextBlock.Text>
+                          <Binding Path="HasPageFile">
+                            <Binding.Converter>
+                              <conv:BoolToYesNoConverter/>
+                            </Binding.Converter>
+                          </Binding>
+                        </TextBlock.Text>
+                      </TextBlock>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <!-- Storage usage card -->
+                <Border Grid.Column="2" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Storage" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+                    <ProgressBar Value="{Binding CapacityUsedPercent}" Minimum="0" Maximum="100" Height="8"
+                                 Margin="0,0,0,6"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                      <TextBlock Grid.Column="0" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
+                        <Run Text="{Binding TotalGb, StringFormat='{}{0:F0} GB total'}"/>
+                      </TextBlock>
+                      <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"
+                                 HorizontalAlignment="Right">
+                        <Run Text="{Binding FreeGb, StringFormat='{}{0:F0} GB free'}"/>
+                      </TextBlock>
+                    </Grid>
+                  </StackPanel>
+                </Border>
               </Grid>
+
+              <!-- Volumes card -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Volumes" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                  <ItemsControl ItemsSource="{Binding Volumes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Margin="0,0,0,8" Padding="10"
+                                Background="{DynamicResource BgSecondaryBrush}"
+                                CornerRadius="{StaticResource CornerSM}">
+                          <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding DriveLetter}" FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding Label}" FontSize="{DynamicResource NxFont11}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                              </StackPanel>
+                              <TextBlock Grid.Column="1" Text="{Binding FileSystem}" FontSize="{DynamicResource NxFont10}"
+                                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                            </Grid>
+                            <ProgressBar Value="{Binding UsedPercent}" Minimum="0" Maximum="100" Height="5"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Grid.Column="0" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
+                                <Run Text="{Binding FreeGb, StringFormat='{}{0:F1} GB free'}"/>
+                                <Run Text=" of "/>
+                                <Run Text="{Binding TotalGb, StringFormat='{}{0:F1} GB'}"/>
+                              </TextBlock>
+                              <TextBlock Grid.Column="1" Text="{Binding UsedPercent, StringFormat='{}{0:F0}% used'}"
+                                         FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                            </Grid>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
           </ScrollViewer>
         </DataTemplate>
 
-        <!-- Network detail -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             NETWORK DETAIL PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:NetworkDeviceViewModel">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="20">
+
+              <!-- Title -->
               <TextBlock Text="{Binding AdapterName}" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-              <lvc:CartesianChart Series="{Binding HistorySeries}"
-                                   XAxes="{Binding HistoryXAxes}"
-                                   Height="120" Background="Transparent"
-                                   AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
-              <Grid ColumnDefinitions="*,*" Margin="0,4">
-                <StackPanel Grid.Column="0">
-                  <TextBlock Text="{Binding RecvRateDisplay}" FontSize="20" FontWeight="Bold"
-                             Foreground="{StaticResource ProcDotNetBrush}"/>
-                  <TextBlock Text="↓ Download" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- Throughput chart -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="Throughput"
+                               FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="10" Height="3" CornerRadius="1" Background="{StaticResource ProcDotNetBrush}"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="Download" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center"/>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="10" Height="3" CornerRadius="1" Background="{StaticResource ColorDangerBrush}"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="Upload" FontSize="9" Foreground="{StaticResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </Grid>
+                  <lvc:CartesianChart Series="{Binding HistorySeries}"
+                                       XAxes="{Binding HistoryXAxes}"
+                                       Height="140" Background="Transparent"
+                                       AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock Text="{Binding SendRateDisplay}" FontSize="20" FontWeight="Bold"
-                             Foreground="{StaticResource ColorDangerBrush}"/>
-                  <TextBlock Text="↑ Upload" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
+              </Border>
+
+              <!-- Top stats row -->
+              <Grid ColumnDefinitions="*,*">
+                <Border Grid.Column="0" Padding="16" Margin="0,0,6,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding RecvRateDisplay}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ProcDotNetBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="&#x2193; Download" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="16" Margin="6,0,0,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding SendRateDisplay}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ColorDangerBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="&#x2191; Upload" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </Grid>
-              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="IPv4" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Ipv4Display}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="IPv6" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Ipv6Display}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"
-                           TextTrimming="CharacterEllipsis"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Type" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AdapterType}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Speed" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,0"/>
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LinkSpeedDisplay}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+
+              <!-- Two-column: Connection info + Totals -->
+              <Grid ColumnDefinitions="*,12,*">
+
+                <!-- Connection Info card -->
+                <Border Grid.Column="0" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Connection" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Adapter type"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding AdapterType}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Connection type"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding ConnectionType}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Link speed"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding LinkSpeedDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="DNS suffix"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding DnsSuffix}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <!-- Addresses + Totals card -->
+                <Border Grid.Column="2" Padding="16"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerLG}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="Addresses" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="IPv4 address"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Ipv4Display}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="IPv6 address"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Ipv6Display}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                    </Grid>
+
+                    <!-- Separator -->
+                    <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                      <TextBlock Grid.Column="0" Text="Total sent"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding TotalSentDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                      <TextBlock Grid.Column="0" Text="Total received"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding TotalRecvDisplay}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 HorizontalAlignment="Right"/>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
               </Grid>
+
             </StackPanel>
           </ScrollViewer>
         </DataTemplate>
 
-        <!-- GPU detail -->
+        <!-- ════════════════════════════════════════════════════════════════════
+             GPU DETAIL PANEL
+             ════════════════════════════════════════════════════════════════════ -->
         <DataTemplate DataType="vm:GpuDeviceViewModel">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="20">
+
+              <!-- Title -->
               <TextBlock Text="{Binding DeviceName}" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                          Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-              <lvc:CartesianChart Series="{Binding HistorySeries}"
-                                   XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
-                                   Height="120" Background="Transparent"
-                                   AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
-              <Grid ColumnDefinitions="*,*,*" Margin="0,4">
-                <StackPanel Grid.Column="0">
-                  <TextBlock Text="{Binding UsagePercent, StringFormat='{}{0:F1}%'}" FontSize="22" FontWeight="Bold"
-                             Foreground="{StaticResource ColorWarningBrush}"/>
-                  <TextBlock Text="GPU utilization" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+
+              <!-- GPU utilization chart -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="GPU utilization"
+                               FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="100% max · 60s"
+                               FontSize="9" Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                  </Grid>
+                  <lvc:CartesianChart Series="{Binding HistorySeries}"
+                                       XAxes="{Binding HistoryXAxes}" YAxes="{Binding HistoryYAxes}"
+                                       Height="150" Background="Transparent"
+                                       AnimationsSpeed="0:0:0.3" EasingFunction="{x:Null}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}">
-                    <Run Text="{Binding DedicatedUsedGb, StringFormat='{}{0:F1}'}"/>
-                    <Run Text=" / "/>
-                    <Run Text="{Binding DedicatedTotalGb, StringFormat='{}{0:F0} GB'}"/>
-                  </TextBlock>
-                  <TextBlock Text="Dedicated VRAM" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <TextBlock Text="{Binding SharedUsedGb, StringFormat='{}{0:F1} GB'}" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                  <TextBlock Text="Shared GPU mem" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
-                </StackPanel>
+              </Border>
+
+              <!-- Top stats row -->
+              <Grid ColumnDefinitions="*,*,*,*">
+                <Border Grid.Column="0" Padding="10" Margin="0,0,4,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding UsagePercent, StringFormat='{}{0:F1}%'}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ColorWarningBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="GPU" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="10" Margin="2,0,2,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center">
+                      <Run Text="{Binding DedicatedUsedGb, StringFormat='{}{0:F1}'}"/>
+                      <Run Text="/" FontSize="{DynamicResource NxFont10}"/>
+                      <Run Text="{Binding DedicatedTotalGb, StringFormat='{}{0:F0}'}"/>
+                      <Run Text=" GB" FontSize="{DynamicResource NxFont10}"/>
+                    </TextBlock>
+                    <TextBlock Text="Dedicated" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="10" Margin="2,0,2,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding SharedUsedGb, StringFormat='{}{0:F1} GB'}" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Shared" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="3" Padding="10" Margin="4,0,0,0"
+                        Background="{DynamicResource BgElevatedBrush}"
+                        BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource CornerMD}">
+                  <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding TempC, StringFormat='{}{0:F0}°C'}" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource ColorWarningBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Temp" FontSize="{DynamicResource NxFont10}"
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
               </Grid>
-              <TextBlock Text="Engine Utilization" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                         Foreground="{StaticResource TextPrimaryBrush}" Margin="0,8,0,4"/>
-              <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="3D" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <ProgressBar Grid.Row="0" Grid.Column="1" Value="{Binding Engine3DPercent}"
-                             Minimum="0" Maximum="100" Height="6" Margin="0,0,8,6" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Engine3DPercent, StringFormat='{}{0:F0}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Copy" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding EngineCopyPercent}"
-                             Minimum="0" Maximum="100" Height="6" Margin="0,0,8,6" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding EngineCopyPercent, StringFormat='{}{0:F0}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Decode" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,6"/>
-                <ProgressBar Grid.Row="2" Grid.Column="1" Value="{Binding EngineDecodePercent}"
-                             Minimum="0" Maximum="100" Height="6" Margin="0,0,8,6" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding EngineDecodePercent, StringFormat='{}{0:F0}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Encode" FontSize="{DynamicResource NxFont11}"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,16,0"/>
-                <ProgressBar Grid.Row="3" Grid.Column="1" Value="{Binding EngineEncodePercent}"
-                             Minimum="0" Maximum="100" Height="6" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding EngineEncodePercent, StringFormat='{}{0:F0}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
-              </Grid>
+
+              <!-- Engine Utilization card -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="0">
+                  <TextBlock Text="Engine Utilization" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                             Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                  <Grid ColumnDefinitions="60,*,50" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <!-- 3D -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="3D" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8" VerticalAlignment="Center"/>
+                    <ProgressBar Grid.Row="0" Grid.Column="1" Value="{Binding Engine3DPercent}"
+                                 Minimum="0" Maximum="100" Height="6" Margin="0,0,8,8" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Engine3DPercent, StringFormat='{}{0:F0}%'}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" Margin="0,0,0,8" VerticalAlignment="Center"/>
+
+                    <!-- Copy -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Copy" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8" VerticalAlignment="Center"/>
+                    <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding EngineCopyPercent}"
+                                 Minimum="0" Maximum="100" Height="6" Margin="0,0,8,8" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding EngineCopyPercent, StringFormat='{}{0:F0}%'}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" Margin="0,0,0,8" VerticalAlignment="Center"/>
+
+                    <!-- Decode -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Decode" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8" VerticalAlignment="Center"/>
+                    <ProgressBar Grid.Row="2" Grid.Column="1" Value="{Binding EngineDecodePercent}"
+                                 Minimum="0" Maximum="100" Height="6" Margin="0,0,8,8" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding EngineDecodePercent, StringFormat='{}{0:F0}%'}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" Margin="0,0,0,8" VerticalAlignment="Center"/>
+
+                    <!-- Encode -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Encode" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,0" VerticalAlignment="Center"/>
+                    <ProgressBar Grid.Row="3" Grid.Column="1" Value="{Binding EngineEncodePercent}"
+                                 Minimum="0" Maximum="100" Height="6" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding EngineEncodePercent, StringFormat='{}{0:F0}%'}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <!-- GPU Info card -->
+              <Border Padding="16"
+                      Background="{DynamicResource BgElevatedBrush}"
+                      BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+                      CornerRadius="{StaticResource CornerLG}">
+                <StackPanel Spacing="0">
+                  <TextBlock Text="GPU Info" FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                             Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Driver version"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DriverVersion}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="DirectX version"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DirectXVersion}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right"/>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Physical location"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding PhysicalLocation}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="200"/>
+                  </Grid>
+
+                  <!-- Separator -->
+                  <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0" Text="Dedicated GPU memory"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right">
+                      <Run Text="{Binding DedicatedTotalGb, StringFormat='{}{0:F1}'}"/>
+                      <Run Text=" GB"/>
+                    </TextBlock>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,0">
+                    <TextBlock Grid.Column="0" Text="Shared GPU memory"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right">
+                      <Run Text="{Binding SharedTotalGb, StringFormat='{}{0:F1}'}"/>
+                      <Run Text=" GB"/>
+                    </TextBlock>
+                  </Grid>
+                </StackPanel>
+              </Border>
+
             </StackPanel>
           </ScrollViewer>
         </DataTemplate>
