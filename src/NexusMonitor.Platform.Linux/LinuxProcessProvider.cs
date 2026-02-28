@@ -279,7 +279,9 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         if (!string.IsNullOrEmpty(imagePath))
         {
             if (imagePath.StartsWith("/usr/lib/systemd/", StringComparison.Ordinal)
-             || imagePath.StartsWith("/lib/systemd/",    StringComparison.Ordinal))
+             || imagePath.StartsWith("/lib/systemd/",     StringComparison.Ordinal)
+             || imagePath.StartsWith("/usr/sbin/",        StringComparison.Ordinal)
+             || imagePath.StartsWith("/sbin/",            StringComparison.Ordinal))
                 return ProcessCategory.WindowsService;
         }
         return ProcessCategory.UserApplication;

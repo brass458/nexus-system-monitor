@@ -24,6 +24,11 @@
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0-macos'))">
     <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'
+    AND !$([MSBuild]::IsOSPlatform('windows'))
+    AND !$([MSBuild]::IsOSPlatform('osx'))">
+    <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.3" />

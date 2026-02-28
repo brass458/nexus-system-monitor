@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using NexusMonitor.Core.Models;
 #if WINDOWS
@@ -25,7 +26,50 @@ public partial class SystemInfoViewModel : ViewModelBase
 #else
     public SystemInfoViewModel()
     {
-        LoadError = "Hardware info is only available on Windows.";
+        _ = LoadCrossPlatformAsync();
+    }
+
+    private async Task LoadCrossPlatformAsync()
+    {
+        await Task.Run(() =>
+        {
+            try
+            {
+                var uptime  = TimeSpan.FromMilliseconds(Environment.TickCount64);
+                var ramBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+
+                var cpu = new CpuHardwareInfo(
+                    Name:          RuntimeInformation.OSArchitecture.ToString(),
+                    Architecture:  RuntimeInformation.OSArchitecture.ToString(),
+                    PhysicalCores: Environment.ProcessorCount,
+                    LogicalCores:  Environment.ProcessorCount,
+                    L2CacheKB:     0,
+                    L3CacheKB:     0,
+                    MaxClockMhz:   0,
+                    Socket:        string.Empty,
+                    Stepping:      string.Empty);
+
+                Info = new SystemHardwareInfo(
+                    Hostname:               Environment.MachineName,
+                    OsName:                 RuntimeInformation.OSDescription,
+                    OsBuild:                Environment.OSVersion.ToString(),
+                    OsArchitecture:         RuntimeInformation.OSArchitecture.ToString(),
+                    Uptime:                 uptime,
+                    BiosVendor:             string.Empty,
+                    BiosVersion:            string.Empty,
+                    MotherboardManufacturer: string.Empty,
+                    MotherboardModel:       string.Empty,
+                    Cpu:                    cpu,
+                    TotalRamBytes:          ramBytes,
+                    RamSlots:               [],
+                    Gpus:                   [],
+                    Storage:                []);
+            }
+            catch (Exception ex)
+            {
+                LoadError = $"Failed to read system info: {ex.Message}";
+            }
+        });
         IsLoading = false;
     }
 #endif

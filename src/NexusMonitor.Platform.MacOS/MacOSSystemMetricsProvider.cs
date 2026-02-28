@@ -13,10 +13,35 @@ internal static partial class LibSystem
     [LibraryImport("libSystem.B.dylib", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int sysctlbyname(
         string name, [Out] byte[] oldp, ref nuint oldlenp, nint newp, nuint newlen);
+
+    [DllImport("libSystem.B.dylib")]
+    public static extern int mach_host_self();
+
+    [DllImport("libSystem.B.dylib")]
+    public static extern int mach_task_self_();
+
+    [DllImport("libSystem.B.dylib")]
+    public static extern int host_processor_info(
+        int host,
+        int flavor,
+        out int processorCount,
+        out nint processorInfo,
+        out int processorInfoCount);
+
+    [DllImport("libSystem.B.dylib")]
+    public static extern int vm_deallocate(int task, nint address, nint size);
 }
 
 public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
 {
+    // PROCESSOR_CPU_LOAD_INFO flavor, CPU_STATE_MAX slots per CPU
+    private const int ProcessorCpuLoadInfo = 2;
+    private const int CpuStateMax          = 4;
+    private const int CpuStateUser         = 0;
+    private const int CpuStateSys          = 1;
+    private const int CpuStateIdle         = 2;
+    private const int CpuStateNice         = 3;
+
     // ── sysctl helpers ─────────────────────────────────────────────────────────
     private static string SysctlString(string name)
     {
@@ -75,14 +100,16 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
     private readonly long   _totalMemBytes;
     private readonly int    _pageSize;
 
-    // ── Delta tracking for CPU and disk/network rates ─────────────────────────
-    private long[]  _prevCpuTimes = [];          // [user, nice, sys, idle] summed
+    // ── Delta tracking for CPU, disk, and network rates ───────────────────────
+    private long[]   _prevCpuTimes = [];
+    private uint[][] _prevPerCoreTicks = [];   // [coreIndex][CpuStateMax]
     private DateTime _prevCpuTime = DateTime.MinValue;
 
     private readonly Dictionary<string, (long rxBytes, long txBytes)> _prevNetBytes = new();
     private DateTime _prevNetTime = DateTime.MinValue;
 
-    private readonly Dictionary<string, (long readSectors, long writeSectors)> _prevDiskSectors = new();
+    // disk: { diskName -> (cumulativeReadBytes, cumulativeWriteBytes) }
+    private readonly Dictionary<string, (long readBytes, long writeBytes)> _prevDiskBytes = new();
     private DateTime _prevDiskTime = DateTime.MinValue;
 
     public MacOSSystemMetricsProvider()
@@ -127,21 +154,17 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
     // ── Memory via vm_stat ─────────────────────────────────────────────────────
     private MemoryMetrics ReadMemory()
     {
-        // Fast path: sysctl for available pages
         var freePages      = (long)(uint)SysctlInt("vm.page_free_count");
         var availableBytes = freePages * _pageSize;
 
-        // Enrich with vm_stat output for cached pages
         long cachedBytes = 0;
         var vmOut = RunCommand("vm_stat", string.Empty);
         if (!string.IsNullOrEmpty(vmOut))
         {
-            long specPages   = ParseVmStatLine(vmOut, "Pages speculative:");
-            long inactPages  = ParseVmStatLine(vmOut, "Pages inactive:");
-            long wirePages   = ParseVmStatLine(vmOut, "Pages wired down:");
-            long freeVm      = ParseVmStatLine(vmOut, "Pages free:");
+            long specPages  = ParseVmStatLine(vmOut, "Pages speculative:");
+            long inactPages = ParseVmStatLine(vmOut, "Pages inactive:");
+            long freeVm     = ParseVmStatLine(vmOut, "Pages free:");
 
-            // Use vm_stat free if sysctl returned 0
             if (freePages == 0 && freeVm > 0)
             {
                 freePages      = freeVm + specPages;
@@ -177,40 +200,29 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         return long.TryParse(num.Trim(), out var v) ? v : 0;
     }
 
-    // ── CPU via top / sysctl ───────────────────────────────────────────────────
+    // ── CPU via host_processor_info (per-core) + top for total ────────────────
     private CpuMetrics ReadCpu()
     {
-        double totalPercent = 0;
-        double freqMhz      = 0;
+        double totalPercent  = 0;
+        double freqMhz       = 0;
+        double[] corePercents = [];
 
         // Frequency via sysctl
         var freqHz = SysctlLong("hw.cpufrequency");
-        if (freqHz == 0)
-            freqHz = SysctlLong("hw.cpufrequency_max");
-        if (freqHz > 0)
-            freqMhz = freqHz / 1_000_000.0;
+        if (freqHz == 0) freqHz = SysctlLong("hw.cpufrequency_max");
+        if (freqHz > 0)  freqMhz = freqHz / 1_000_000.0;
 
-        // CPU% via top -l 1
-        var topOut = RunCommand("top", "-l 1 -stats pid,cpu -n 0");
-        if (!string.IsNullOrEmpty(topOut))
-        {
-            // Look for: "CPU usage: X.X% user, Y.Y% sys, Z.Z% idle"
-            var cpuLine = topOut.Split('\n')
-                                .FirstOrDefault(l => l.Contains("CPU usage:", StringComparison.OrdinalIgnoreCase));
-            if (cpuLine != null)
-            {
-                double user = 0, sys = 0, idle = 0;
-                ExtractPercent(cpuLine, "user", ref user);
-                ExtractPercent(cpuLine, "sys",  ref sys);
-                ExtractPercent(cpuLine, "idle", ref idle);
-                totalPercent = Math.Clamp(user + sys, 0, 100);
-            }
-        }
+        // Per-core CPU via Mach host_processor_info
+        corePercents = ReadPerCoreCpu(out totalPercent);
+
+        // If Mach API returned nothing, fall back to top -l 1
+        if (corePercents.Length == 0)
+            totalPercent = ReadTotalCpuFromTop();
 
         return new CpuMetrics
         {
             TotalPercent       = totalPercent,
-            CorePercents       = [],
+            CorePercents       = corePercents,
             FrequencyMhz       = freqMhz,
             TemperatureCelsius = 0,
             LogicalCores       = _logicalCores,
@@ -219,15 +231,109 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         };
     }
 
+    private double[] ReadPerCoreCpu(out double totalPercent)
+    {
+        totalPercent = 0;
+        try
+        {
+            var host   = LibSystem.mach_host_self();
+            var result = LibSystem.host_processor_info(
+                host,
+                ProcessorCpuLoadInfo,
+                out int cpuCount,
+                out nint infoPtr,
+                out int infoCnt);
+
+            if (result != 0 || infoPtr == nint.Zero || cpuCount <= 0)
+                return [];
+
+            // infoCnt = cpuCount * CpuStateMax (4 uint32 per CPU)
+            var corePercents = new double[cpuCount];
+            long totalUser = 0, totalSys = 0, totalIdle = 0, totalNice = 0;
+
+            // Resize/reset previous tick buffer if CPU count changed
+            if (_prevPerCoreTicks.Length != cpuCount)
+            {
+                _prevPerCoreTicks = new uint[cpuCount][];
+                for (int i = 0; i < cpuCount; i++)
+                    _prevPerCoreTicks[i] = new uint[CpuStateMax];
+            }
+
+            for (int i = 0; i < cpuCount; i++)
+            {
+                var offset   = i * CpuStateMax;
+                var user     = (uint)Marshal.ReadInt32(infoPtr, (offset + CpuStateUser) * 4);
+                var sys      = (uint)Marshal.ReadInt32(infoPtr, (offset + CpuStateSys)  * 4);
+                var idle     = (uint)Marshal.ReadInt32(infoPtr, (offset + CpuStateIdle) * 4);
+                var nice     = (uint)Marshal.ReadInt32(infoPtr, (offset + CpuStateNice) * 4);
+
+                var prevUser = _prevPerCoreTicks[i][CpuStateUser];
+                var prevSys  = _prevPerCoreTicks[i][CpuStateSys];
+                var prevIdle = _prevPerCoreTicks[i][CpuStateIdle];
+                var prevNice = _prevPerCoreTicks[i][CpuStateNice];
+
+                var dUser = user - prevUser;
+                var dSys  = sys  - prevSys;
+                var dIdle = idle - prevIdle;
+                var dNice = nice - prevNice;
+                var dTotal = (double)(dUser + dSys + dIdle + dNice);
+
+                corePercents[i] = dTotal > 0
+                    ? Math.Clamp((dUser + dSys + dNice) / dTotal * 100.0, 0, 100)
+                    : 0;
+
+                _prevPerCoreTicks[i][CpuStateUser] = user;
+                _prevPerCoreTicks[i][CpuStateSys]  = sys;
+                _prevPerCoreTicks[i][CpuStateIdle] = idle;
+                _prevPerCoreTicks[i][CpuStateNice] = nice;
+
+                totalUser += dUser;
+                totalSys  += dSys;
+                totalIdle += dIdle;
+                totalNice += dNice;
+            }
+
+            // Free the Mach-allocated buffer
+            LibSystem.vm_deallocate(
+                LibSystem.mach_task_self_(),
+                infoPtr,
+                (nint)(infoCnt * 4));
+
+            var grandTotal = (double)(totalUser + totalSys + totalIdle + totalNice);
+            totalPercent = grandTotal > 0
+                ? Math.Clamp((totalUser + totalSys + totalNice) / grandTotal * 100.0, 0, 100)
+                : 0;
+
+            return corePercents;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static double ReadTotalCpuFromTop()
+    {
+        var topOut = RunCommand("top", "-l 1 -stats pid,cpu -n 0");
+        if (string.IsNullOrEmpty(topOut)) return 0;
+
+        var cpuLine = topOut.Split('\n')
+            .FirstOrDefault(l => l.Contains("CPU usage:", StringComparison.OrdinalIgnoreCase));
+        if (cpuLine == null) return 0;
+
+        double user = 0, sys = 0;
+        ExtractPercent(cpuLine, "user", ref user);
+        ExtractPercent(cpuLine, "sys",  ref sys);
+        return Math.Clamp(user + sys, 0, 100);
+    }
+
     private static void ExtractPercent(string line, string keyword, ref double value)
     {
         var idx = line.IndexOf(keyword, StringComparison.OrdinalIgnoreCase);
         if (idx < 0) return;
-        // Scan backwards for the number
         int end = idx - 1;
         while (end >= 0 && line[end] == ' ') end--;
         if (end < 0) return;
-        // end should be on '%' or after the digits
         if (line[end] == '%') end--;
         int start = end;
         while (start > 0 && (char.IsDigit(line[start - 1]) || line[start - 1] == '.'))
@@ -237,12 +343,24 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             value = v;
     }
 
-    // ── Disks via df -k ────────────────────────────────────────────────────────
+    // ── Disks via df -k + ioreg (I/O rates) ───────────────────────────────────
     private IReadOnlyList<DiskMetrics> ReadDisks()
     {
-        var result = new List<DiskMetrics>();
-        var dfOut  = RunCommand("df", "-k");
-        if (string.IsNullOrEmpty(dfOut)) return result;
+        var result  = new List<DiskMetrics>();
+        var now     = DateTime.UtcNow;
+        var elapsed = _prevDiskTime == DateTime.MinValue
+            ? 1.0
+            : Math.Max(0.1, (now - _prevDiskTime).TotalSeconds);
+
+        // Build per-disk I/O map via ioreg
+        var ioMap = ReadIoregDiskStats();
+
+        var dfOut = RunCommand("df", "-k");
+        if (string.IsNullOrEmpty(dfOut))
+        {
+            _prevDiskTime = now;
+            return result;
+        }
 
         int index = 0;
         foreach (var line in dfOut.Split('\n'))
@@ -250,34 +368,122 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             if (string.IsNullOrWhiteSpace(line)) continue;
             var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 6) continue;
-            // Filesystem 1K-blocks Used Available Use% Mounted-on
-            // Skip header
             if (parts[0] == "Filesystem") continue;
-            // Only include real block devices (starts with /dev/)
             if (!parts[0].StartsWith("/dev/", StringComparison.Ordinal)) continue;
 
-            if (!long.TryParse(parts[1], out var totalKb))  continue;
-            if (!long.TryParse(parts[3], out var availKb))  continue;
+            if (!long.TryParse(parts[1], out var totalKb)) continue;
+            if (!long.TryParse(parts[3], out var availKb)) continue;
 
-            var mountPoint  = parts[^1];
-            var driveLetter = mountPoint == "/" ? "/" : mountPoint;
+            var mountPoint = parts[^1];
+            var devName    = parts[0]; // e.g. /dev/disk3s5
+
+            // Look up I/O rates from ioreg — try exact match or parent disk
+            long readRate  = 0;
+            long writeRate = 0;
+
+            var baseDisk = ExtractBaseDiskName(devName); // "disk3s5" -> "disk3"
+            if (!string.IsNullOrEmpty(baseDisk) && ioMap.TryGetValue(baseDisk, out var ioCur))
+            {
+                if (_prevDiskBytes.TryGetValue(baseDisk, out var ioPrev))
+                {
+                    readRate  = (long)Math.Max(0, (ioCur.readBytes  - ioPrev.readBytes)  / elapsed);
+                    writeRate = (long)Math.Max(0, (ioCur.writeBytes - ioPrev.writeBytes) / elapsed);
+                }
+                _prevDiskBytes[baseDisk] = ioCur;
+            }
 
             result.Add(new DiskMetrics
             {
-                DiskIndex       = index++,
-                DriveLetter     = driveLetter,
-                Label           = parts[0],
-                PhysicalName    = parts[0],
-                AllDriveLetters = driveLetter,
-                TotalBytes      = totalKb  * 1024L,
-                FreeBytes       = availKb  * 1024L,
-                ReadBytesPerSec = 0,
-                WriteBytesPerSec = 0,
-                ActivePercent   = 0,
+                DiskIndex        = index++,
+                DriveLetter      = mountPoint,
+                Label            = parts[0],
+                PhysicalName     = parts[0],
+                AllDriveLetters  = mountPoint,
+                TotalBytes       = totalKb  * 1024L,
+                FreeBytes        = availKb  * 1024L,
+                ReadBytesPerSec  = readRate,
+                WriteBytesPerSec = writeRate,
+                ActivePercent    = 0,
             });
         }
 
+        _prevDiskTime = now;
         return result;
+    }
+
+    /// <summary>Returns base disk name from a device path, e.g. "/dev/disk3s5" → "disk3".</summary>
+    private static string ExtractBaseDiskName(string devPath)
+    {
+        // Strip /dev/ prefix
+        var name = devPath.StartsWith("/dev/", StringComparison.Ordinal)
+            ? devPath[5..]
+            : devPath;
+        // Strip partition suffix: "disk3s5" → "disk3"
+        var sIdx = name.IndexOf('s');
+        return sIdx > 0 && sIdx < name.Length - 1 && char.IsDigit(name[sIdx + 1])
+            ? name[..sIdx]
+            : name;
+    }
+
+    /// <summary>
+    /// Parses `ioreg -c IOBlockStorageDriver -r -k Statistics` to get
+    /// cumulative bytes read/written per disk (indexed as disk0, disk1, ...).
+    /// </summary>
+    private static Dictionary<string, (long readBytes, long writeBytes)> ReadIoregDiskStats()
+    {
+        var map = new Dictionary<string, (long, long)>(StringComparer.Ordinal);
+        try
+        {
+            var output = RunCommand("ioreg", "-c IOBlockStorageDriver -r -k Statistics");
+            if (string.IsNullOrEmpty(output)) return map;
+
+            int diskIndex = 0;
+            long readBytes = 0, writeBytes = 0;
+
+            foreach (var line in output.Split('\n'))
+            {
+                var trimmed = line.Trim();
+
+                // Start of a new driver entry
+                if (trimmed.Contains("IOBlockStorageDriver", StringComparison.Ordinal) &&
+                    trimmed.Contains("<class", StringComparison.Ordinal))
+                {
+                    // Save previous entry if valid
+                    if (readBytes > 0 || writeBytes > 0)
+                    {
+                        map[$"disk{diskIndex}"] = (readBytes, writeBytes);
+                        diskIndex++;
+                    }
+                    readBytes  = 0;
+                    writeBytes = 0;
+                    continue;
+                }
+
+                if (trimmed.StartsWith("\"Statistics\"", StringComparison.Ordinal))
+                {
+                    // Parse inline: "Statistics" = {"Bytes (Read)"=12345,...}
+                    readBytes  = ParseIoregLong(trimmed, "\"Bytes (Read)\"=");
+                    writeBytes = ParseIoregLong(trimmed, "\"Bytes (Write)\"=");
+                }
+            }
+
+            // Last entry
+            if (readBytes > 0 || writeBytes > 0)
+                map[$"disk{diskIndex}"] = (readBytes, writeBytes);
+        }
+        catch { }
+
+        return map;
+    }
+
+    private static long ParseIoregLong(string text, string key)
+    {
+        var idx = text.IndexOf(key, StringComparison.Ordinal);
+        if (idx < 0) return 0;
+        var rest  = text[(idx + key.Length)..];
+        var end   = 0;
+        while (end < rest.Length && char.IsDigit(rest[end])) end++;
+        return end > 0 && long.TryParse(rest[..end], out var v) ? v : 0;
     }
 
     // ── Network via NetworkInterface ───────────────────────────────────────────

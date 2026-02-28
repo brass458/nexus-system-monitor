@@ -183,7 +183,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  MacOSNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MacOSPowerPlanProvider>();
         services.AddSingleton<INotificationService,         NullNotificationService>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
@@ -192,7 +192,7 @@ public class App : Application
         services.AddSingleton<INetworkConnectionsProvider,  LinuxNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
         services.AddSingleton<INotificationService,         NullNotificationService>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
