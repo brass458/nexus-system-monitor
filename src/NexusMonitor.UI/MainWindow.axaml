@@ -63,7 +63,7 @@
 
   </Window.Styles>
 
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,*" PointerMoved="OnGlobalPointerMoved">
 
     <!-- ===== TITLEBAR ===== -->
     <Border Grid.Row="0"
@@ -125,14 +125,15 @@
 
         <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
 
-        <!-- Layer 1: Broad soft wash — fills the whole titlebar top to bottom -->
-        <Border IsHitTestVisible="False"
+        <!-- Layer 1: Broad soft wash — pointer-tracked specular highlight -->
+        <Border x:Name="TitleSpecularWash"
+                IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
-            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-              <GradientStop Color="#50FFFFFF" Offset="0"/>
-              <GradientStop Color="#18FFFFFF" Offset="0.45"/>
-              <GradientStop Color="#00FFFFFF" Offset="0.85"/>
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+              <GradientStop Color="#58FFFFFF" Offset="0"/>
+              <GradientStop Color="#20FFFFFF" Offset="0.35"/>
+              <GradientStop Color="#00FFFFFF" Offset="0.7"/>
             </LinearGradientBrush>
           </Border.Background>
         </Border>
@@ -151,14 +152,15 @@
           </Border.Background>
         </Border>
 
-        <!-- Layer 3: Prismatic shimmer — diagonal rainbow tint at very low alpha -->
-        <Border IsHitTestVisible="False"
+        <!-- Layer 3: Prismatic shimmer — rotating rainbow tint (animated in code) -->
+        <Border x:Name="TitlePrismatic"
+                IsHitTestVisible="False"
                 Opacity="{DynamicResource GlassSpecularOpacity}">
           <Border.Background>
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-              <GradientStop Color="#0CFF8888" Offset="0.0"/>
-              <GradientStop Color="#06FFFFFF" Offset="0.33"/>
-              <GradientStop Color="#0C88FFFF" Offset="0.66"/>
+              <GradientStop Color="#10FF8888" Offset="0.0"/>
+              <GradientStop Color="#08FFFFFF" Offset="0.33"/>
+              <GradientStop Color="#1088FFFF" Offset="0.66"/>
               <GradientStop Color="#00FFFFFF" Offset="1.0"/>
             </LinearGradientBrush>
           </Border.Background>
@@ -222,14 +224,15 @@
 
           <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
 
-          <!-- Layer 1: Broad diagonal wash from top-left corner -->
-          <Border IsHitTestVisible="False"
+          <!-- Layer 1: Broad diagonal wash — pointer-tracked specular highlight -->
+          <Border x:Name="SideSpecularWash"
+                  IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,0%" EndPoint="60%,100%">
-                <GradientStop Color="#38FFFFFF" Offset="0"/>
-                <GradientStop Color="#10FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#00FFFFFF" Offset="0.75"/>
+                <GradientStop Color="#40FFFFFF" Offset="0"/>
+                <GradientStop Color="#14FFFFFF" Offset="0.35"/>
+                <GradientStop Color="#00FFFFFF" Offset="0.7"/>
               </LinearGradientBrush>
             </Border.Background>
           </Border>
@@ -248,14 +251,15 @@
             </Border.Background>
           </Border>
 
-          <!-- Layer 3: Prismatic shimmer — diagonal iridescent tint -->
-          <Border IsHitTestVisible="False"
+          <!-- Layer 3: Prismatic shimmer — rotating iridescent tint (animated in code) -->
+          <Border x:Name="SidePrismatic"
+                  IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                <GradientStop Color="#0AFF8888" Offset="0.0"/>
-                <GradientStop Color="#06FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#0A88FFFF" Offset="0.75"/>
+                <GradientStop Color="#0EFF8888" Offset="0.0"/>
+                <GradientStop Color="#08FFFFFF" Offset="0.4"/>
+                <GradientStop Color="#0E88FFFF" Offset="0.75"/>
                 <GradientStop Color="#00FFFFFF" Offset="1.0"/>
               </LinearGradientBrush>
             </Border.Background>
@@ -318,28 +322,30 @@
 
           <!-- ── Liquid Glass specular layers for content area (pointer-transparent) ── -->
 
-          <!-- Layer 1: Subtle top-edge highlight — simulates light from the titlebar -->
-          <Border IsHitTestVisible="False"
-                  Height="60"
+          <!-- Layer 1: Content specular wash — pointer-tracked light source -->
+          <Border x:Name="ContentSpecularWash"
+                  IsHitTestVisible="False"
+                  Height="80"
                   VerticalAlignment="Top"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
-              <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                <GradientStop Color="#14FFFFFF" Offset="0"/>
-                <GradientStop Color="#06FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#00FFFFFF" Offset="1"/>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#18FFFFFF" Offset="0"/>
+                <GradientStop Color="#08FFFFFF" Offset="0.35"/>
+                <GradientStop Color="#00FFFFFF" Offset="0.7"/>
               </LinearGradientBrush>
             </Border.Background>
           </Border>
 
-          <!-- Layer 2: Very subtle prismatic shimmer — diagonal iridescent tint -->
-          <Border IsHitTestVisible="False"
+          <!-- Layer 2: Prismatic shimmer — rotating iridescent tint (animated in code) -->
+          <Border x:Name="ContentPrismatic"
+                  IsHitTestVisible="False"
                   Opacity="{DynamicResource GlassSpecularOpacity}">
             <Border.Background>
               <LinearGradientBrush StartPoint="100%,0%" EndPoint="0%,100%">
-                <GradientStop Color="#06FF8888" Offset="0.0"/>
-                <GradientStop Color="#03FFFFFF" Offset="0.4"/>
-                <GradientStop Color="#0688FFFF" Offset="0.8"/>
+                <GradientStop Color="#08FF8888" Offset="0.0"/>
+                <GradientStop Color="#04FFFFFF" Offset="0.4"/>
+                <GradientStop Color="#0888FFFF" Offset="0.8"/>
                 <GradientStop Color="#00FFFFFF" Offset="1.0"/>
               </LinearGradientBrush>
             </Border.Background>

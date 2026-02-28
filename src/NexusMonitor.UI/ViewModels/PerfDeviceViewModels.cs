@@ -17,6 +17,8 @@ public abstract partial class PerfDeviceViewModel : ObservableObject
 
     [ObservableProperty] private string _valueDisplay    = "0%";
     [ObservableProperty] private string _subValueDisplay = string.Empty;
+    [ObservableProperty] private bool _isDragging;
+    [ObservableProperty] private bool _isSelected;
 
     // 20-point mini sparkline for the sidebar list item
     public ObservableCollection<ObservableValue> MiniHistory { get; } =

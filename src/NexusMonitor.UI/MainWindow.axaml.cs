@@ -26,6 +26,12 @@ public partial class MainWindow : Window
     // Grip zone: the leftmost 18px of each nav item (the grip column)
     private const double GripWidth = 18.0;
 
+    // ── Liquid Glass specular tracking ──────────────────────────────────────
+    private double _specNx;  // smoothed normalised cursor x (0‥1)
+    private double _specNy;  // smoothed normalised cursor y (0‥1)
+    private DispatcherTimer? _shimmerTimer;
+    private double _shimmerPhase; // 0‥2π, drives prismatic cycling
+
     public MainWindow()
     {
         InitializeComponent();
@@ -41,10 +47,18 @@ public partial class MainWindow : Window
         ];
 
         // Dispose all cached ViewModels when the window closes.
-        Closed += (_, _) => (DataContext as IDisposable)?.Dispose();
+        Closed += (_, _) =>
+        {
+            (DataContext as IDisposable)?.Dispose();
+            _shimmerTimer?.Stop();
+        };
 
         // Hook drag-to-reorder once the visual tree is ready.
-        Loaded += (_, _) => SetupNavDrag();
+        Loaded += (_, _) =>
+        {
+            SetupNavDrag();
+            StartShimmerTimer();
+        };
     }
 
     // ── Window chrome ────────────────────────────────────────────────────────
@@ -138,6 +152,87 @@ public partial class MainWindow : Window
             }
         }
         return null;
+    }
+
+    // ── Liquid Glass: pointer-tracked specular + prismatic shimmer ─────────
+
+    /// <summary>
+    /// Moves the specular "bright spot" gradient direction toward the cursor,
+    /// simulating a real-time light source that follows the user's pointer —
+    /// the hallmark of Apple's iOS 26 Liquid Glass material.
+    /// </summary>
+    private void OnGlobalPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (Bounds.Width < 1 || Bounds.Height < 1) return;
+
+        var pos = e.GetCurrentPoint(this).Position;
+        double rawNx = pos.X / Bounds.Width;   // 0..1
+        double rawNy = pos.Y / Bounds.Height;  // 0..1
+
+        // Smooth (lerp) to avoid jarring jumps — 30% blend toward target each frame
+        const double k = 0.30;
+        _specNx += (rawNx - _specNx) * k;
+        _specNy += (rawNy - _specNy) * k;
+
+        ApplySpecularGradient(TitleSpecularWash,   _specNx, _specNy, horizontal: true);
+        ApplySpecularGradient(SideSpecularWash,    _specNx, _specNy, horizontal: false);
+        ApplySpecularGradient(ContentSpecularWash, _specNx, _specNy, horizontal: true);
+    }
+
+    private static void ApplySpecularGradient(Border? target, double nx, double ny, bool horizontal)
+    {
+        if (target?.Background is not LinearGradientBrush brush || brush.GradientStops.Count < 3) return;
+
+        if (horizontal)
+        {
+            // Titlebar / content: light slides left–right following cursor
+            double sx = nx * 0.6;            // start x shifts 0‥0.6
+            double sy = Math.Max(0, ny * 0.2); // slight vertical tilt
+            brush.StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative);
+            brush.EndPoint   = new RelativePoint(sx + 0.6, 1.0, RelativeUnit.Relative);
+        }
+        else
+        {
+            // Sidebar: light slides top-to-bottom following cursor
+            double sy = ny * 0.4;
+            double sx = nx * 0.3;
+            brush.StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative);
+            brush.EndPoint   = new RelativePoint(0.7, sy + 0.7, RelativeUnit.Relative);
+        }
+    }
+
+    /// <summary>
+    /// Slowly rotates the prismatic shimmer gradient direction across all
+    /// glass surfaces, creating the subtle "alive" iridescent quality
+    /// of Apple's Liquid Glass material.
+    /// </summary>
+    private void StartShimmerTimer()
+    {
+        _shimmerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _shimmerTimer.Tick += (_, _) =>
+        {
+            _shimmerPhase += 0.015;        // full cycle ≈ 420 ticks ≈ 21s
+            if (_shimmerPhase > Math.PI * 2) _shimmerPhase -= Math.PI * 2;
+
+            // Rotate the prismatic gradient direction slowly
+            double angle = _shimmerPhase;
+            double sx = 0.5 + 0.5 * Math.Cos(angle);
+            double sy = 0.5 + 0.5 * Math.Sin(angle);
+            double ex = 0.5 + 0.5 * Math.Cos(angle + Math.PI);
+            double ey = 0.5 + 0.5 * Math.Sin(angle + Math.PI);
+
+            RotatePrismatic(TitlePrismatic, sx, sy, ex, ey);
+            RotatePrismatic(SidePrismatic,  sx, sy, ex, ey);
+            RotatePrismatic(ContentPrismatic, sx, sy, ex, ey);
+        };
+        _shimmerTimer.Start();
+    }
+
+    private static void RotatePrismatic(Border? target, double sx, double sy, double ex, double ey)
+    {
+        if (target?.Background is not LinearGradientBrush brush) return;
+        brush.StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative);
+        brush.EndPoint   = new RelativePoint(ex, ey, RelativeUnit.Relative);
     }
 
     // ── Sidebar drag-to-reorder (iOS-style gap animation) ──────────────────
