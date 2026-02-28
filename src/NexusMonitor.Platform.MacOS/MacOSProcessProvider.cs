@@ -1,5 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reactive.Linq;
+using System.Runtime.InteropServices;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -13,6 +14,51 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     private bool _disposed;
 
+    // ── P/Invoke declarations ──────────────────────────────────────────────────
+    [DllImport("libSystem.dylib", SetLastError = true)]
+    private static extern int kill(int pid, int sig);
+
+    [DllImport("libSystem.dylib", SetLastError = true)]
+    private static extern int setpriority(int which, uint who, int prio);
+
+    [DllImport("libSystem.dylib")]
+    private static extern int proc_listallpids(IntPtr buffer, int bufferSize);
+
+    [DllImport("libSystem.dylib")]
+    private static extern int proc_pidinfo(int pid, int flavor, ulong arg, IntPtr buffer, int bufferSize);
+
+    [DllImport("libSystem.dylib")]
+    private static extern int proc_name(int pid, byte[] buffer, uint bufferSize);
+
+    private const int PROC_PIDTASKINFO = 4;
+    private const int PRIO_PROCESS     = 0;
+    private const int SIGKILL          = 9;
+    private const int SIGSTOP          = 17;
+    private const int SIGCONT          = 19;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct proc_taskinfo
+    {
+        public ulong pti_virtual_size;
+        public ulong pti_resident_size;
+        public ulong pti_total_user;
+        public ulong pti_total_system;
+        public ulong pti_threads_user;
+        public ulong pti_threads_system;
+        public int   pti_policy;
+        public int   pti_faults;
+        public int   pti_pageins;
+        public int   pti_cow_faults;
+        public int   pti_messages_sent;
+        public int   pti_messages_received;
+        public int   pti_syscalls_mach;
+        public int   pti_syscalls_unix;
+        public int   pti_csw;
+        public int   pti_threadnum;
+        public int   pti_numrunning;
+        public int   pti_priority;
+    }
+
     // ── Streaming ──────────────────────────────────────────────────────────────
     public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval) =>
         Observable.Timer(TimeSpan.Zero, interval)
@@ -24,88 +70,127 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
-        var now = DateTime.UtcNow;
+        var now    = DateTime.UtcNow;
         var result = new List<ProcessInfo>();
 
-        foreach (var proc in Process.GetProcesses())
+        // Get all PIDs using proc_listallpids
+        int pidCount = proc_listallpids(IntPtr.Zero, 0);
+        if (pidCount <= 0)
+            return SnapshotFallback(now);
+
+        var pidArray = new int[pidCount + 16]; // +16 for race margin
+        var gcHandle = GCHandle.Alloc(pidArray, GCHandleType.Pinned);
+        int actualCount;
+        try
         {
+            actualCount = proc_listallpids(gcHandle.AddrOfPinnedObject(), pidArray.Length * sizeof(int));
+        }
+        finally
+        {
+            gcHandle.Free();
+        }
+
+        if (actualCount <= 0)
+            return SnapshotFallback(now);
+
+        var taskInfoSize = Marshal.SizeOf<proc_taskinfo>();
+
+        for (int i = 0; i < actualCount && i < pidArray.Length; i++)
+        {
+            int pid = pidArray[i];
+            if (pid <= 0) continue;
+
             try
             {
-                using (proc)
+                // Get process name
+                var nameBuf = new byte[256];
+                proc_name(pid, nameBuf, (uint)nameBuf.Length);
+                var name = System.Text.Encoding.UTF8.GetString(nameBuf)
+                                  .TrimEnd('\0').Trim();
+                if (string.IsNullOrEmpty(name))
+                    name = $"pid{pid}";
+
+                // Get task info (CPU + memory)
+                var infoPtr = Marshal.AllocHGlobal(taskInfoSize);
+                ulong workingSet     = 0;
+                ulong virtualSize    = 0;
+                ulong totalUserNs    = 0;
+                ulong totalSystemNs  = 0;
+                int   threadCount    = 0;
+
+                try
                 {
-                    var pid    = proc.Id;
-                    var name   = proc.ProcessName;
-                    var ws     = proc.WorkingSet64;
-                    var virt   = proc.VirtualMemorySize64;
-                    var threads = 0;
-                    var handles = 0;
-                    var startTime = DateTime.MinValue;
-                    var imagePath = string.Empty;
-                    var cpu   = TimeSpan.Zero;
-                    var accessDenied = false;
-
-                    try { threads   = proc.Threads.Count; }  catch { }
-                    try { handles   = proc.HandleCount; }    catch { }
-                    try { startTime = proc.StartTime.ToUniversalTime(); } catch { }
-                    try { imagePath = proc.MainModule?.FileName ?? string.Empty; } catch { }
-
-                    try
+                    int ret = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, infoPtr, taskInfoSize);
+                    if (ret == taskInfoSize)
                     {
-                        cpu = proc.TotalProcessorTime;
+                        var info     = Marshal.PtrToStructure<proc_taskinfo>(infoPtr);
+                        workingSet   = info.pti_resident_size;
+                        virtualSize  = info.pti_virtual_size;
+                        totalUserNs  = info.pti_total_user;
+                        totalSystemNs = info.pti_total_system;
+                        threadCount  = info.pti_threadnum;
                     }
-                    catch
-                    {
-                        accessDenied = true;
-                    }
-
-                    // CPU% delta
-                    double cpuPercent = 0.0;
-                    if (!accessDenied && _cpuSamples.TryGetValue(pid, out var prev))
-                    {
-                        var cpuDelta  = (cpu - prev.cpu).TotalSeconds;
-                        var timeDelta = (now - prev.time).TotalSeconds;
-                        if (timeDelta > 0)
-                            cpuPercent = Math.Clamp(cpuDelta / (timeDelta * s_processorCount) * 100.0, 0, 100);
-                    }
-                    if (!accessDenied)
-                        _cpuSamples[pid] = (cpu, now);
-
-                    // Category heuristics
-                    var category = ClassifyProcess(pid, imagePath);
-
-                    result.Add(new ProcessInfo
-                    {
-                        Pid              = pid,
-                        ParentPid        = 0,          // requires sysctl KERN_PROC — deferred
-                        Name             = name,
-                        Description      = string.Empty,
-                        ImagePath        = imagePath,
-                        CommandLine      = string.Empty,
-                        UserName         = string.Empty, // requires sysctl KERN_PROC — deferred
-                        Category         = category,
-                        State            = ProcessState.Running,
-                        StartTime        = startTime,
-                        CpuPercent       = cpuPercent,
-                        ThreadCount      = threads,
-                        HandleCount      = handles,
-                        WorkingSetBytes  = ws,
-                        PrivateBytesBytes = 0,
-                        PagedPoolBytes   = 0,
-                        VirtualBytesBytes = virt,
-                        IoReadBytesPerSec  = 0,
-                        IoWriteBytesPerSec = 0,
-                        GpuPercent       = 0,
-                        NetworkSendBytesPerSec = 0,
-                        NetworkRecvBytesPerSec = 0,
-                        IsElevated       = false,
-                        IsCritical       = false,
-                        AccessDenied     = accessDenied,
-                    });
                 }
+                finally
+                {
+                    Marshal.FreeHGlobal(infoPtr);
+                }
+
+                // CPU% delta — macOS reports times in nanoseconds
+                double cpuPercent = 0.0;
+                var cpuNs = (long)(totalUserNs + totalSystemNs);
+                var cpuTs = TimeSpan.FromTicks(cpuNs / 100); // 100ns per tick
+
+                if (_cpuSamples.TryGetValue(pid, out var prev))
+                {
+                    var cpuDelta  = (cpuTs - prev.cpu).TotalSeconds;
+                    var timeDelta = (now - prev.time).TotalSeconds;
+                    if (timeDelta > 0 && cpuDelta >= 0)
+                        cpuPercent = Math.Clamp(cpuDelta / (timeDelta * s_processorCount) * 100.0, 0, 100);
+                }
+                _cpuSamples[pid] = (cpuTs, now);
+
+                // Classify
+                var category = pid == s_currentPid
+                    ? ProcessCategory.CurrentProcess
+                    : ProcessCategory.UserApplication;
+
+                result.Add(new ProcessInfo
+                {
+                    Pid                    = pid,
+                    ParentPid              = 0,
+                    Name                   = name,
+                    Description            = string.Empty,
+                    ImagePath              = string.Empty,
+                    CommandLine            = string.Empty,
+                    UserName               = string.Empty,
+                    Category               = category,
+                    State                  = ProcessState.Running,
+                    StartTime              = DateTime.MinValue,
+                    CpuPercent             = cpuPercent,
+                    ThreadCount            = threadCount,
+                    HandleCount            = 0,
+                    WorkingSetBytes        = (long)workingSet,
+                    PrivateBytesBytes      = 0,
+                    PagedPoolBytes         = 0,
+                    VirtualBytesBytes      = (long)virtualSize,
+                    IoReadBytesPerSec      = 0,
+                    IoWriteBytesPerSec     = 0,
+                    GpuPercent             = 0,
+                    NetworkSendBytesPerSec = 0,
+                    NetworkRecvBytesPerSec = 0,
+                    IsElevated             = false,
+                    IsCritical             = false,
+                    AccessDenied           = false,
+                    AffinityMask           = 0,
+                    CurrentIoPriority      = IoPriority.Normal,
+                    CurrentMemoryPriority  = MemoryPriority.Normal,
+                    IsEfficiencyMode       = false,
+                });
             }
             catch
             {
-                // Process exited between GetProcesses() and property access — skip
+                // Process exited or access denied — skip
             }
         }
 
@@ -117,59 +202,143 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         return result;
     }
 
-    private static ProcessCategory ClassifyProcess(int pid, string imagePath)
+    // Fallback to System.Diagnostics.Process if proc_listallpids fails
+    private IReadOnlyList<ProcessInfo> SnapshotFallback(DateTime now)
     {
-        if (pid == s_currentPid)
-            return ProcessCategory.CurrentProcess;
-
-        if (!string.IsNullOrEmpty(imagePath))
+        var result = new List<ProcessInfo>();
+        foreach (var proc in Process.GetProcesses())
         {
-            if (imagePath.StartsWith("/System/", StringComparison.Ordinal)
-             || imagePath.StartsWith("/usr/",    StringComparison.Ordinal)
-             || imagePath.StartsWith("/sbin/",   StringComparison.Ordinal))
-                return ProcessCategory.SystemKernel;
+            try
+            {
+                using (proc)
+                {
+                    var pid       = proc.Id;
+                    var name      = proc.ProcessName;
+                    var ws        = proc.WorkingSet64;
+                    var virt      = proc.VirtualMemorySize64;
+                    var threads   = 0;
+                    var startTime = DateTime.MinValue;
+                    var cpu       = TimeSpan.Zero;
+                    var accessDenied = false;
 
-            if (imagePath.StartsWith("/Applications/", StringComparison.Ordinal))
-                return ProcessCategory.UserApplication;
+                    try { threads   = proc.Threads.Count; }  catch { }
+                    try { startTime = proc.StartTime.ToUniversalTime(); } catch { }
+                    try { cpu       = proc.TotalProcessorTime; } catch { accessDenied = true; }
+
+                    double cpuPercent = 0.0;
+                    if (!accessDenied && _cpuSamples.TryGetValue(pid, out var prev))
+                    {
+                        var cpuDelta  = (cpu - prev.cpu).TotalSeconds;
+                        var timeDelta = (now - prev.time).TotalSeconds;
+                        if (timeDelta > 0 && cpuDelta >= 0)
+                            cpuPercent = Math.Clamp(cpuDelta / (timeDelta * s_processorCount) * 100.0, 0, 100);
+                    }
+                    if (!accessDenied)
+                        _cpuSamples[pid] = (cpu, now);
+
+                    var category = pid == s_currentPid
+                        ? ProcessCategory.CurrentProcess
+                        : ProcessCategory.UserApplication;
+
+                    result.Add(new ProcessInfo
+                    {
+                        Pid                    = pid,
+                        ParentPid              = 0,
+                        Name                   = name,
+                        Description            = string.Empty,
+                        ImagePath              = string.Empty,
+                        CommandLine            = string.Empty,
+                        UserName               = string.Empty,
+                        Category               = category,
+                        State                  = ProcessState.Running,
+                        StartTime              = startTime,
+                        CpuPercent             = cpuPercent,
+                        ThreadCount            = threads,
+                        HandleCount            = 0,
+                        WorkingSetBytes        = ws,
+                        PrivateBytesBytes      = 0,
+                        PagedPoolBytes         = 0,
+                        VirtualBytesBytes      = virt,
+                        IoReadBytesPerSec      = 0,
+                        IoWriteBytesPerSec     = 0,
+                        GpuPercent             = 0,
+                        NetworkSendBytesPerSec = 0,
+                        NetworkRecvBytesPerSec = 0,
+                        IsElevated             = false,
+                        IsCritical             = false,
+                        AccessDenied           = accessDenied,
+                        AffinityMask           = 0,
+                        CurrentIoPriority      = IoPriority.Normal,
+                        CurrentMemoryPriority  = MemoryPriority.Normal,
+                        IsEfficiencyMode       = false,
+                    });
+                }
+            }
+            catch { }
         }
 
-        return ProcessCategory.UserApplication;
+        var activePids = new HashSet<int>(result.Select(p => p.Pid));
+        foreach (var key in _cpuSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
+            _cpuSamples.Remove(key);
+
+        return result;
     }
 
     // ── Process control ────────────────────────────────────────────────────────
     public Task KillProcessAsync(int pid, bool killTree = false, CancellationToken ct = default) =>
         Task.Run(() =>
         {
-            using var p = Process.GetProcessById(pid);
-            p.Kill(killTree);
+            if (killTree)
+            {
+                // Best-effort: kill process group
+                kill(-pid, SIGKILL);
+            }
+            kill(pid, SIGKILL);
         }, ct);
 
     public Task SuspendProcessAsync(int pid, CancellationToken ct = default) =>
-        Task.FromException(new PlatformNotSupportedException("Process suspend is not supported on macOS via managed APIs."));
+        Task.Run(() => kill(pid, SIGSTOP), ct);
 
     public Task ResumeProcessAsync(int pid, CancellationToken ct = default) =>
-        Task.FromException(new PlatformNotSupportedException("Process resume is not supported on macOS via managed APIs."));
-
-    public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
-        Task.FromException(new PlatformNotSupportedException("CPU affinity is not supported on macOS."));
+        Task.Run(() => kill(pid, SIGCONT), ct);
 
     public Task SetPriorityAsync(int pid, ProcessPriority priority, CancellationToken ct = default) =>
         Task.Run(() =>
         {
-            using var p = Process.GetProcessById(pid);
-            p.PriorityClass = priority switch
+            int nice = priority switch
             {
-                ProcessPriority.Idle        => ProcessPriorityClass.Idle,
-                ProcessPriority.BelowNormal => ProcessPriorityClass.BelowNormal,
-                ProcessPriority.Normal      => ProcessPriorityClass.Normal,
-                ProcessPriority.AboveNormal => ProcessPriorityClass.AboveNormal,
-                ProcessPriority.High        => ProcessPriorityClass.High,
-                ProcessPriority.RealTime    => ProcessPriorityClass.RealTime,
-                _                           => ProcessPriorityClass.Normal,
+                ProcessPriority.Idle        =>  19,
+                ProcessPriority.BelowNormal =>  10,
+                ProcessPriority.Normal      =>   0,
+                ProcessPriority.AboveNormal =>  -5,
+                ProcessPriority.High        => -10,
+                ProcessPriority.RealTime    => -20,
+                _                           =>   0,
             };
+            setpriority(PRIO_PROCESS, (uint)pid, nice);
         }, ct);
 
-    // ── Detail queries (deferred) ──────────────────────────────────────────────
+    // macOS does not support CPU affinity — no-op
+    public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    // macOS does not expose I/O priority via public API — no-op
+    public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    // macOS does not expose memory priority via public API — no-op
+    public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    // macOS working set trim — no direct public API, no-op
+    public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    // macOS efficiency mode — no direct equivalent, no-op
+    public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    // ── Detail queries ─────────────────────────────────────────────────────────
     public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ModuleInfo>>([]);
 
@@ -177,7 +346,14 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         Task.FromResult<IReadOnlyList<ThreadInfo>>([]);
 
     public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<EnvironmentEntry>>([]); // sysctl KERN_PROCARGS2 required
+        Task.FromResult<IReadOnlyList<EnvironmentEntry>>([]);
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HandleInfo>>([]);
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
+
 
     // ── IDisposable ────────────────────────────────────────────────────────────
     public void Dispose()

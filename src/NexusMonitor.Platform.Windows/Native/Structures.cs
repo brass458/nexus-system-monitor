@@ -225,3 +225,32 @@ internal static class NativeServiceStartType
     public const uint SERVICE_DEMAND_START = 3;
     public const uint SERVICE_DISABLED     = 4;
 }
+
+// ─── Handle Enumeration ───────────────────────────────────────────────────────
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX
+{
+    internal nint   Object;
+    internal nuint  UniqueProcessId;
+    internal nuint  HandleValue;
+    internal uint   GrantedAccess;
+    internal ushort CreatorBackTraceIndex;
+    internal ushort ObjectTypeIndex;
+    internal uint   HandleAttributes;
+    internal uint   Reserved;
+}
+
+// ─── Virtual Memory Query ─────────────────────────────────────────────────────
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct MEMORY_BASIC_INFORMATION
+{
+    internal nint  BaseAddress;
+    internal nint  AllocationBase;
+    internal uint  AllocationProtect;
+    internal nint  RegionSize;         // SIZE_T — pointer-sized
+    internal uint  State;              // 0x1000=Commit, 0x2000=Reserve, 0x10000=Free
+    internal uint  Protect;
+    internal uint  Type;               // 0x1000000=Image, 0x40000=Mapped, 0x20000=Private
+}

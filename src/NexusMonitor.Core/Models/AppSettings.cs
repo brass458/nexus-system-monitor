@@ -1,3 +1,6 @@
+using NexusMonitor.Core.Alerts;
+using NexusMonitor.Core.Rules;
+
 namespace NexusMonitor.Core.Models;
 
 public class AppSettings
@@ -15,6 +18,11 @@ public class AppSettings
     public string AccentColorHex     { get; set; } = "#0A84FF";
     public string TextAccentColorHex { get; set; } = "";     // "" = derive from AccentColorHex
 
+    // Custom surface colors — "" = use built-in theme defaults
+    public string CustomWindowBgHex  { get; set; } = "";   // BgBaseBrush  (window chrome)
+    public string CustomSurfaceBgHex { get; set; } = "";   // BgPrimary/Secondary/Elevated (cards/panels)
+    public string CustomSidebarBgHex { get; set; } = "";   // GlassBgBrush (left sidebar / nav)
+
     // Typography
     public string FontFamily         { get; set; } = "";     // "" = system default
 
@@ -28,4 +36,26 @@ public class AppSettings
 
     // Other
     public bool   ShowOverlayWidget  { get; set; } = false;
+
+    // Notifications
+    public bool   DesktopNotificationsEnabled { get; set; } = true;
+
+    // ProBalance
+    public bool          ProBalanceEnabled      { get; set; } = false;
+    public double        ProBalanceCpuThreshold { get; set; } = 80.0;
+    public List<string>  ProBalanceExclusions   { get; set; } = new();
+
+    // Rules
+    public List<ProcessRule> Rules { get; set; } = new();
+
+    // Gaming Mode
+    public bool          GamingModeEnabled     { get; set; } = false;
+    public string        GamingModeGameProcess { get; set; } = "";
+    public List<string>  GamingModeExclusions  { get; set; } = new();
+
+    // Alerts
+    public List<AlertRule> AlertRules { get; set; } = new();
+
+    // Sidebar navigation order — empty = default order
+    public List<string> NavOrder { get; set; } = new();
 }

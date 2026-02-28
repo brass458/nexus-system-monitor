@@ -1,0 +1,457 @@
+﻿using System.Diagnostics;
+using System.Reactive.Linq;
+using System.Runtime.InteropServices;
+using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Models;
+
+namespace NexusMonitor.Platform.Linux;
+
+public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
+{
+    // ── P/Invoke declarations ──────────────────────────────────────────────────
+    [DllImport("libc.so.6", SetLastError = true)]
+    private static extern int kill(int pid, int sig);
+
+    [DllImport("libc.so.6", SetLastError = true)]
+    private static extern int setpriority(int which, uint who, int prio);
+
+    [DllImport("libc.so.6", SetLastError = true)]
+    private static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong mask);
+
+    private const int PRIO_PROCESS = 0;
+    private const int SIGKILL      = 9;
+    private const int SIGSTOP      = 19;
+    private const int SIGCONT      = 18;
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    private readonly Dictionary<int, (long cpuTicks, DateTime time)> _cpuSamples = new();
+    private static readonly int s_processorCount = Math.Max(1, Environment.ProcessorCount);
+    private static readonly int s_currentPid     = Environment.ProcessId;
+    private static readonly long s_clockTick      = GetClockTicksPerSecond();
+
+    // username cache (uid → name)
+    private readonly Dictionary<int, string> _uidCache = new();
+
+    private bool _disposed;
+
+    private static long GetClockTicksPerSecond()
+    {
+        // sysconf(_SC_CLK_TCK) — typically 100 on Linux
+        try
+        {
+            var output = RunFile("getconf", "CLK_TCK");
+            if (long.TryParse(output.Trim(), out var v) && v > 0) return v;
+        }
+        catch { }
+        return 100;
+    }
+
+    private static string RunFile(string cmd, string args)
+    {
+        try
+        {
+            using var p = new Process
+            {
+                StartInfo = new ProcessStartInfo(cmd, args)
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            p.Start();
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(2000);
+            return output;
+        }
+        catch { return string.Empty; }
+    }
+
+    // ── Streaming ──────────────────────────────────────────────────────────────
+    public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval) =>
+        Observable.Timer(TimeSpan.Zero, interval)
+                  .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot());
+
+    public Task<IReadOnlyList<ProcessInfo>> GetProcessesAsync(CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<ProcessInfo>>(() => Snapshot(), ct);
+
+    // ── Snapshot ───────────────────────────────────────────────────────────────
+    private IReadOnlyList<ProcessInfo> Snapshot()
+    {
+        var now    = DateTime.UtcNow;
+        var result = new List<ProcessInfo>();
+
+        string[] pidDirs;
+        try
+        {
+            pidDirs = Directory.GetDirectories("/proc");
+        }
+        catch { return result; }
+
+        foreach (var dir in pidDirs)
+        {
+            var dirName = Path.GetFileName(dir);
+            if (!int.TryParse(dirName, out var pid)) continue;
+
+            try
+            {
+                var info = ReadProcessInfo(pid, dir, now);
+                if (info != null) result.Add(info);
+            }
+            catch { }
+        }
+
+        // Evict stale CPU samples
+        var activePids = new HashSet<int>(result.Select(p => p.Pid));
+        foreach (var key in _cpuSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
+            _cpuSamples.Remove(key);
+
+        return result;
+    }
+
+    private ProcessInfo? ReadProcessInfo(int pid, string procDir, DateTime now)
+    {
+        var statPath   = Path.Combine(procDir, "stat");
+        var statusPath = Path.Combine(procDir, "status");
+
+        if (!File.Exists(statPath) || !File.Exists(statusPath))
+            return null;
+
+        var statLine   = File.ReadAllText(statPath);
+        var statusText = File.ReadAllText(statusPath);
+
+        // Parse /proc/[pid]/stat
+        // Format: pid (name) state ppid ... utime stime ...
+        // Field 2 (name) is wrapped in parens and may contain spaces
+        var nameStart = statLine.IndexOf('(');
+        var nameEnd   = statLine.LastIndexOf(')');
+        if (nameStart < 0 || nameEnd < 0 || nameEnd <= nameStart) return null;
+
+        var name  = statLine[(nameStart + 1)..nameEnd];
+        var rest  = statLine[(nameEnd + 2)..]; // skip ") "
+        var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        // parts[0] = state, parts[1] = ppid, ... parts[11]=utime, parts[12]=stime, parts[19]=starttime
+        if (parts.Length < 20) return null;
+
+        var stateChar = parts[0].Length > 0 ? parts[0][0] : 'S';
+        _ = int.TryParse(parts[1], out var ppid);
+        _ = long.TryParse(parts[11], out var utime);
+        _ = long.TryParse(parts[12], out var stime);
+        _ = long.TryParse(parts[19], out var starttime);
+
+        // CPU% delta
+        var totalTicks = utime + stime;
+        double cpuPercent = 0.0;
+        if (_cpuSamples.TryGetValue(pid, out var prev))
+        {
+            var tickDelta = totalTicks - prev.cpuTicks;
+            var timeDelta = (now - prev.time).TotalSeconds;
+            if (timeDelta > 0 && tickDelta >= 0)
+                cpuPercent = Math.Clamp(
+                    tickDelta / (double)s_clockTick / timeDelta / s_processorCount * 100.0,
+                    0, 100);
+        }
+        _cpuSamples[pid] = (totalTicks, now);
+
+        // Parse /proc/[pid]/status
+        long   vmRss     = ParseStatusLong(statusText, "VmRSS:");
+        long   vmSwap    = ParseStatusLong(statusText, "VmSwap:");
+        int    threads   = (int)ParseStatusLong(statusText, "Threads:");
+        int    uid       = (int)ParseStatusLong(statusText, "Uid:");
+
+        var userName = LookupUsername(uid);
+
+        // Start time (seconds since boot)
+        DateTime startDt = DateTime.MinValue;
+        try
+        {
+            var uptimeText = File.ReadAllText("/proc/uptime");
+            if (double.TryParse(uptimeText.Split(' ')[0],
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out var uptimeSec))
+            {
+                var bootTime    = DateTime.UtcNow - TimeSpan.FromSeconds(uptimeSec);
+                var procStartSec = starttime / (double)s_clockTick;
+                startDt = bootTime + TimeSpan.FromSeconds(procStartSec);
+            }
+        }
+        catch { }
+
+        // Image path via /proc/[pid]/exe symlink
+        var imagePath = string.Empty;
+        try { imagePath = new FileInfo(Path.Combine(procDir, "exe")).LinkTarget ?? string.Empty; }
+        catch { }
+
+        // Command line
+        var cmdLine = string.Empty;
+        try
+        {
+            var rawCmd = File.ReadAllText(Path.Combine(procDir, "cmdline"));
+            cmdLine = rawCmd.Replace('\0', ' ').Trim();
+        }
+        catch { }
+
+        // Process state
+        var procState = stateChar switch
+        {
+            'R' or 'S' => ProcessState.Running,
+            'T'        => ProcessState.Suspended,
+            'Z'        => ProcessState.Zombie,
+            _          => ProcessState.Unknown,
+        };
+
+        // Category
+        var category = pid == s_currentPid
+            ? ProcessCategory.CurrentProcess
+            : ClassifyLinuxProcess(uid, imagePath);
+
+        return new ProcessInfo
+        {
+            Pid                    = pid,
+            ParentPid              = ppid,
+            Name                   = name,
+            Description            = string.Empty,
+            ImagePath              = imagePath,
+            CommandLine            = cmdLine,
+            UserName               = userName,
+            Category               = category,
+            State                  = procState,
+            StartTime              = startDt,
+            CpuPercent             = cpuPercent,
+            ThreadCount            = threads,
+            HandleCount            = 0,
+            WorkingSetBytes        = vmRss * 1024L,
+            PrivateBytesBytes      = 0,
+            PagedPoolBytes         = vmSwap * 1024L,
+            VirtualBytesBytes      = 0,
+            IoReadBytesPerSec      = 0,
+            IoWriteBytesPerSec     = 0,
+            GpuPercent             = 0,
+            NetworkSendBytesPerSec = 0,
+            NetworkRecvBytesPerSec = 0,
+            IsElevated             = uid == 0,
+            IsCritical             = false,
+            AccessDenied           = false,
+            AffinityMask           = 0,
+            CurrentIoPriority      = IoPriority.Normal,
+            CurrentMemoryPriority  = MemoryPriority.Normal,
+            IsEfficiencyMode       = false,
+        };
+    }
+
+    private static long ParseStatusLong(string text, string key)
+    {
+        var idx = text.IndexOf(key, StringComparison.Ordinal);
+        if (idx < 0) return 0;
+        var rest = text[(idx + key.Length)..].TrimStart();
+        // value may be followed by " kB" or newline
+        var end  = 0;
+        while (end < rest.Length && (char.IsDigit(rest[end]) || rest[end] == '-'))
+            end++;
+        return long.TryParse(rest[..end], out var v) ? v : 0;
+    }
+
+    private string LookupUsername(int uid)
+    {
+        if (_uidCache.TryGetValue(uid, out var cached)) return cached;
+        try
+        {
+            foreach (var line in File.ReadAllLines("/etc/passwd"))
+            {
+                var parts = line.Split(':');
+                if (parts.Length >= 3 && int.TryParse(parts[2], out var fileUid) && fileUid == uid)
+                {
+                    _uidCache[uid] = parts[0];
+                    return parts[0];
+                }
+            }
+        }
+        catch { }
+        _uidCache[uid] = uid.ToString();
+        return uid.ToString();
+    }
+
+    private static ProcessCategory ClassifyLinuxProcess(int uid, string imagePath)
+    {
+        if (uid == 0) return ProcessCategory.SystemKernel;
+        if (!string.IsNullOrEmpty(imagePath))
+        {
+            if (imagePath.StartsWith("/usr/lib/systemd/", StringComparison.Ordinal)
+             || imagePath.StartsWith("/lib/systemd/",    StringComparison.Ordinal))
+                return ProcessCategory.WindowsService;
+        }
+        return ProcessCategory.UserApplication;
+    }
+
+    // ── Process control ────────────────────────────────────────────────────────
+    public Task KillProcessAsync(int pid, bool killTree = false, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            if (killTree) kill(-pid, SIGKILL);
+            kill(pid, SIGKILL);
+        }, ct);
+
+    public Task SuspendProcessAsync(int pid, CancellationToken ct = default) =>
+        Task.Run(() => kill(pid, SIGSTOP), ct);
+
+    public Task ResumeProcessAsync(int pid, CancellationToken ct = default) =>
+        Task.Run(() => kill(pid, SIGCONT), ct);
+
+    public Task SetPriorityAsync(int pid, ProcessPriority priority, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            int nice = priority switch
+            {
+                ProcessPriority.Idle        =>  19,
+                ProcessPriority.BelowNormal =>  10,
+                ProcessPriority.Normal      =>   0,
+                ProcessPriority.AboveNormal =>  -5,
+                ProcessPriority.High        => -10,
+                ProcessPriority.RealTime    => -20,
+                _                           =>   0,
+            };
+            setpriority(PRIO_PROCESS, (uint)pid, nice);
+        }, ct);
+
+    public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            var mask = (ulong)affinityMask;
+            sched_setaffinity(pid, new IntPtr(sizeof(ulong)), ref mask);
+        }, ct);
+
+    // Linux I/O priority via ioprio_set (syscall 251 on x86_64)
+    public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default) =>
+        Task.CompletedTask; // ioprio_set syscall — stub for portability
+
+    public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default) =>
+        Task.CompletedTask; // No direct Linux equivalent
+
+    public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default) =>
+        Task.CompletedTask; // madvise(MADV_DONTNEED) requires per-mapping addresses
+
+    public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            if (enabled)
+                setpriority(PRIO_PROCESS, (uint)pid, 10); // Nice +10
+            // No direct equivalent for "efficiency mode" on Linux
+        }, ct);
+
+    // ── Detail queries ─────────────────────────────────────────────────────────
+    public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<ModuleInfo>>(() => ReadModules(pid), ct);
+
+    private static IReadOnlyList<ModuleInfo> ReadModules(int pid)
+    {
+        var result  = new List<ModuleInfo>();
+        var seen    = new HashSet<string>(StringComparer.Ordinal);
+        var mapsPath = $"/proc/{pid}/maps";
+        if (!File.Exists(mapsPath)) return result;
+
+        try
+        {
+            foreach (var line in File.ReadAllLines(mapsPath))
+            {
+                // Format: addr-addr perms offset dev inode path
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 6) continue;
+                var path = parts[^1];
+                if (!path.StartsWith('/') || !seen.Add(path)) continue;
+
+                // Parse base address from first field "start-end"
+                var dashIdx = parts[0].IndexOf('-');
+                long baseAddr = 0;
+                if (dashIdx > 0 && long.TryParse(parts[0][..dashIdx],
+                                                  System.Globalization.NumberStyles.HexNumber,
+                                                  null, out var addr))
+                    baseAddr = addr;
+
+                result.Add(new ModuleInfo(Path.GetFileName(path), path, baseAddr));
+            }
+        }
+        catch { }
+
+        return result;
+    }
+
+    public Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(int pid, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<ThreadInfo>>(() => ReadThreads(pid), ct);
+
+    private static IReadOnlyList<ThreadInfo> ReadThreads(int pid)
+    {
+        var result   = new List<ThreadInfo>();
+        var taskPath = $"/proc/{pid}/task";
+        if (!Directory.Exists(taskPath)) return result;
+
+        try
+        {
+            foreach (var tidDir in Directory.GetDirectories(taskPath))
+            {
+                if (!int.TryParse(Path.GetFileName(tidDir), out var tid)) continue;
+                var statPath = Path.Combine(tidDir, "stat");
+                if (!File.Exists(statPath)) continue;
+
+                try
+                {
+                    var line      = File.ReadAllText(statPath);
+                    var nameEnd   = line.LastIndexOf(')');
+                    var rest      = nameEnd >= 0 ? line[(nameEnd + 2)..] : line;
+                    var parts     = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    // parts[15] = priority (field 18 overall, 0-indexed from after name)
+                    int priority  = parts.Length > 15 && int.TryParse(parts[15], out var pr) ? pr : 0;
+
+                    result.Add(new ThreadInfo(tid, pid, priority));
+                }
+                catch { }
+            }
+        }
+        catch { }
+
+        return result;
+    }
+
+    public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<EnvironmentEntry>>(() => ReadEnvironment(pid), ct);
+
+    private static IReadOnlyList<EnvironmentEntry> ReadEnvironment(int pid)
+    {
+        var result   = new List<EnvironmentEntry>();
+        var envPath  = $"/proc/{pid}/environ";
+        if (!File.Exists(envPath)) return result;
+
+        try
+        {
+            var raw   = File.ReadAllBytes(envPath);
+            var text  = System.Text.Encoding.UTF8.GetString(raw);
+            foreach (var entry in text.Split('\0'))
+            {
+                if (string.IsNullOrEmpty(entry)) continue;
+                var eq = entry.IndexOf('=');
+                if (eq < 0) continue;
+                result.Add(new EnvironmentEntry(entry[..eq], entry[(eq + 1)..]));
+            }
+        }
+        catch { }
+
+        return result;
+    }
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HandleInfo>>([]);
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
+
+
+    // ── IDisposable ────────────────────────────────────────────────────────────
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _cpuSamples.Clear();
+        _uidCache.Clear();
+    }
+}

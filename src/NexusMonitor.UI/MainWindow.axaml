@@ -44,14 +44,14 @@
                     CornerRadius="6"
                     Background="{DynamicResource AccentBlueBrush}">
               <TextBlock Text="N"
-                         FontSize="13"
+                         FontSize="{DynamicResource NxFont13}"
                          FontWeight="Bold"
                          Foreground="White"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"/>
             </Border>
             <TextBlock Text="Nexus Monitor"
-                       FontSize="13"
+                       FontSize="{DynamicResource NxFont13}"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        VerticalAlignment="Center"/>
@@ -65,17 +65,17 @@
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMinimize"
                     ToolTip.Tip="Minimize">
-              <TextBlock Text="—" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="—" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnMaximize"
                     ToolTip.Tip="Maximize">
-              <TextBlock Text="⬜" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="⬜" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="8,6"
                     Click="OnClose"
                     ToolTip.Tip="Close">
-              <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Button>
           </StackPanel>
 
@@ -138,22 +138,38 @@
         <Panel>
           <ScrollViewer VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding NavItems}"
+            <ItemsControl x:Name="NavItemsControl"
+                          ItemsSource="{Binding NavItems}"
                           Margin="8,12">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:NavItem">
-                  <Button Classes="nx-btn-ghost"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Left"
-                          Padding="12,9"
-                          Margin="0,1"
-                          CornerRadius="8"
-                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
-                          CommandParameter="{Binding}">
-                    <TextBlock Text="{Binding Label}"
+                  <Grid ColumnDefinitions="20,*">
+                    <!-- Drag grip — visual handle for drag-to-reorder -->
+                    <TextBlock Grid.Column="0"
+                               Text="&#x2807;"
                                FontSize="13"
-                               VerticalAlignment="Center" />
-                  </Button>
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Opacity="0.3"
+                               Cursor="SizeNorthSouth"
+                               IsHitTestVisible="False"/>
+                    <!-- Navigation button -->
+                    <Button Grid.Column="1"
+                            Classes="nx-btn-ghost"
+                            Classes.active="{Binding IsActive}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,9"
+                            Margin="0,1"
+                            CornerRadius="8"
+                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
+                            CommandParameter="{Binding}">
+                      <TextBlock Text="{Binding Label}"
+                                 FontSize="{DynamicResource NxFont13}"
+                                 VerticalAlignment="Center" />
+                    </Button>
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -228,6 +244,24 @@
             </DataTemplate>
             <DataTemplate DataType="vm:OptimizationViewModel">
               <views:OptimizationView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:GamingModeViewModel">
+              <views:GamingModeView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:AlertsViewModel">
+              <views:AlertsView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:DiskAnalyzerViewModel">
+              <views:DiskAnalyzerView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:SystemInfoViewModel">
+              <views:SystemInfoView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ProBalanceViewModel">
+              <views:ProBalanceView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:RulesViewModel">
+              <views:RulesView />
             </DataTemplate>
             <DataTemplate DataType="vm:SettingsViewModel">
               <views:SettingsView />

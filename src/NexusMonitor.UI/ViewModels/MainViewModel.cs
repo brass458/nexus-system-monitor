@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Services;
 using NexusMonitor.UI.Messages;
 
 namespace NexusMonitor.UI.ViewModels;
@@ -15,25 +17,61 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private NavItem _selectedNavItem;
 
-    public IReadOnlyList<NavItem> NavItems { get; }
+    /// <summary>
+    /// The sidebar navigation entries.  ObservableCollection so drag-to-reorder
+    /// is reflected in the UI without re-creating the list.
+    /// </summary>
+    public ObservableCollection<NavItem> NavItems { get; } = new();
 
-    public MainViewModel(IServiceProvider services)
+    private readonly SettingsService _settings;
+
+    public MainViewModel(IServiceProvider services, SettingsService settings)
     {
-        NavItems =
-        [
-            // eager: true  →  ViewModel created immediately at app startup so its
+        _settings = settings;
+
+        // ── Build the default ordered list ─────────────────────────────────
+        var defaults = new List<NavItem>
+        {
+            // eager: true → ViewModel created immediately at startup so its
             // data streams are live before the user ever clicks the tab.
-            new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),   eager: true),
-            new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(), eager: true),
-            new NavItem("Services",     "\ue9a0", () => services.GetRequiredService<ServicesViewModel>(),    eager: false),
-            new NavItem("Startup",      "\ue9b0", () => services.GetRequiredService<StartupViewModel>(),     eager: false),
-            new NavItem("Network",      "\ue9c8", () => services.GetRequiredService<NetworkViewModel>(),     eager: false),
+            new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),    eager: true),
+            new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(),  eager: true),
+            new NavItem("System Info",  "\ue9d8", () => services.GetRequiredService<SystemInfoViewModel>(),   eager: false),
+            new NavItem("Services",     "\ue9a0", () => services.GetRequiredService<ServicesViewModel>(),     eager: false),
+            new NavItem("Startup",      "\ue9b0", () => services.GetRequiredService<StartupViewModel>(),      eager: false),
+            new NavItem("Network",      "\ue9c8", () => services.GetRequiredService<NetworkViewModel>(),      eager: false),
             new NavItem("Optimization", "\ue993", () => services.GetRequiredService<OptimizationViewModel>(), eager: false),
-            new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),    eager: false),
-        ];
+            new NavItem("ProBalance",   "\ue996", () => services.GetRequiredService<ProBalanceViewModel>(),   eager: false),
+            new NavItem("Rules",        "\ue994", () => services.GetRequiredService<RulesViewModel>(),        eager: false),
+            new NavItem("Gaming Mode",  "\ue995", () => services.GetRequiredService<GamingModeViewModel>(),   eager: false),
+            new NavItem("Alerts",       "\ue997", () => services.GetRequiredService<AlertsViewModel>(),       eager: false),
+            new NavItem("Disk Analyzer","\ue9e5", () => services.GetRequiredService<DiskAnalyzerViewModel>(), eager: false),
+            new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),     eager: false),
+        };
+
+        // ── Apply saved order (if any) ──────────────────────────────────────
+        var savedOrder = settings.Current.NavOrder;
+        if (savedOrder.Count > 0)
+        {
+            var ordered = new List<NavItem>(defaults.Count);
+            foreach (var label in savedOrder)
+            {
+                var item = defaults.FirstOrDefault(n => n.Label == label);
+                if (item is not null) ordered.Add(item);
+            }
+            // Add any new tabs not present in the saved order (e.g., newly added features)
+            foreach (var item in defaults.Where(n => !ordered.Contains(n)))
+                ordered.Add(item);
+            foreach (var item in ordered) NavItems.Add(item);
+        }
+        else
+        {
+            foreach (var item in defaults) NavItems.Add(item);
+        }
 
         _selectedNavItem = NavItems[0];
-        _currentPage     = NavItems[0].GetOrCreate();   // Processes VM already exists
+        NavItems[0].IsActive = true;
+        _currentPage         = NavItems[0].GetOrCreate();
         Title = "Nexus Monitor";
 
         WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, _) =>
@@ -41,7 +79,10 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             Dispatcher.UIThread.Post(() =>
             {
                 var nav = NavItems.First(n => n.Label == "Processes");
+                if (SelectedNavItem is not null)
+                    SelectedNavItem.IsActive = false;
                 SelectedNavItem = nav;
+                nav.IsActive    = true;
                 CurrentPage     = nav.GetOrCreate();
             });
         });
@@ -52,11 +93,19 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         if (item == SelectedNavItem) return;
 
-        // Each NavItem caches its ViewModel — we never dispose on navigation.
-        // The instance keeps its Rx subscription and history alive in the
-        // background, so data is always ready when the user returns to a tab.
+        if (SelectedNavItem is not null)
+            SelectedNavItem.IsActive = false;
+
         SelectedNavItem = item;
+        item.IsActive   = true;
         CurrentPage     = item.GetOrCreate();
+    }
+
+    /// <summary>Persists the current sidebar order to settings.</summary>
+    internal void SaveNavOrder()
+    {
+        _settings.Current.NavOrder = NavItems.Select(n => n.Label).ToList();
+        _settings.Save();
     }
 
     /// <summary>
@@ -78,10 +127,18 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 /// created immediately (and its data streams start) rather than waiting for
 /// the user to navigate to the tab.
 /// </summary>
-public sealed class NavItem
+public sealed class NavItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public string Label { get; }
     public string Icon  { get; }
+
+    private bool _isActive;
+    /// <summary>True when this item is the currently selected navigation page.</summary>
+    public bool IsActive
+    {
+        get => _isActive;
+        internal set => SetProperty(ref _isActive, value);
+    }
 
     private readonly Func<ViewModelBase> _factory;
     private ViewModelBase? _cached;

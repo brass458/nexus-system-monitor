@@ -21,6 +21,10 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int    _totalCount;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private NetworkConnection? _selectedConnection;
+    [ObservableProperty] private bool _isDetailPanelVisible = true;
+
+    /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
+    public bool IsConnectionDetailShown => SelectedConnection is not null && IsDetailPanelVisible;
 
     public NetworkViewModel(INetworkConnectionsProvider provider)
     {
@@ -35,6 +39,8 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
 
     // Re-filter when search text changes
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnSelectedConnectionChanged(NetworkConnection? value) => OnPropertyChanged(nameof(IsConnectionDetailShown));
+    partial void OnIsDetailPanelVisibleChanged(bool value) => OnPropertyChanged(nameof(IsConnectionDetailShown));
 
     private void Update(IReadOnlyList<NetworkConnection> all)
     {
@@ -88,9 +94,11 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
                 // New — append; the DataGrid will sort it into place
                 Connections.Add(conn);
             }
-            else if (Connections[idx].State != conn.State)
+            else if (Connections[idx].State           != conn.State           ||
+                     Connections[idx].SendBytesPerSec != conn.SendBytesPerSec ||
+                     Connections[idx].RecvBytesPerSec != conn.RecvBytesPerSec)
             {
-                // State changed (e.g. ESTABLISHED → TIME_WAIT) — replace in-place
+                // State or throughput changed — replace in-place so DataGrid refreshes
                 Connections[idx] = conn;
             }
         }

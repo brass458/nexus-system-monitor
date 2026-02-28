@@ -26,10 +26,10 @@
         </Border>
         <StackPanel VerticalAlignment="Center" Spacing="3">
           <TextBlock Text="What should happen when you close?"
-                     FontSize="14" FontWeight="SemiBold"
+                     FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}"/>
           <TextBlock Text="You can change this later in Settings → System Tray"
-                     FontSize="11"
+                     FontSize="{DynamicResource NxFont11}"
                      Foreground="{DynamicResource TextTertiaryBrush}"/>
         </StackPanel>
       </StackPanel>
@@ -51,10 +51,10 @@
                 Cursor="Hand"
                 Click="OnMinimizeToTray">
           <StackPanel Spacing="4">
-            <TextBlock Text="📌  Minimize to Tray" FontSize="13" FontWeight="SemiBold"
+            <TextBlock Text="📌  Minimize to Tray" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="App keeps running in the background. Click the tray icon to restore."
-                       FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
@@ -70,10 +70,10 @@
                 Cursor="Hand"
                 Click="OnCloseApp">
           <StackPanel Spacing="4">
-            <TextBlock Text="✕  Close Application" FontSize="13" FontWeight="SemiBold"
+            <TextBlock Text="✕  Close Application" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                        Foreground="White"/>
             <TextBlock Text="Stops monitoring and exits completely. Widgets also close."
-                       FontSize="10" Foreground="#CCffffff"
+                       FontSize="{DynamicResource NxFont10}" Foreground="#CCffffff"
                        TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
@@ -83,14 +83,14 @@
       <!-- Widget option (shown only if widget is visible) -->
       <CheckBox x:Name="HideWidgetCheck"
                 Content="Also hide the Desktop Widget when minimizing to tray"
-                FontSize="12"
+                FontSize="{DynamicResource NxFont12}"
                 Foreground="{DynamicResource TextSecondaryBrush}"
                 IsVisible="False"/>
 
       <!-- Remember -->
       <CheckBox x:Name="RememberCheck"
                 Content="Remember my choice (can be changed in Settings)"
-                FontSize="12"
+                FontSize="{DynamicResource NxFont12}"
                 Foreground="{DynamicResource TextSecondaryBrush}"/>
 
     </StackPanel>

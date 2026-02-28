@@ -11,11 +11,24 @@ namespace NexusMonitor.Platform.Windows;
 /// <summary>
 /// Enumerates active TCP and UDP connections via IPHelper
 /// GetExtendedTcpTable / GetExtendedUdpTable.
+/// Per-connection TCP throughput is tracked via GetPerTcpConnectionEStats,
+/// which uses cumulative byte counters to compute byte-per-second rates.
+/// EStats collection is enabled per-connection; failures (e.g. non-admin for
+/// foreign-process connections) are silently swallowed — rate shows "—".
 /// </summary>
 public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvider
 {
     private const int AF_INET  = 2;
     private const int AF_INET6 = 23;
+
+    // ── Per-connection EStats state ────────────────────────────────────────────
+    // Key: (LocalAddr, LocalPort, RemoteAddr, RemotePort) for TCP4
+    private readonly Dictionary<EStatsKey, EStatEntry> _stats = new();
+
+    private readonly record struct EStatsKey(uint Local, uint LocalPort, uint Remote, uint RemotePort);
+    private readonly record struct EStatEntry(ulong SendBytes, ulong RecvBytes, long Ticks);
+
+    // ── Public interface ───────────────────────────────────────────────────────
 
     public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval) =>
         Observable.Timer(TimeSpan.Zero, interval)
@@ -26,22 +39,28 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
     // ─── Snapshot ─────────────────────────────────────────────────────────────
 
-    private static List<NetworkConnection> Snapshot()
+    private List<NetworkConnection> Snapshot()
     {
         var names  = GetProcessNames();
         var result = new List<NetworkConnection>(256);
+        var seen   = new HashSet<EStatsKey>();
 
-        try { result.AddRange(GetTcp4(names)); } catch { }
-        try { result.AddRange(GetTcp6(names)); } catch { }
-        try { result.AddRange(GetUdp4(names)); } catch { }
-        try { result.AddRange(GetUdp6(names)); } catch { }
+        try { result.AddRange(GetTcp4(names, seen)); } catch { }
+        try { result.AddRange(GetTcp6(names)); }       catch { }
+        try { result.AddRange(GetUdp4(names)); }       catch { }
+        try { result.AddRange(GetUdp6(names)); }       catch { }
+
+        // Prune cache entries for connections that no longer exist
+        foreach (var k in _stats.Keys.Where(k => !seen.Contains(k)).ToList())
+            _stats.Remove(k);
 
         return result;
     }
 
-    // ─── TCP IPv4 ─────────────────────────────────────────────────────────────
+    // ─── TCP IPv4 (with EStats throughput) ────────────────────────────────────
 
-    private static IEnumerable<NetworkConnection> GetTcp4(Dictionary<int, string> names)
+    private IEnumerable<NetworkConnection> GetTcp4(
+        Dictionary<int, string> names, HashSet<EStatsKey> seen)
     {
         int size = 0;
         IpHelper.GetExtendedTcpTable(nint.Zero, ref size, 0, AF_INET,
@@ -61,16 +80,21 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
             {
                 var row = Marshal.PtrToStructure<MIB_TCPROW_OWNER_PID>(buf + 4 + i * rowSize);
                 int pid = (int)row.dwOwningPid;
+
+                TryGetTcpRates(ref row, seen, out long sendRate, out long recvRate);
+
                 yield return new NetworkConnection
                 {
-                    Protocol      = ConnectionProtocol.Tcp4,
-                    LocalAddress  = Addr4(row.dwLocalAddr),
-                    LocalPort     = Port(row.dwLocalPort),
-                    RemoteAddress = Addr4(row.dwRemoteAddr),
-                    RemotePort    = Port(row.dwRemotePort),
-                    State         = TcpState(row.dwState),
-                    ProcessId     = pid,
-                    ProcessName   = names.GetValueOrDefault(pid, "—"),
+                    Protocol        = ConnectionProtocol.Tcp4,
+                    LocalAddress    = Addr4(row.dwLocalAddr),
+                    LocalPort       = Port(row.dwLocalPort),
+                    RemoteAddress   = Addr4(row.dwRemoteAddr),
+                    RemotePort      = Port(row.dwRemotePort),
+                    State           = TcpState(row.dwState),
+                    ProcessId       = pid,
+                    ProcessName     = names.GetValueOrDefault(pid, "—"),
+                    SendBytesPerSec = sendRate,
+                    RecvBytesPerSec = recvRate,
                 };
             }
         }
@@ -189,6 +213,69 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
             }
         }
         finally { Marshal.FreeHGlobal(buf); }
+    }
+
+    // ─── EStats throughput helper ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Attempts to read per-TCP-connection cumulative byte counters via
+    /// <c>GetPerTcpConnectionEStats</c> and convert them to per-second rates
+    /// using the delta from the previous snapshot.
+    /// Silently returns 0/0 on any failure (no admin, connection closed, etc.).
+    /// </summary>
+    private unsafe void TryGetTcpRates(
+        ref MIB_TCPROW_OWNER_PID row,
+        HashSet<EStatsKey> seen,
+        out long sendRate,
+        out long recvRate)
+    {
+        sendRate = 0;
+        recvRate = 0;
+
+        var tcpRow = new MIB_TCPROW_FOR_ESTATS
+        {
+            dwState      = row.dwState,
+            dwLocalAddr  = row.dwLocalAddr,
+            dwLocalPort  = row.dwLocalPort,
+            dwRemoteAddr = row.dwRemoteAddr,
+            dwRemotePort = row.dwRemotePort,
+        };
+
+        // Enable EStats data collection (no-op if already on; fails silently
+        // for foreign-process connections without admin — that is expected).
+        var rw = new TCP_ESTATS_DATA_RW_v0 { EnableCollection = 1 };
+        IpHelper.SetPerTcpConnectionEStats(
+            ref tcpRow, IpHelper.TCP_ESTATS_TYPE.TcpConnectionEstatsData,
+            (nint)(&rw), 0, (uint)sizeof(TCP_ESTATS_DATA_RW_v0), 0);
+
+        // Read the cumulative byte counters.
+        TCP_ESTATS_DATA_ROD_v0 rod = default;
+        uint hr = IpHelper.GetPerTcpConnectionEStats(
+            ref tcpRow, IpHelper.TCP_ESTATS_TYPE.TcpConnectionEstatsData,
+            nint.Zero, 0, 0,
+            nint.Zero, 0, 0,
+            (nint)(&rod), 0, (uint)sizeof(TCP_ESTATS_DATA_ROD_v0));
+
+        if (hr != 0) return;   // EStats not available (needs elevation, or connection just opened)
+
+        var key  = new EStatsKey(row.dwLocalAddr, row.dwLocalPort, row.dwRemoteAddr, row.dwRemotePort);
+        var now  = DateTime.UtcNow.Ticks;
+
+        seen.Add(key);
+
+        if (_stats.TryGetValue(key, out var prev))
+        {
+            double elapsed = (now - prev.Ticks) / (double)TimeSpan.TicksPerSecond;
+            if (elapsed >= 0.1
+                && rod.DataBytesOut >= prev.SendBytes
+                && rod.DataBytesIn  >= prev.RecvBytes)
+            {
+                sendRate = (long)((rod.DataBytesOut - prev.SendBytes) / elapsed);
+                recvRate = (long)((rod.DataBytesIn  - prev.RecvBytes) / elapsed);
+            }
+        }
+
+        _stats[key] = new EStatEntry(rod.DataBytesOut, rod.DataBytesIn, now);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿﻿using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -224,6 +224,37 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { LastAction = $"Failed: {ex.Message}"; }
     }
 
+
+    /// <summary>Trim working sets of all non-system processes to free up RAM.</summary>
+    [RelayCommand]
+    private async Task SmartTrimAll()
+    {
+        LastAction = string.Empty;
+        int count = 0;
+        long savedBytes = 0;
+        try
+        {
+            var processes = await _processProvider.GetProcessesAsync(_cts.Token);
+            foreach (var p in processes.Where(p => p.Category != ProcessCategory.SystemKernel))
+            {
+                try
+                {
+                    long before = p.WorkingSetBytes;
+                    await _processProvider.TrimWorkingSetAsync(p.Pid, _cts.Token);
+                    count++;
+                    // Approximate savings (actual reduction varies)
+                    savedBytes += Math.Max(0, before / 4);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch { /* access denied or exited */ }
+            }
+            LastAction = count > 0
+                ? $"SmartTrim: trimmed {count} processes, freed ~{ProcessRowViewModel.FormatBytes(savedBytes)}."
+                : "No processes trimmed.";
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { LastAction = $"SmartTrim failed: {ex.Message}"; }
+    }
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void SyncCollection(

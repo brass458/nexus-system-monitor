@@ -51,6 +51,21 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private string _lastError = string.Empty;
 
     [ObservableProperty]
+    private bool _isDetailPanelVisible = true;
+
+    [ObservableProperty]
+    private bool _isTreeViewActive;
+
+    /// <summary>True when the detail panel should be shown (has selection AND toggle is on).</summary>
+    public bool IsDetailPanelShown => SelectedDetails is not null && IsDetailPanelVisible;
+
+    /// <summary>
+    /// Tracks the set of PIDs shown in the last tree-mode render so we avoid
+    /// clearing + rebuilding the list on every tick when nothing structural changed.
+    /// </summary>
+    private readonly HashSet<int> _currentTreePids = new();
+
+    [ObservableProperty]
     private IReadOnlyList<ModuleInfo> _processModules = [];
 
     [ObservableProperty]
@@ -58,6 +73,15 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private IReadOnlyList<EnvironmentEntry> _processEnvironment = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<HandleInfo> _processHandles = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<MemoryRegionInfo> _processMemoryMap = [];
+
+    [ObservableProperty]
+    private string _handleCountLabel = "";
 
     public ProcessesViewModel(IProcessProvider processProvider)
     {
@@ -98,6 +122,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 row.IoWriteBytesPerSec = info.IoWriteBytesPerSec;
                 row.ThreadCount        = info.ThreadCount;
                 row.HandleCount        = info.HandleCount;
+                row.PushCpuHistory(info.CpuPercent);
             }
             else
             {
@@ -121,8 +146,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// Filters <see cref="_allRows"/> against <see cref="SearchText"/> and syncs
-    /// the <see cref="Processes"/> collection in-place, preserving sort order and
-    /// the current selection.  Must be called on the UI thread.
+    /// the <see cref="Processes"/> collection.  Must be called on the UI thread.
+    /// In flat mode: in-place add/remove preserves DataGrid sort state.
+    /// In tree mode: rebuilds only when the PID set changes, keeping row order stable.
     /// </summary>
     private void ApplyFilter()
     {
@@ -133,12 +159,24 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 ? _allRows.Keys
                 : _allRows.Values
                     .Where(r =>
-                        r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)       ||
-                        r.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)||
+                        r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)        ||
+                        r.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                         r.Pid.ToString().Contains(SearchText))
                     .Select(r => r.Pid));
 
-        // Remove rows that left the visible set (iterate backwards to keep indices valid)
+        if (IsTreeViewActive)
+            ApplyTreeFilter(wantPids, selectedPid);
+        else
+            ApplyFlatFilter(wantPids, selectedPid);
+    }
+
+    /// <summary>Standard flat-list filter: add / remove rows in-place preserving DataGrid sort.</summary>
+    private void ApplyFlatFilter(HashSet<int> wantPids, int selectedPid)
+    {
+        // Reset tree depths so indents disappear when leaving tree mode
+        foreach (var r in _allRows.Values) r.TreeDepth = 0;
+
+        // Remove rows that left the visible set
         for (int i = Processes.Count - 1; i >= 0; i--)
             if (!wantPids.Contains(Processes[i].Pid))
                 Processes.RemoveAt(i);
@@ -149,8 +187,59 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             if (!currentPids.Contains(pid) && _allRows.TryGetValue(pid, out var row))
                 Processes.Add(row);
 
-        // Restore selection if it was cleared by collection churn
         if (selectedPid >= 0 && SelectedProcess is null)
+            SelectedProcess = Processes.FirstOrDefault(r => r.Pid == selectedPid);
+    }
+
+    /// <summary>
+    /// Tree-ordered filter: processes appear in depth-first parent→child order with
+    /// <see cref="ProcessRowViewModel.TreeDepth"/> set for visual indentation.
+    /// Only rebuilds the collection when the set of visible PIDs changes to avoid
+    /// scroll-position disruption on every 1-second tick.
+    /// </summary>
+    private void ApplyTreeFilter(HashSet<int> wantPids, int selectedPid)
+    {
+        // Structural rebuild only when the visible PID set actually changed
+        if (_currentTreePids.SetEquals(wantPids)) return;
+        _currentTreePids.Clear();
+        foreach (var p in wantPids) _currentTreePids.Add(p);
+
+        // Build parent → children map from the full live set
+        var allPids    = new HashSet<int>(_allRows.Keys);
+        var childrenOf = new Dictionary<int, List<ProcessRowViewModel>>();
+        foreach (var row in _allRows.Values)
+        {
+            if (!childrenOf.TryGetValue(row.ParentPid, out var list))
+                childrenOf[row.ParentPid] = list = new List<ProcessRowViewModel>();
+            list.Add(row);
+        }
+
+        // Roots: processes whose parent is not a live process
+        var roots = _allRows.Values
+            .Where(r => !allPids.Contains(r.ParentPid))
+            .OrderBy(r => r.Name)
+            .ToList();
+
+        // Depth-first traversal
+        var ordered = new List<ProcessRowViewModel>();
+        void Traverse(ProcessRowViewModel row, int depth)
+        {
+            if (wantPids.Contains(row.Pid))
+            {
+                row.TreeDepth = depth;
+                ordered.Add(row);
+            }
+            if (childrenOf.TryGetValue(row.Pid, out var kids))
+                foreach (var kid in kids.OrderBy(k => k.Name))
+                    Traverse(kid, depth + 1);
+        }
+        foreach (var root in roots) Traverse(root, 0);
+
+        // Rebuild collection (only happens on structural change, not every tick)
+        Processes.Clear();
+        foreach (var row in ordered) Processes.Add(row);
+
+        if (selectedPid >= 0)
             SelectedProcess = Processes.FirstOrDefault(r => r.Pid == selectedPid);
     }
 
@@ -232,19 +321,36 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    partial void OnIsDetailPanelVisibleChanged(bool value) =>
+        OnPropertyChanged(nameof(IsDetailPanelShown));
+
+    partial void OnIsTreeViewActiveChanged(bool value)
+    {
+        // When leaving tree mode, reset depths and force a full rebuild on next filter pass
+        if (!value) foreach (var r in _allRows.Values) r.TreeDepth = 0;
+        _currentTreePids.Clear();
+        ApplyFilter();
+    }
+
     partial void OnSelectedProcessChanged(ProcessRowViewModel? value)
     {
         // Dispose the old detail view model to unsubscribe its PropertyChanged handler
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);
-        ProcessModules = [];
-        ProcessThreads = [];
+        OnPropertyChanged(nameof(IsDetailPanelShown));
+        ProcessModules     = [];
+        ProcessThreads     = [];
         ProcessEnvironment = [];
+        ProcessHandles     = [];
+        ProcessMemoryMap   = [];
+        HandleCountLabel   = "";
         if (value is not null)
         {
             _ = LoadModulesAsync(value.Pid);
             _ = LoadThreadsAsync(value.Pid);
             _ = LoadEnvironmentAsync(value.Pid);
+            _ = LoadHandlesAsync(value.Pid);
+            _ = LoadMemoryMapAsync(value.Pid);
         }
     }
 
@@ -314,6 +420,53 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task LoadHandlesAsync(int pid)
+    {
+        try
+        {
+            var handles = await _processProvider.GetHandlesAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                {
+                    ProcessHandles   = handles;
+                    HandleCountLabel = $"{handles.Count} handles";
+                }
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessHandles = [];
+            });
+        }
+    }
+
+    private async Task LoadMemoryMapAsync(int pid)
+    {
+        try
+        {
+            var regions = await _processProvider.GetMemoryMapAsync(pid, _cts.Token);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessMemoryMap = regions;
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedProcess?.Pid == pid)
+                    ProcessMemoryMap = [];
+            });
+        }
+    }
+
     public void Dispose()
     {
         _cts.Cancel();
@@ -360,6 +513,32 @@ public partial class ProcessRowViewModel : ObservableObject
 
     [ObservableProperty] private int _threadCount;
     [ObservableProperty] private int _handleCount;
+
+    /// <summary>Depth in the process tree (0 = root). Used for indentation in tree-view mode.</summary>
+    [ObservableProperty] private int _treeDepth;
+
+    // ── CPU history for the detail-panel sparkline ───────────────────────────
+    private readonly double[] _cpuHistory = new double[60];
+    private int _histIdx; // monotonically increasing write cursor
+
+    /// <summary>Appends the latest CPU sample to the ring buffer (called every tick).</summary>
+    public void PushCpuHistory(double cpu)
+    {
+        _cpuHistory[_histIdx % 60] = cpu;
+        _histIdx++;
+    }
+
+    /// <summary>Returns up to 60 CPU samples ordered oldest-first.</summary>
+    public double[] GetCpuHistory()
+    {
+        int filled = Math.Min(_histIdx, 60);
+        if (filled == 0) return [];
+        var result = new double[filled];
+        int start  = _histIdx > 60 ? _histIdx % 60 : 0;
+        for (int i = 0; i < filled; i++)
+            result[i] = _cpuHistory[(start + i) % 60];
+        return result;
+    }
 
     public string CpuDisplay => CpuPercent < 0.1 ? "" : $"{CpuPercent:F1}%";
     public string MemDisplay => FormatBytes(WorkingSetBytes);
@@ -445,4 +624,28 @@ public class ProcessDetailViewModel : INotifyPropertyChanged, IDisposable
     public string ImagePath   => _row.ImagePath.Length   > 0 ? _row.ImagePath   : "—";
     public string CommandLine => _row.CommandLine.Length > 0 ? _row.CommandLine : "—";
     public string Description => _row.Description.Length > 0 ? _row.Description : "—";
+
+    /// <summary>
+    /// Polyline points for the CPU history sparkline.
+    /// Re-evaluated each time the source row fires PropertyChanged (which happens every tick).
+    /// Coordinates are normalised to a 240 × 44 canvas (Viewbox scales to fit the container).
+    /// </summary>
+    public IList<Avalonia.Point> CpuSparkPoints
+    {
+        get
+        {
+            var history = _row.GetCpuHistory();
+            var pts     = new List<Avalonia.Point>();
+            int n = history.Length;
+            if (n < 2) return pts;
+            const double W = 240, H = 44;
+            for (int i = 0; i < n; i++)
+            {
+                double x = (double)i / (n - 1) * W;
+                double y = H - Math.Clamp(history[i] / 100.0, 0, 1) * H;
+                pts.Add(new Avalonia.Point(x, y));
+            }
+            return pts;
+        }
+    }
 }

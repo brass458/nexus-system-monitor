@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -32,6 +32,18 @@ public sealed class MockProcessProvider : IProcessProvider
     public Task SetAffinityAsync(int pid, long affinityMask, CancellationToken ct = default)
         => Task.CompletedTask;
 
+    public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default)
+        => Task.CompletedTask;
+
     public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<ModuleInfo>>(new List<ModuleInfo>
         {
@@ -55,6 +67,13 @@ public sealed class MockProcessProvider : IProcessProvider
             new("TEMP",     @"C:\Users\User\AppData\Local\Temp"),
             new("USERNAME", "User"),
         });
+
+    public Task<IReadOnlyList<HandleInfo>> GetHandlesAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<HandleInfo>>([]);
+
+    public Task<IReadOnlyList<MemoryRegionInfo>> GetMemoryMapAsync(int pid, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryRegionInfo>>([]);
+
 
     private static ProcessInfo[] GetAnimatedSnapshot()
     {

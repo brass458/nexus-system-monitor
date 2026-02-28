@@ -4,7 +4,7 @@
     {
       "name": "NexusMonitor (Windows)",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "src/NexusMonitor.UI/NexusMonitor.UI.csproj", "--framework", "net8.0-windows"],
+      "runtimeArgs": ["run", "--project", "src/NexusMonitor.UI/NexusMonitor.UI.csproj"],
       "port": 0
     }
   ]

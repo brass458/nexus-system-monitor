@@ -6,7 +6,12 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Mock;
+using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Alerts;
+using NexusMonitor.Core.Gaming;
+using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
@@ -15,6 +20,8 @@ using SkiaSharp;
 using NexusMonitor.Platform.Windows;
 #elif MACOS
 using NexusMonitor.Platform.MacOS;
+#elif LINUX
+using NexusMonitor.Platform.Linux;
 #endif
 
 namespace NexusMonitor.UI;
@@ -33,6 +40,14 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // ── Log any exception that escapes to the Avalonia UI-thread dispatcher ──
+        Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            CrashLogger.Write(e.Exception, "Avalonia Dispatcher UI Thread");
+            // Do NOT set e.Handled = true here — let Avalonia's default crash behaviour run
+            // so the user isn't left with a silent, frozen window.
+        };
+
         Services = BuildServices();
 
         var saved = Services.GetRequiredService<SettingsService>();
@@ -54,6 +69,14 @@ public class App : Application
             if (saved.Current.ShowOverlayWidget)
                 overlayWin.Show();
 
+            // Start automation engines
+            // ProBalance only starts if it was enabled in settings
+            if (saved.Current.ProBalanceEnabled)
+                Services.GetRequiredService<ProBalanceService>().Start();
+
+            Services.GetRequiredService<RulesEngine>().Start();
+            Services.GetRequiredService<AlertsService>().Start();
+
             // System-tray icon
             SetupTrayIcon(desktop);
         }
@@ -61,7 +84,7 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    // ── System-tray icon ──────────────────────────────────────────────────────
+    // ── System-tray icon ────────────────────────────────────────────
 
     private void SetupTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -71,7 +94,7 @@ public class App : Application
             ToolTipText = "Nexus Monitor",
         };
 
-        // Single-click → restore main window
+        // Single-click -> restore main window
         _trayIcon.Clicked += (_, _) =>
         {
             if (desktop.MainWindow is { } win)
@@ -111,7 +134,7 @@ public class App : Application
         TrayIcon.SetIcons(this, [_trayIcon]);
     }
 
-    /// <summary>Generates a 32×32 "N" app icon via SkiaSharp — no asset file required.</summary>
+    /// <summary>Generates a 32x32 "N" app icon via SkiaSharp -- no asset file required.</summary>
     private static WindowIcon CreateAppIcon()
     {
         using var bmp    = new SKBitmap(32, 32);
@@ -136,44 +159,82 @@ public class App : Application
         return new WindowIcon(new Bitmap(ms));
     }
 
-    // ── DI ────────────────────────────────────────────────────────────────────
+    // -- DI --
 
     private static IServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
 
-        // ── Platform-specific providers ──────────────────────────────────────
+        // -- Platform-specific providers --
 #if WINDOWS
         services.AddSingleton<IProcessProvider,             WindowsProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       WindowsSystemMetricsProvider>();
         services.AddSingleton<IServicesProvider,            WindowsServicesProvider>();
         services.AddSingleton<INetworkConnectionsProvider,  WindowsNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             WindowsStartupProvider>();
+        services.AddSingleton<IForegroundWindowProvider,    WindowsForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider,           WindowsPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         WindowsNotificationService>();
+        services.AddSingleton<WindowsHardwareInfoProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
         services.AddSingleton<IServicesProvider,            MacOSServicesProvider>();
-        services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
-        services.AddSingleton<IStartupProvider,             MockStartupProvider>();
+        services.AddSingleton<INetworkConnectionsProvider,  MacOSNetworkConnectionsProvider>();
+        services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
+        services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
+#elif LINUX
+        services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
+        services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
+        services.AddSingleton<IServicesProvider,            LinuxServicesProvider>();
+        services.AddSingleton<INetworkConnectionsProvider,  LinuxNetworkConnectionsProvider>();
+        services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
+        services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
         services.AddSingleton<IServicesProvider,            MockServicesProvider>();
         services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
         services.AddSingleton<IStartupProvider,             MockStartupProvider>();
+        services.AddSingleton<IForegroundWindowProvider,    MockForegroundWindowProvider>();
+        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
+        services.AddSingleton<INotificationService,         NullNotificationService>();
 #endif
 
-        // ── Services ─────────────────────────────────────────────────────────
+        // -- Core services --
         services.AddSingleton<SettingsService>();
+        // Register the live AppSettings instance so ProBalanceService / RulesEngine
+        // receive the same object that SettingsService mutates on save.
+        services.AddSingleton<AppSettings>(sp =>
+            sp.GetRequiredService<SettingsService>().Current);
 
-        // ── ViewModels ───────────────────────────────────────────────────────
+        // -- Automation services --
+        services.AddSingleton<ProBalanceService>();
+        services.AddSingleton<RulesEngine>();
+        services.AddSingleton<RulesPersistence>();
+
+        // -- Gaming and Alerts services --
+        services.AddSingleton<GamingModeService>();
+        services.AddSingleton<AlertsService>();
+
+        // -- ViewModels --
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<ProcessesViewModel>();
         services.AddSingleton<PerformanceViewModel>();
+        services.AddSingleton<SystemInfoViewModel>();
         services.AddSingleton<ServicesViewModel>();
         services.AddSingleton<StartupViewModel>();
         services.AddSingleton<NetworkViewModel>();
         services.AddSingleton<OptimizationViewModel>();
+        services.AddSingleton<ProBalanceViewModel>();
+        services.AddSingleton<RulesViewModel>();
+        services.AddSingleton<GamingModeViewModel>();
+        services.AddSingleton<AlertsViewModel>();
+        services.AddSingleton<DiskAnalyzerViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<OverlayViewModel>();
 

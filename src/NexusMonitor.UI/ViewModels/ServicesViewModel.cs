@@ -25,6 +25,10 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int _totalCount;
     [ObservableProperty] private int _runningCount;
     [ObservableProperty] private string _lastError = string.Empty;
+    [ObservableProperty] private bool _isDetailPanelVisible = true;
+
+    /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
+    public bool IsServiceDetailShown => SelectedService is not null && IsDetailPanelVisible;
 
     public ServicesViewModel(IServicesProvider servicesProvider)
     {
@@ -49,6 +53,8 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter(preserveSelection: true);
+    partial void OnSelectedServiceChanged(ServiceInfo? value) => OnPropertyChanged(nameof(IsServiceDetailShown));
+    partial void OnIsDetailPanelVisibleChanged(bool value) => OnPropertyChanged(nameof(IsServiceDetailShown));
 
     private void ApplyFilter(bool preserveSelection = false)
     {
