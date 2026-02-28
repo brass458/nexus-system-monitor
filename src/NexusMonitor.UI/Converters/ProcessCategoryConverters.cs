@@ -103,6 +103,22 @@ public class CpuHeatBrushConverter : IValueConverter
         => AvaloniaProperty.UnsetValue;
 }
 
+/// <summary>
+/// Converts an integer tree depth (0 = root) to a left-padded cell Margin.
+/// Each depth level adds 14px of left indent so child processes appear nested.
+/// </summary>
+public class DepthToMarginConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        int depth = value is int d ? d : 0;
+        return new Avalonia.Thickness(4 + depth * 14, 0, 4, 0);
+    }
+
+    public object? ConvertBack(object? v, Type t, object? p, CultureInfo c)
+        => Avalonia.AvaloniaProperty.UnsetValue;
+}
+
 /// <summary>Returns true when CPU% > 0.05 (for text visibility).</summary>
 public class CpuNonZeroConverter : IValueConverter
 {

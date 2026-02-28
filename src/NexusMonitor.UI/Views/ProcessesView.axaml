@@ -13,6 +13,7 @@
     <conv:BytesFormatConverter x:Key="BytesFmt" />
     <conv:CpuHeatBrushConverter x:Key="CpuHeat" />
     <conv:NullToBoolConverter x:Key="NullToBool" />
+    <conv:DepthToMarginConverter x:Key="DepthMargin" />
   </UserControl.Resources>
 
   <DockPanel>
@@ -50,19 +51,28 @@
           </Grid>
         </Border>
 
-        <!-- View toggle -->
+        <!-- View toggle: Simplified -->
         <ToggleButton Grid.Column="1"
                       Classes="nx-toggle"
-                      Margin="8,0"
+                      Margin="8,0,4,0"
                       IsChecked="{Binding IsSimplifiedView}"
-                      ToolTip.Tip="Toggle simplified view">
+                      ToolTip.Tip="Toggle simplified view (hide system processes)">
           <TextBlock Text="Simplified" FontSize="{DynamicResource NxFont11}"/>
         </ToggleButton>
 
+        <!-- View toggle: Tree -->
+        <ToggleButton Grid.Column="2"
+                      Classes="nx-toggle"
+                      Margin="0,0,4,0"
+                      IsChecked="{Binding IsTreeViewActive}"
+                      ToolTip.Tip="Show process parent/child hierarchy">
+          <TextBlock Text="Tree" FontSize="{DynamicResource NxFont11}"/>
+        </ToggleButton>
+
         <!-- Kill button -->
-        <Button Grid.Column="2"
+        <Button Grid.Column="3"
                 Classes="nx-btn"
-                Margin="4,0"
+                Margin="0,0,4,0"
                 Command="{Binding KillProcessCommand}"
                 IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBool}}"
                 ToolTip.Tip="End process">
@@ -73,17 +83,17 @@
         </Button>
 
         <!-- More actions -->
-        <Button Grid.Column="3"
+        <Button Grid.Column="4"
                 Classes="nx-btn"
-                Margin="4,0"
+                Margin="0,0,4,0"
                 ToolTip.Tip="More actions">
           <TextBlock Text="⋮" FontSize="{DynamicResource NxFont14}"/>
         </Button>
 
         <!-- Detail panel toggle -->
-        <ToggleButton Grid.Column="4"
+        <ToggleButton Grid.Column="5"
                       Classes="nx-toggle"
-                      Margin="4,0"
+                      Margin="0"
                       IsChecked="{Binding IsDetailPanelVisible}"
                       ToolTip.Tip="Show/hide process details panel">
           <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
@@ -156,6 +166,15 @@
                 AutoGenerateColumns="False"
                 Margin="0">
 
+        <!-- Row background tinting by process category.
+             :not(:selected):not(:pointerover) avoids overriding the selection / hover highlights. -->
+        <DataGrid.Styles>
+          <Style Selector="DataGridRow:not(:selected):not(:pointerover)">
+            <Setter Property="Background"
+                    Value="{Binding Category, Converter={StaticResource CategoryBgBrush}}"/>
+          </Style>
+        </DataGrid.Styles>
+
         <DataGrid.ContextMenu>
           <ContextMenu>
             <MenuItem Header="End Process" Command="{Binding KillProcessCommand}">
@@ -191,7 +210,8 @@
           <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="120" SortMemberPath="Name">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
-                <Grid ColumnDefinitions="4,Auto,*" Margin="4,0">
+                <Grid ColumnDefinitions="4,Auto,*"
+                      Margin="{Binding TreeDepth, Converter={StaticResource DepthMargin}}">
                   <Rectangle Grid.Column="0"
                               Width="3" Height="14"
                               RadiusX="1.5" RadiusY="1.5"
@@ -357,6 +377,23 @@
               <TextBlock Grid.Row="5" Grid.Column="0" Text="Virtual"     Classes="detail-label"/>
               <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding VirtualBytes}" Classes="detail-value"/>
             </Grid>
+
+            <!-- CPU history sparkline — updates every tick via PropertyChanged(null) -->
+            <Border Background="{StaticResource BgElevatedBrush}"
+                    CornerRadius="4"
+                    ClipToBounds="True"
+                    Height="46"
+                    Margin="0,4,0,12">
+              <Viewbox Stretch="Fill">
+                <Canvas Width="240" Height="44">
+                  <Polyline Points="{Binding CpuSparkPoints}"
+                             Stroke="{DynamicResource AccentBlueBrush}"
+                             StrokeThickness="1.5"
+                             StrokeLineCap="Round"
+                             StrokeJoin="Round"/>
+                </Canvas>
+              </Viewbox>
+            </Border>
 
             <!-- Section: I/O -->
             <TextBlock Text="DISK I/O" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
