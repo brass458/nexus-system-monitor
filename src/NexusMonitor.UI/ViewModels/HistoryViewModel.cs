@@ -15,6 +15,7 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
 {
     private readonly IMetricsReader _reader;
     private CancellationTokenSource? _loadCts;
+    private TimeSpan _currentSpan = TimeSpan.FromHours(24);
 
     // ── UI state ─────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isLoading;
@@ -61,6 +62,10 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         Title   = "History";
 
         // ── X axis ──────────────────────────────────────────────────────────
+        // DateTimeAxis's constructor Labeler = (v) => labeler(new DateTime((long)(v-0.5)))
+        // which crashes when LiveChartsCore probes with out-of-range values (0, double.Max…).
+        // We replace Labeler with our own safe version that owns the tick→DateTime conversion,
+        // applies the same -0.5 offset, range-guards the cast, and reads _currentSpan.
         _xAxis = new DateTimeAxis(TimeSpan.FromMinutes(1), d => d.ToString("HH:mm"))
         {
             TextSize        = 10,
@@ -68,6 +73,16 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
             SeparatorsPaint = new SolidColorPaint(new SKColor(80, 80, 80, 50)),
             TicksPaint      = null,
             SubticksPaint   = null,
+        };
+        _xAxis.Labeler = value =>
+        {
+            var ticks = (long)(value - 0.5);
+            if (ticks < 0 || ticks > DateTime.MaxValue.Ticks) return string.Empty;
+            var dt = new DateTime(ticks);
+            if (_currentSpan.TotalHours <= 2)   return dt.ToString("HH:mm:ss");
+            if (_currentSpan.TotalDays  <= 1)   return dt.ToString("HH:mm");
+            if (_currentSpan.TotalDays  <= 7)   return dt.ToString("ddd HH:mm");
+            return dt.ToString("MM/dd");
         };
         XAxes = [_xAxis];
 
@@ -122,30 +137,15 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         Is7dActive  = is7d;
         Is30dActive = is30d;
 
-        IsLoading = true;
-        HasData   = false;
+        IsLoading    = true;
+        HasData      = false;
+        _currentSpan = span;
 
-        // Tune X axis granularity labels
-        if (span.TotalHours <= 2)
-        {
-            _xAxis.UnitWidth = TimeSpan.FromSeconds(1).Ticks;
-            _xAxis.Labeler   = v => new DateTime((long)v).ToString("HH:mm:ss");
-        }
-        else if (span.TotalDays <= 1)
-        {
-            _xAxis.UnitWidth = TimeSpan.FromMinutes(1).Ticks;
-            _xAxis.Labeler   = v => new DateTime((long)v).ToString("HH:mm");
-        }
-        else if (span.TotalDays <= 7)
-        {
-            _xAxis.UnitWidth = TimeSpan.FromMinutes(5).Ticks;
-            _xAxis.Labeler   = v => new DateTime((long)v).ToString("ddd HH:mm");
-        }
-        else
-        {
-            _xAxis.UnitWidth = TimeSpan.FromHours(1).Ticks;
-            _xAxis.Labeler   = v => new DateTime((long)v).ToString("MM/dd");
-        }
+        // Tune X axis step width; the formatter closure already reads _currentSpan.
+        _xAxis.UnitWidth = span.TotalHours <= 2  ? TimeSpan.FromSeconds(1).Ticks  :
+                           span.TotalDays  <= 1  ? TimeSpan.FromMinutes(1).Ticks  :
+                           span.TotalDays  <= 7  ? TimeSpan.FromMinutes(5).Ticks  :
+                                                   TimeSpan.FromHours(1).Ticks;
 
         var to   = DateTimeOffset.Now;
         var from = to - span;
