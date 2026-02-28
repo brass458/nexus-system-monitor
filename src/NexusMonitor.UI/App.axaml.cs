@@ -40,6 +40,14 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // ── Log any exception that escapes to the Avalonia UI-thread dispatcher ──
+        Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            CrashLogger.Write(e.Exception, "Avalonia Dispatcher UI Thread");
+            // Do NOT set e.Handled = true here — let Avalonia's default crash behaviour run
+            // so the user isn't left with a silent, frozen window.
+        };
+
         Services = BuildServices();
 
         var saved = Services.GetRequiredService<SettingsService>();
