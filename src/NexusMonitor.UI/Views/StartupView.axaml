@@ -126,8 +126,8 @@
 
           <DataGridTextColumn Header="Name"           Binding="{Binding Name}"          Width="2*"   MinWidth="100" IsReadOnly="True"/>
           <DataGridTextColumn Header="Publisher"      Binding="{Binding Publisher}"     Width="1.8*" MinWidth="100" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Location"       Binding="{Binding Location}"      Width="1.3*" MinWidth="80"  IsReadOnly="True"/>
-          <DataGridTextColumn Header="Startup Impact" Binding="{Binding StartupImpact}" Width="1.5*" MinWidth="90"  IsReadOnly="True"/>
+          <DataGridTextColumn Header="Location"       Binding="{Binding Location}"      Width="1.3*" MinWidth="100" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Startup Impact" Binding="{Binding StartupImpact}" Width="1.5*" MinWidth="155" IsReadOnly="True"/>
           <DataGridTextColumn Header="Command"        Binding="{Binding Command}"       Width="3*"   MinWidth="120" IsReadOnly="True"/>
 
         </DataGrid.Columns>

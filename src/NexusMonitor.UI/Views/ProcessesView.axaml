@@ -245,7 +245,7 @@
 
           <DataGridTextColumn Header="PID"
                               Binding="{Binding Pid}"
-                              Width="0.7*" MinWidth="55"
+                              Width="0.7*" MinWidth="65"
                               IsReadOnly="True"/>
 
           <DataGridTemplateColumn Header="CPU" Width="0.7*" MinWidth="60" SortMemberPath="CpuPercent">
@@ -301,17 +301,17 @@
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
-                              Width="0.8*" MinWidth="65"
+                              Width="0.8*" MinWidth="90"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Handles"
                               Binding="{Binding HandleCount}"
-                              Width="0.8*" MinWidth="65"
+                              Width="0.8*" MinWidth="90"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="User"
                               Binding="{Binding UserName}"
-                              Width="0.9*" MinWidth="70"
+                              Width="0.9*" MinWidth="90"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Description"
