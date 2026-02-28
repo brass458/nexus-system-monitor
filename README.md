@@ -105,11 +105,17 @@ This isn't a lowest-common-denominator approach. Nexus aims for the **union** of
 
 | Platform | Status | Detail Level |
 |----------|--------|-------------|
-| **Windows** | Full implementation | Complete — P/Invoke, PDH counters, WMI, Win32 APIs |
-| **macOS** | Scaffold (in progress) | Provider interfaces implemented, native calls pending |
-| **Linux** | Scaffold (in progress) | Provider interfaces implemented, /proc + /sys parsing pending |
+| **Windows** | ✅ Full | P/Invoke, PDH counters, WMI, Win32 APIs |
+| **macOS** | ✅ Full | sysctl, Mach APIs, ObjC runtime, launchctl, pmset |
+| **Linux** | ✅ Full | procfs, sysfs, multi-init (systemd/SysVinit/OpenRC) |
 
-The core application, UI, and all business logic are fully cross-platform today. Platform-specific system calls (process enumeration, metrics collection, service management) are isolated behind clean abstraction interfaces, with Windows fully implemented and macOS/Linux providers ready for native API integration.
+All tabs show real data on all three platforms. Windows has the deepest detail level (WMI hardware info, PDH counters, GPU engines). macOS and Linux provide the same interface and equivalent data through native APIs.
+
+**Platform-specific notes:**
+- **Disk Analyzer** is currently disabled on all platforms (separate work item)
+- **System Info tab** shows full WMI hardware inventory on Windows; hostname, OS, architecture, uptime, and RAM on macOS/Linux
+- **Gaming Mode** power plan switching on macOS may require `sudo` (pmset restriction). Process throttling works without elevation.
+- **ProBalance** on Linux under Wayland without a compositor that supports `xdotool` will treat all background processes equally (no foreground window detection). Fully functional on X11 and macOS.
 
 ---
 
@@ -117,11 +123,11 @@ The core application, UI, and all business logic are fully cross-platform today.
 
 ### Prerequisites
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (or later)
+- [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- **macOS:** macOS 12 Monterey or later (Intel or Apple Silicon)
+- **Linux:** Any modern distribution — systemd, SysVinit (Fedora, Debian, etc.), or OpenRC (Gentoo, Alpine) are all supported. X11 recommended for ProBalance; Wayland works with reduced foreground-window detection.
 
 ### From Source
-
-Clone the repository and build:
 
 ```bash
 git clone https://github.com/brass458/nexus-system-monitor.git
@@ -141,7 +147,12 @@ dotnet run --project src/NexusMonitor.UI/NexusMonitor.UI.csproj --framework net8
 dotnet run --project src/NexusMonitor.UI/NexusMonitor.UI.csproj --framework net8.0-macos
 ```
 
-> **Note:** macOS providers are scaffolded but not yet fully implemented. The application will launch with limited system data until native macOS API integration is complete.
+> **Gatekeeper:** If macOS blocks an unsigned binary, right-click → Open, or run:
+> ```bash
+> xattr -d com.apple.quarantine path/to/NexusMonitor
+> ```
+
+> **Gaming Mode / power plans:** Switching power profiles uses `pmset`, which may require `sudo` on some machines. Process throttling (ProBalance, Gaming Mode process priority) works without elevation.
 
 #### Linux
 
@@ -149,11 +160,52 @@ dotnet run --project src/NexusMonitor.UI/NexusMonitor.UI.csproj --framework net8
 dotnet run --project src/NexusMonitor.UI/NexusMonitor.UI.csproj --framework net8.0
 ```
 
-> **Note:** Linux providers are scaffolded but not yet fully implemented. The application will launch with limited system data until /proc and /sys parsing is complete.
+The app auto-detects your init system at startup:
+- **systemd** — uses `systemctl` (most distros)
+- **SysVinit** — uses `/etc/init.d/` scripts and `service` (pre-systemd Fedora, Debian, etc.)
+- **OpenRC** — uses `rc-status` and `rc-service` (Gentoo, Alpine, etc.)
+
+> **Power plans:** Install `power-profiles-daemon` for Gaming Mode power plan switching (`powerprofilesctl`). Falls back to `/sys/devices/system/cpu/*/cpufreq/scaling_governor` if unavailable.
+
+### Self-Contained Builds (for distribution)
+
+Produce a portable folder that includes the .NET runtime — no SDK required on the target machine.
+
+#### macOS (Apple Silicon)
+
+```bash
+dotnet publish src/NexusMonitor.UI /p:PublishProfile=osx-arm64
+# Output: src/NexusMonitor.UI/publish/osx-arm64/
+```
+
+#### macOS (Intel)
+
+```bash
+dotnet publish src/NexusMonitor.UI /p:PublishProfile=osx-x64
+# Output: src/NexusMonitor.UI/publish/osx-x64/
+```
+
+#### Linux x64
+
+```bash
+dotnet publish src/NexusMonitor.UI /p:PublishProfile=linux-x64
+# Output: src/NexusMonitor.UI/publish/linux-x64/
+# Distribute as a tarball:
+tar -czf NexusMonitor-linux-x64.tar.gz -C src/NexusMonitor.UI/publish/linux-x64 .
+```
+
+#### Linux ARM64
+
+```bash
+dotnet publish src/NexusMonitor.UI /p:PublishProfile=linux-arm64
+# Output: src/NexusMonitor.UI/publish/linux-arm64/
+```
+
+> **Cross-compiling from Windows:** All publish profiles work from a Windows host. The LINUX preprocessor define is set automatically by the publish profiles, so Linux-specific providers compile correctly even when building on Windows.
 
 ### Pre-Built Releases
 
-Pre-compiled binaries for Windows, macOS, and Linux are not yet available. They will be published under [Releases](https://github.com/brass458/nexus-system-monitor/releases) once platform implementations are finalized.
+Pre-compiled binaries for Windows, macOS, and Linux are not yet available. They will be published under [Releases](https://github.com/brass458/nexus-system-monitor/releases) once platform testing is complete.
 
 ---
 
