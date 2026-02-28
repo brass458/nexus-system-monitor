@@ -8,7 +8,7 @@ public class AppSettings
     public bool   IsDarkTheme        { get; set; } = true;
 
     // Liquid Glass
-    public bool   IsGlassEnabled     { get; set; } = false;
+    public bool   IsGlassEnabled     { get; set; } = true;
     public double GlassOpacity       { get; set; } = 0.80;   // 0 = fully transparent, 1 = fully opaque
     public string BackdropBlurMode   { get; set; } = "Acrylic"; // None | Blur | Acrylic | Mica
     public bool   IsSpecularEnabled  { get; set; } = true;

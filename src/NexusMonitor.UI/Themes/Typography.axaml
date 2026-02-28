@@ -6,39 +6,39 @@
   <FontFamily x:Key="FontMono">Cascadia Code,JetBrains Mono,Consolas,Menlo,monospace</FontFamily>
 
   <!-- ===== STATIC FONT SIZE SCALE =====
-       These are the canonical font sizes for the app. All views reference the
-       NxFont* tokens below via {DynamicResource} so they apply instantly.
-       Base: 14px body — comfortable for any modern display density. -->
+       Base: 14px body — comfortable for modern displays.
+       Hierarchy goes from 11px compact labels up to 28px hero numbers. -->
 
   <!-- Legacy semantic tokens (used by a few older layouts) -->
-  <x:Double x:Key="FontSizeXS">12</x:Double>
+  <x:Double x:Key="FontSizeXS">11</x:Double>
   <x:Double x:Key="FontSizeSM">12</x:Double>
   <x:Double x:Key="FontSizeMD">13</x:Double>
   <x:Double x:Key="FontSizeBase">14</x:Double>
-  <x:Double x:Key="FontSizeLG">15</x:Double>
-  <x:Double x:Key="FontSizeXL">17</x:Double>
+  <x:Double x:Key="FontSizeLG">16</x:Double>
+  <x:Double x:Key="FontSizeXL">18</x:Double>
   <x:Double x:Key="FontSize2XL">22</x:Double>
-  <x:Double x:Key="FontSize3XL">26</x:Double>
+  <x:Double x:Key="FontSize3XL">28</x:Double>
 
-  <!-- NxFont* tokens — referenced throughout all views and control styles.
-       No longer written at runtime; defined here so {DynamicResource} always resolves. -->
-  <x:Double x:Key="NxFont10">12</x:Double>
+  <!-- NxFont* tokens — referenced throughout all views and control styles. -->
+  <x:Double x:Key="NxFont10">11</x:Double>
   <x:Double x:Key="NxFont11">12</x:Double>
   <x:Double x:Key="NxFont12">13</x:Double>
   <x:Double x:Key="NxFont13">14</x:Double>
   <x:Double x:Key="NxFont14">15</x:Double>
   <x:Double x:Key="NxFont16">17</x:Double>
+  <x:Double x:Key="NxFont18">20</x:Double>
+  <x:Double x:Key="NxFont24">28</x:Double>
 
   <!-- Control-style shorthand aliases -->
   <x:Double x:Key="NxFontSm">12</x:Double>
   <x:Double x:Key="NxFontBase">13</x:Double>
   <x:Double x:Key="NxFontMd">14</x:Double>
 
-  <!-- Corner radii -->
-  <CornerRadius x:Key="CornerSM">6</CornerRadius>
-  <CornerRadius x:Key="CornerMD">8</CornerRadius>
-  <CornerRadius x:Key="CornerLG">12</CornerRadius>
-  <CornerRadius x:Key="CornerXL">16</CornerRadius>
+  <!-- Corner radii — generous Apple-style rounding -->
+  <CornerRadius x:Key="CornerSM">8</CornerRadius>
+  <CornerRadius x:Key="CornerMD">10</CornerRadius>
+  <CornerRadius x:Key="CornerLG">14</CornerRadius>
+  <CornerRadius x:Key="CornerXL">20</CornerRadius>
   <CornerRadius x:Key="CornerFull">9999</CornerRadius>
 
   <!-- Padding tokens -->

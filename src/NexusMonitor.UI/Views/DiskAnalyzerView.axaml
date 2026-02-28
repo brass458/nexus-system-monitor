@@ -70,7 +70,7 @@
                 Padding="14,8" VerticalAlignment="Center">
           <Button.Styles>
             <Style Selector="Button">
-              <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+              <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
               <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
               <Setter Property="CornerRadius" Value="8"/>
             </Style>
@@ -164,7 +164,7 @@
               <Setter Property="BorderThickness" Value="0"/>
             </Style>
             <Style Selector="Button:pointerover /template/ ContentPresenter">
-              <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+              <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
             </Style>
           </Button.Styles>
           <Panel>
@@ -183,7 +183,7 @@
               <Setter Property="BorderThickness" Value="0"/>
             </Style>
             <Style Selector="Button:pointerover /template/ ContentPresenter">
-              <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+              <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
             </Style>
           </Button.Styles>
           <Panel>
@@ -217,7 +217,7 @@
                 <Button.Styles>
                   <Style Selector="Button">
                     <Setter Property="CornerRadius" Value="6"/>
-                    <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
                     <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                   </Style>
                 </Button.Styles>
@@ -331,7 +331,7 @@
                   <Grid ColumnDefinitions="54,*,Auto" Margin="0,2">
                     <Border Grid.Column="0"
                             CornerRadius="4" Padding="4,2"
-                            Background="{StaticResource BgElevatedBrush}"
+                            Background="{DynamicResource BgElevatedBrush}"
                             HorizontalAlignment="Left">
                       <TextBlock Text="{Binding Extension}"
                                  FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
@@ -407,7 +407,7 @@
                         FontSize="{DynamicResource NxFont11}">
                   <Button.Styles>
                     <Style Selector="Button">
-                      <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+                      <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
                       <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                     </Style>
                   </Button.Styles>
@@ -473,6 +473,7 @@
                 BorderThickness="0,0,0,1">
           <Grid ColumnDefinitions="*,Auto">
             <TextBox Grid.Column="0"
+                     Name="SearchBox"
                      Classes="nx-input"
                      Text="{Binding FileSearchText}"
                      Watermark="Search file name or path…"

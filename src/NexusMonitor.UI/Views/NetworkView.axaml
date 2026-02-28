@@ -17,7 +17,7 @@
     <!-- Toolbar -->
     <Border DockPanel.Dock="Top"
             Padding="16,10"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
@@ -33,7 +33,8 @@
                         ToolTip.Tip="Show/hide connection details panel">
             <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
           </ToggleButton>
-          <TextBox Classes="nx-input"
+          <TextBox Name="SearchBox"
+                   Classes="nx-input"
                    Text="{Binding SearchText}"
                    Watermark="Search address, port, process&#x2026;"
                    Width="260"
@@ -45,7 +46,7 @@
     <!-- Status bar -->
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
@@ -111,7 +112,7 @@
       <!-- Detail sidebar -->
       <Border Grid.Column="2"
               Width="260"
-              Background="{StaticResource BgSecondaryBrush}"
+              Background="{DynamicResource BgSecondaryBrush}"
               IsVisible="{Binding IsConnectionDetailShown}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="0"

@@ -13,8 +13,10 @@ public partial class RulesViewModel : ViewModelBase
 
     // ── Rules list ────────────────────────────────────────────────────────────
     public ObservableCollection<ProcessRule> Rules { get; } = [];
+    public ObservableCollection<ProcessRule> FilteredRules { get; } = [];
 
     [ObservableProperty] private ProcessRule? _selectedRule;
+    [ObservableProperty] private string _searchText = string.Empty;
 
     // ── Editor visibility ─────────────────────────────────────────────────────
     [ObservableProperty] private bool _isEditorVisible;
@@ -54,6 +56,27 @@ public partial class RulesViewModel : ViewModelBase
         => OnPropertyChanged(nameof(IsConditionEnabled));
     partial void OnEditWatchdogActionIndexChanged(int value)
         => OnPropertyChanged(nameof(IsWatchdogEnabled));
+
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        var selected = SelectedRule;
+        FilteredRules.Clear();
+
+        var source = string.IsNullOrWhiteSpace(SearchText)
+            ? (IEnumerable<ProcessRule>)Rules
+            : Rules.Where(r =>
+                r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                r.ProcessNamePattern.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var rule in source)
+            FilteredRules.Add(rule);
+
+        // Restore selection if it still passes the filter
+        if (selected is not null && FilteredRules.Contains(selected))
+            SelectedRule = selected;
+    }
 
     // ── Static option lists ───────────────────────────────────────────────────
 
@@ -197,6 +220,7 @@ public partial class RulesViewModel : ViewModelBase
         Rules.Clear();
         foreach (var r in _persistence.GetAll())
             Rules.Add(r);
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -225,6 +249,7 @@ public partial class RulesViewModel : ViewModelBase
         _persistence.Remove(SelectedRule.Id);
         Rules.Remove(SelectedRule);
         SelectedRule = null;
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -237,6 +262,7 @@ public partial class RulesViewModel : ViewModelBase
         var idx = Rules.IndexOf(rule);
         if (idx >= 0) { Rules.RemoveAt(idx); Rules.Insert(idx, rule); }
         SelectedRule = rule;
+        ApplyFilter();
     }
 
     // ── Editor ────────────────────────────────────────────────────────────────
@@ -312,6 +338,7 @@ public partial class RulesViewModel : ViewModelBase
             if (idx >= 0) { Rules.RemoveAt(idx); Rules.Insert(idx, rule); }
         }
 
+        ApplyFilter();
         IsEditorVisible = false;
     }
 

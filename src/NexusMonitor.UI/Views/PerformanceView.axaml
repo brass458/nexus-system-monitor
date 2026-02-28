@@ -17,7 +17,7 @@
     <ListBox Grid.Column="0"
              ItemsSource="{Binding Devices}"
              SelectedItem="{Binding SelectedDevice}"
-             Background="{StaticResource BgSecondaryBrush}"
+             Background="{DynamicResource BgSecondaryBrush}"
              Padding="4,8">
       <ListBox.ItemContainerTheme>
         <ControlTheme TargetType="ListBoxItem" x:DataType="ListBoxItem">
@@ -26,7 +26,7 @@
           <Setter Property="Background" Value="Transparent"/>
           <Setter Property="CornerRadius" Value="6"/>
           <Style Selector="^:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
           </Style>
           <Style Selector="^:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource AccentBlueDimBrush}"/>
@@ -95,7 +95,7 @@
 
                     <WrapPanel Orientation="Horizontal" ItemWidth="180">
                       <Border Margin="0,0,12,12" Padding="16"
-                              Background="{StaticResource BgElevatedBrush}"
+                              Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
                               BorderThickness="1"
                               CornerRadius="{StaticResource CornerLG}">
@@ -124,7 +124,7 @@
                       </Border>
 
                       <Border Margin="0,0,12,12" Padding="16"
-                              Background="{StaticResource BgElevatedBrush}"
+                              Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
                               BorderThickness="1"
                               CornerRadius="{StaticResource CornerLG}">
@@ -143,7 +143,7 @@
                       </Border>
 
                       <Border Margin="0,0,12,12" Padding="16"
-                              Background="{StaticResource BgElevatedBrush}"
+                              Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
                               BorderThickness="1"
                               CornerRadius="{StaticResource CornerLG}">
@@ -166,7 +166,7 @@
                     </WrapPanel>
 
                     <Border Margin="0,0,0,12" Padding="16"
-                            Background="{StaticResource BgElevatedBrush}"
+                            Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource CornerLG}">
@@ -192,7 +192,7 @@
                     </Border>
 
                     <Border Margin="0,0,0,12" Padding="16"
-                            Background="{StaticResource BgElevatedBrush}"
+                            Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource CornerLG}">
@@ -223,7 +223,7 @@
                     </Border>
 
                     <Border Margin="0,0,0,12" Padding="16"
-                            Background="{StaticResource BgElevatedBrush}"
+                            Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource CornerLG}">
@@ -247,7 +247,7 @@
 
                     <Grid ColumnDefinitions="*,12,*" Margin="0,0,0,12">
                       <Border Grid.Column="0" Padding="16"
-                              Background="{StaticResource BgElevatedBrush}"
+                              Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
                               BorderThickness="1"
                               CornerRadius="{StaticResource CornerLG}">
@@ -270,7 +270,7 @@
                         </StackPanel>
                       </Border>
                       <Border Grid.Column="2" Padding="16"
-                              Background="{StaticResource BgElevatedBrush}"
+                              Background="{DynamicResource BgElevatedBrush}"
                               BorderBrush="{StaticResource GlassBorderBrush}"
                               BorderThickness="1"
                               CornerRadius="{StaticResource CornerLG}">
@@ -295,7 +295,7 @@
                     </Grid>
 
                     <Border Margin="0,0,0,12" Padding="16"
-                            Background="{StaticResource BgElevatedBrush}"
+                            Background="{DynamicResource BgElevatedBrush}"
                             BorderBrush="{StaticResource GlassBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource CornerLG}">

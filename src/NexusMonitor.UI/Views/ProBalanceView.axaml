@@ -10,7 +10,7 @@
     <!-- ══ Header ══════════════════════════════════════════════════════════ -->
     <Border DockPanel.Dock="Top"
             Padding="16,10"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>

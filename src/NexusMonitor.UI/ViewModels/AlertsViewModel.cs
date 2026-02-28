@@ -36,6 +36,12 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int    _editSustainSec  = 5;
     [ObservableProperty] private int    _editCooldownSec = 60;
 
+    // ── Search / filter ────────────────────────────────────────────────────────
+    [ObservableProperty] private string _searchText = string.Empty;
+
+    public ObservableCollection<AlertRule>  FilteredRules    { get; } = [];
+    public ObservableCollection<AlertEvent> FilteredEventLog { get; } = [];
+
     // ── Event log ─────────────────────────────────────────────────────────────
     public ObservableCollection<AlertEvent> EventLog { get; } = [];
 
@@ -70,6 +76,41 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
 
         // Start the service
         alertsService.Start();
+
+        // Initial filter sync
+        ApplyFilter();
+    }
+
+    // ── Search / filter logic ───────────────────────────────────────────────
+
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        FilteredRules.Clear();
+        FilteredEventLog.Clear();
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            foreach (var rule in Rules)
+                FilteredRules.Add(rule);
+            foreach (var evt in EventLog)
+                FilteredEventLog.Add(evt);
+        }
+        else
+        {
+            foreach (var rule in Rules)
+            {
+                if (rule.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                    FilteredRules.Add(rule);
+            }
+            foreach (var evt in EventLog)
+            {
+                if (evt.Rule.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    evt.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                    FilteredEventLog.Add(evt);
+            }
+        }
     }
 
     // ── Event handler ─────────────────────────────────────────────────────────
@@ -86,6 +127,8 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
             case AlertSeverity.Critical: CriticalCount++; break;
             case AlertSeverity.Warning:  WarningCount++;  break;
         }
+
+        ApplyFilter();
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
@@ -119,6 +162,7 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
             _settings.Current.AlertRules.FirstOrDefault(r => r.Id == rule.Id)!);
         _settings.Save();
         SelectedRule = null;
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -164,6 +208,7 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
 
         _settings.Save();
         IsEditorVisible = false;
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -176,6 +221,7 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
         AlertCount    = 0;
         CriticalCount = 0;
         WarningCount  = 0;
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -190,6 +236,7 @@ public partial class AlertsViewModel : ViewModelBase, IDisposable
         // Refresh list to trigger UI update
         var idx = Rules.IndexOf(rule);
         if (idx >= 0) { Rules.RemoveAt(idx); Rules.Insert(idx, rule); }
+        ApplyFilter();
     }
 
     // ── Enum ↔ index helpers ──────────────────────────────────────────────────

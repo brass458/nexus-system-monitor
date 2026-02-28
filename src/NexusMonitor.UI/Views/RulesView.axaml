@@ -10,7 +10,7 @@
     <!-- ══ Header ══════════════════════════════════════════════════════════ -->
     <Border DockPanel.Dock="Top"
             Padding="16,10"
-            Background="{StaticResource BgSecondaryBrush}"
+            Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{StaticResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
@@ -19,6 +19,22 @@
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
+        <!-- Search box -->
+        <Border DockPanel.Dock="Right"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerSM}"
+                Padding="0" Margin="10,0,0,0"
+                VerticalAlignment="Center" Width="200">
+          <TextBox Name="SearchBox"
+                   Text="{Binding SearchText}"
+                   Watermark="Search rules…"
+                   BorderThickness="0"
+                   Background="Transparent"
+                   FontSize="{DynamicResource NxFont12}"
+                   Padding="8,5"/>
+        </Border>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <Button Classes="nx-btn"
                   Command="{Binding AddRuleCommand}"
@@ -62,7 +78,7 @@
           <!-- Empty state -->
           <Border DockPanel.Dock="Top"
                   Padding="24,48"
-                  IsVisible="{Binding Rules.Count, Converter={x:Static BoolConverters.Not}}">
+                  IsVisible="{Binding FilteredRules.Count, Converter={x:Static BoolConverters.Not}}">
             <StackPanel HorizontalAlignment="Center" Spacing="10">
               <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center"
                          Foreground="{StaticResource TextTertiaryBrush}"/>
@@ -79,7 +95,7 @@
           <!-- Rule list -->
           <ScrollViewer Padding="16">
             <StackPanel Spacing="6">
-              <ItemsControl ItemsSource="{Binding Rules}">
+              <ItemsControl ItemsSource="{Binding FilteredRules}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Border Padding="14,12"
@@ -88,7 +104,23 @@
                             BorderBrush="{DynamicResource GlassBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource CornerMD}"
-                            Cursor="Hand">
+                            Cursor="Hand"
+                            PointerPressed="OnRuleBorderPointerPressed">
+                      <Border.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="Edit Rule"
+                                    Command="{Binding DataContext.EditRuleCommand,
+                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                          <MenuItem Header="Toggle Enabled"
+                                    Command="{Binding DataContext.ToggleEnabledCommand,
+                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                          <Separator/>
+                          <MenuItem Header="Delete Rule"
+                                    Command="{Binding DataContext.DeleteRuleCommand,
+                                              RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        </ContextMenu>
+                      </Border.ContextMenu>
                       <Border.Styles>
                         <Style Selector="Border:pointerover">
                           <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>

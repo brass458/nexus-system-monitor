@@ -1,24 +1,24 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- ===== NEXUS DARK PALETTE ===== -->
+  <!-- ===== NEXUS DARK PALETTE — Glassmorphism + Vibrant ===== -->
 
-  <!-- Background layers (macOS-inspired) -->
-  <Color x:Key="BgBase">#0F0F12</Color>
-  <Color x:Key="BgPrimary">#1C1C1E</Color>
-  <Color x:Key="BgSecondary">#252528</Color>
-  <Color x:Key="BgElevated">#2C2C2E</Color>
-  <Color x:Key="BgHover">#363638</Color>
-  <Color x:Key="BgSelected">#3A3A3C</Color>
+  <!-- Background layers — deep blue-black with cool undertones -->
+  <Color x:Key="BgBase">#0A0A12</Color>
+  <Color x:Key="BgPrimary">#131318</Color>
+  <Color x:Key="BgSecondary">#1B1B22</Color>
+  <Color x:Key="BgElevated">#24242E</Color>
+  <Color x:Key="BgHover">#2E2E3A</Color>
+  <Color x:Key="BgSelected">#38384A</Color>
 
-  <!-- Glass surface colors -->
-  <Color x:Key="GlassBg">#B21C1C1E</Color>
-  <Color x:Key="GlassBorder">#403A3A3C</Color>
-  <Color x:Key="GlassHighlight">#18FFFFFF</Color>
-  <Color x:Key="GlassShadow">#40000000</Color>
+  <!-- Glass surface colors — cool-tinted frosted panels -->
+  <Color x:Key="GlassBg">#A8161622</Color>
+  <Color x:Key="GlassBorder">#38FFFFFF</Color>
+  <Color x:Key="GlassHighlight">#22FFFFFF</Color>
+  <Color x:Key="GlassShadow">#50000000</Color>
 
   <!-- Liquid Glass runtime token (0 = invisible, 1 = full intensity) — written from code -->
-  <x:Double x:Key="GlassSpecularOpacity">0</x:Double>
+  <x:Double x:Key="GlassSpecularOpacity">0.35</x:Double>
 
   <!-- Overlay widget background — always semi-transparent (tracks main glass opacity with a floor) -->
   <SolidColorBrush x:Key="OverlayBgBrush" Color="#CC050508" />
@@ -26,21 +26,21 @@
   <!-- Text accent — written from code; defaults to AccentBlue -->
   <SolidColorBrush x:Key="TextAccentBrush" Color="{StaticResource AccentBlue}" />
 
-  <!-- Text -->
-  <Color x:Key="TextPrimary">#FFFFFFFF</Color>
-  <Color x:Key="TextSecondary">#99EBEBF5</Color>
-  <Color x:Key="TextTertiary">#66EBEBF5</Color>
+  <!-- Text hierarchy — softer white primary, brighter secondary for legibility -->
+  <Color x:Key="TextPrimary">#F5F5FA</Color>
+  <Color x:Key="TextSecondary">#A0EBEBF5</Color>
+  <Color x:Key="TextTertiary">#70EBEBF5</Color>
   <Color x:Key="TextDisabled">#40EBEBF5</Color>
 
-  <!-- Borders -->
-  <Color x:Key="BorderSubtle">#28FFFFFF</Color>
-  <Color x:Key="BorderDefault">#40FFFFFF</Color>
-  <Color x:Key="BorderStrong">#60FFFFFF</Color>
+  <!-- Borders — refined for glass surfaces -->
+  <Color x:Key="BorderSubtle">#20FFFFFF</Color>
+  <Color x:Key="BorderDefault">#35FFFFFF</Color>
+  <Color x:Key="BorderStrong">#55FFFFFF</Color>
 
   <!-- Accent — macOS Blue -->
   <Color x:Key="AccentBlue">#0A84FF</Color>
-  <Color x:Key="AccentBlueDim">#1A0A84FF</Color>
-  <Color x:Key="AccentBlueHover">#228BE6</Color>
+  <Color x:Key="AccentBlueDim">#250A84FF</Color>
+  <Color x:Key="AccentBlueHover">#3D9FFF</Color>
 
   <!-- Status / semantic colors -->
   <Color x:Key="ColorSuccess">#34C759</Color>
