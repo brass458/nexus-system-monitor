@@ -152,7 +152,7 @@
                                VerticalAlignment="Center"
                                Foreground="{StaticResource TextTertiaryBrush}"
                                Opacity="0.3"
-                               Cursor="SizeNS"
+                               Cursor="SizeNorthSouth"
                                IsHitTestVisible="False"/>
                     <!-- Navigation button -->
                     <Button Grid.Column="1"
