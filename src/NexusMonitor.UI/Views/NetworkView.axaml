@@ -110,10 +110,10 @@
         <DataGrid.Columns>
           <DataGridTextColumn Header="Protocol"       Binding="{Binding Protocol}"      Width="0.9*" MinWidth="100" IsReadOnly="True"/>
           <DataGridTextColumn Header="Local Address"  Binding="{Binding LocalAddress}"  Width="1.5*" MinWidth="150" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Local Port"     Binding="{Binding LocalPort}"     Width="0.8*" MinWidth="120" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Local Port"     Binding="{Binding LocalPort}"     Width="0.8*" MinWidth="110" IsReadOnly="True"/>
           <DataGridTextColumn Header="Remote Address" Binding="{Binding RemoteAddress}" Width="1.5*" MinWidth="160" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Remote Port"    Binding="{Binding RemotePort}"    Width="0.8*" MinWidth="130" IsReadOnly="True"/>
-          <DataGridTemplateColumn Header="State" Width="1*" MinWidth="75" SortMemberPath="State">
+          <DataGridTextColumn Header="Remote Port"    Binding="{Binding RemotePort}"    Width="0.8*" MinWidth="120" IsReadOnly="True"/>
+          <DataGridTemplateColumn Header="State" Width="1*" MinWidth="80" SortMemberPath="State">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Border CornerRadius="4"
@@ -130,8 +130,8 @@
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="&#x2191; Send"  Binding="{Binding SendDisplay}"   Width="0.8*" MinWidth="90" IsReadOnly="True"/>
           <DataGridTextColumn Header="&#x2193; Recv"  Binding="{Binding RecvDisplay}"   Width="0.8*" MinWidth="90" IsReadOnly="True"/>
-          <DataGridTextColumn Header="PID"            Binding="{Binding ProcessId}"     Width="0.6*" MinWidth="60" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Process"        Binding="{Binding ProcessName}"   Width="2*"   MinWidth="90" IsReadOnly="True"/>
+          <DataGridTextColumn Header="PID"            Binding="{Binding ProcessId}"     Width="0.6*" MinWidth="75" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Process"        Binding="{Binding ProcessName}"   Width="2*"   MinWidth="95" IsReadOnly="True"/>
         </DataGrid.Columns>
       </DataGrid>
 
