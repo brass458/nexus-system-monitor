@@ -6,6 +6,7 @@ using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using System.Linq;
 using NexusMonitor.Core.Storage;
 using SkiaSharp;
 
@@ -30,6 +31,23 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
 
     // ── Top-process table ────────────────────────────────────────────────────
     public ObservableCollection<ProcessSummary> TopProcesses { get; } = new();
+
+    // ── Events timeline ───────────────────────────────────────────────────────
+    public ObservableCollection<StoredEvent> Events { get; } = new();
+
+    [ObservableProperty] private int    _eventCount;
+    [ObservableProperty] private string _eventTypeFilter = "All";
+
+    public static IReadOnlyList<string> EventTypeFilters { get; } =
+    [
+        "All",
+        EventType.CpuHigh,
+        EventType.MemHigh,
+        EventType.GpuHigh,
+        EventType.NetAnomaly,
+        EventType.NewConnection,
+        EventType.ProcessSpike,
+    ];
 
     // ── Chart data collections ───────────────────────────────────────────────
     private readonly ObservableCollection<DateTimePoint> _cpuPts   = new();
@@ -154,6 +172,8 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         {
             var metrics = await _reader.GetSystemMetricsAsync(from, to, ct);
             var procs   = await _reader.GetTopProcessSummariesAsync(from, to, topN: 10, ct);
+            var evtType = EventTypeFilter == "All" ? null : EventTypeFilter;
+            var events  = await _reader.GetEventsAsync(from, to, evtType, ct);
 
             if (ct.IsCancellationRequested) return;
 
@@ -163,6 +183,10 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
 
                 TopProcesses.Clear();
                 foreach (var p in procs) TopProcesses.Add(p);
+
+                Events.Clear();
+                foreach (var e in events.OrderByDescending(e => e.Timestamp)) Events.Add(e);
+                EventCount = events.Count;
 
                 HasData    = metrics.Count > 0;
                 StatusText = metrics.Count > 0

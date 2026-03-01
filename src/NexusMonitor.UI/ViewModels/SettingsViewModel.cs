@@ -62,6 +62,14 @@ public partial class SettingsViewModel : ViewModelBase
     // ── Notifications ─────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _desktopNotificationsEnabled = true;
 
+    // ── Anomaly Detection ─────────────────────────────────────────────────────
+    [ObservableProperty] private bool    _anomalyDetectionEnabled;
+    [ObservableProperty] private string  _anomalySensitivity = "Medium";
+    [ObservableProperty] private decimal _anomalyCooldownSeconds = 60m;
+    [ObservableProperty] private decimal _metricsEventsRetentionDays = 90m;
+
+    public static IReadOnlyList<string> AnomalySensitivities { get; } = ["Low", "Medium", "High"];
+
     // ── Telemetry ─────────────────────────────────────────────────────────────
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PrometheusStatusText))]
@@ -161,6 +169,12 @@ public partial class SettingsViewModel : ViewModelBase
         // Map stored UpdateIntervalMs → index
         _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
         if (_updateIntervalIndex < 0) _updateIntervalIndex = 1;
+
+        // ── Anomaly Detection ─────────────────────────────────────────────────
+        _anomalyDetectionEnabled     = settings.Current.AnomalyDetectionEnabled;
+        _anomalySensitivity          = settings.Current.AnomalySensitivity;
+        _anomalyCooldownSeconds      = settings.Current.AnomalyCooldownSeconds;
+        _metricsEventsRetentionDays  = settings.Current.MetricsEventsRetentionDays;
 
         // ── Telemetry ────────────────────────────────────────────────────────
         _prometheusEnabled = settings.Current.PrometheusEnabled;
@@ -331,6 +345,30 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnDesktopNotificationsEnabledChanged(bool value)
     {
         _settings.Current.DesktopNotificationsEnabled = value;
+        _settings.Save();
+    }
+
+    partial void OnAnomalyDetectionEnabledChanged(bool value)
+    {
+        _settings.Current.AnomalyDetectionEnabled = value;
+        _settings.Save();
+    }
+
+    partial void OnAnomalySensitivityChanged(string value)
+    {
+        _settings.Current.AnomalySensitivity = value;
+        _settings.Save();
+    }
+
+    partial void OnAnomalyCooldownSecondsChanged(decimal value)
+    {
+        _settings.Current.AnomalyCooldownSeconds = (int)value;
+        _settings.Save();
+    }
+
+    partial void OnMetricsEventsRetentionDaysChanged(decimal value)
+    {
+        _settings.Current.MetricsEventsRetentionDays = (int)value;
         _settings.Save();
     }
 

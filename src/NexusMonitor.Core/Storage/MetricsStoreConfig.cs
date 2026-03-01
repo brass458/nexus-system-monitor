@@ -19,4 +19,7 @@ public sealed class MetricsStoreConfig
     public TimeSpan Rollup1mRetention { get; set; } = TimeSpan.FromDays(7);
     public TimeSpan Rollup5mRetention { get; set; } = TimeSpan.FromDays(30);
     public TimeSpan Rollup1hRetention { get; set; } = TimeSpan.FromDays(365);
+
+    /// <summary>How long to keep rows in the events table before pruning.</summary>
+    public TimeSpan EventsRetention   { get; set; } = TimeSpan.FromDays(90);
 }

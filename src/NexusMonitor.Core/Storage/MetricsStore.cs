@@ -8,7 +8,7 @@ namespace NexusMonitor.Core.Storage;
 /// Subscribes to live metric streams and persists them to SQLite in batched transactions.
 /// Also implements IMetricsReader for historical queries.
 /// </summary>
-public sealed class MetricsStore : IMetricsReader, IDisposable
+public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 {
     private readonly MetricsDatabase            _db;
     private readonly MetricsStoreConfig         _config;
@@ -291,6 +291,39 @@ public sealed class MetricsStore : IMetricsReader, IDisposable
             }
         }
     }
+
+    // ── IEventWriter ───────────────────────────────────────────────────────────
+    public Task InsertEventAsync(
+        string  eventType, int     severity,
+        string? metricName, double? metricValue, double? threshold,
+        string? description, string? metadataJson = null) =>
+        Task.Run(() =>
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    using var cmd = _db.Connection.CreateCommand();
+                    cmd.CommandText = @"
+                        INSERT INTO events
+                            (ts, event_type, severity, metric_name, metric_value,
+                             threshold, description, metadata_json)
+                        VALUES
+                            ($ts, $type, $sev, $mname, $mval,
+                             $thresh, $desc, $meta)";
+                    cmd.Parameters.AddWithValue("$ts",    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    cmd.Parameters.AddWithValue("$type",  eventType);
+                    cmd.Parameters.AddWithValue("$sev",   severity);
+                    cmd.Parameters.AddWithValue("$mname", (object?)metricName   ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("$mval",  (object?)metricValue  ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("$thresh",(object?)threshold    ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("$desc",  (object?)description  ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("$meta",  (object?)metadataJson ?? DBNull.Value);
+                    cmd.ExecuteNonQuery();
+                }
+                catch { /* swallow — never crash the monitoring loop */ }
+            }
+        });
 
     // ── IMetricsReader ─────────────────────────────────────────────────────────
     public Task<IReadOnlyList<MetricsDataPoint>> GetSystemMetricsAsync(

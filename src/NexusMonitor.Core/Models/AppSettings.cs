@@ -71,4 +71,12 @@ public class AppSettings
     // Telemetry — Prometheus endpoint (Phase 14)
     public bool PrometheusEnabled { get; set; } = false;
     public int  PrometheusPort    { get; set; } = 9182;
+
+    // Anomaly Detection (Phase 13)
+    public bool   AnomalyDetectionEnabled     { get; set; } = true;
+    /// <summary>"Low", "Medium", or "High" — maps to sigma preset in AnomalyDetectionConfig.</summary>
+    public string AnomalySensitivity          { get; set; } = "Medium";
+    public int    AnomalyCooldownSeconds      { get; set; } = 60;
+    public int    AnomalyNewConnGracePeriodSec{ get; set; } = 120;
+    public int    MetricsEventsRetentionDays  { get; set; } = 90;
 }

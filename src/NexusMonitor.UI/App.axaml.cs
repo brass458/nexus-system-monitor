@@ -88,14 +88,46 @@ public class App : Application
                 Services.GetRequiredService<MetricsRollupService>().Start();
             }
 
+            // Start anomaly detection if enabled
+            var anomalyService = Services.GetRequiredService<AnomalyDetectionService>();
+            if (saved.Current.AnomalyDetectionEnabled)
+                anomalyService.Start();
+
             // Start Prometheus endpoint if enabled
             var prometheusExporter = Services.GetRequiredService<PrometheusExporter>();
             if (saved.Current.PrometheusEnabled)
                 prometheusExporter.Start(saved.Current.PrometheusPort);
 
             // Wire alert events → Prometheus counter
-            Services.GetRequiredService<AlertsService>().Events
-                .Subscribe(_ => prometheusExporter.RecordAlertFired());
+            var alertsService = Services.GetRequiredService<AlertsService>();
+            alertsService.Events.Subscribe(_ => prometheusExporter.RecordAlertFired());
+
+            // Wire alert events → events table (bridge)
+            var eventWriter = Services.GetRequiredService<IEventWriter>();
+            alertsService.Events.Subscribe(alert =>
+            {
+                var eventType = alert.Rule.Metric switch
+                {
+                    AlertMetric.CpuPercent  => EventType.CpuHigh,
+                    AlertMetric.RamPercent  => EventType.MemHigh,
+                    AlertMetric.GpuPercent  => EventType.GpuHigh,
+                    _                       => "alert"
+                };
+                var severity = alert.Rule.Severity switch
+                {
+                    AlertSeverity.Critical => EventSeverity.Critical,
+                    AlertSeverity.Warning  => EventSeverity.Warning,
+                    _                      => EventSeverity.Info
+                };
+                _ = eventWriter.InsertEventAsync(
+                    eventType, severity,
+                    alert.Rule.Metric.ToString().ToLowerInvariant(), alert.Value,
+                    alert.Rule.Threshold, alert.Description);
+            });
+
+            // Wire anomaly detection → Prometheus counter
+            anomalyService.AnomalyDetected
+                .Subscribe(_ => prometheusExporter.RecordAnomalyDetected());
 
             // System-tray icon
             SetupTrayIcon(desktop);
@@ -248,11 +280,28 @@ public class App : Application
                 Rollup1mRetention      = TimeSpan.FromDays(s.MetricsRollup1mDays),
                 Rollup5mRetention      = TimeSpan.FromDays(s.MetricsRollup5mDays),
                 Rollup1hRetention      = TimeSpan.FromDays(s.MetricsRollup1hDays),
+                EventsRetention        = TimeSpan.FromDays(s.MetricsEventsRetentionDays),
             };
         });
         services.AddSingleton<MetricsStore>();
         services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
+        services.AddSingleton<IEventWriter>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<MetricsRollupService>();
+
+        // -- Anomaly detection --
+        services.AddSingleton<AnomalyDetectionConfig>(sp =>
+        {
+            var s = sp.GetRequiredService<AppSettings>();
+            var cfg = new AnomalyDetectionConfig
+            {
+                Enabled                        = s.AnomalyDetectionEnabled,
+                CooldownSeconds                = s.AnomalyCooldownSeconds,
+                NewConnectionGracePeriodSeconds = s.AnomalyNewConnGracePeriodSec,
+            };
+            cfg.ApplySensitivity(s.AnomalySensitivity);
+            return cfg;
+        });
+        services.AddSingleton<AnomalyDetectionService>();
 
         // -- Telemetry --
         services.AddSingleton<PrometheusExporter>();

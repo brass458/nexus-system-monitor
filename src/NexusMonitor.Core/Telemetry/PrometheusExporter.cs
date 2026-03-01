@@ -22,6 +22,7 @@ public sealed class PrometheusExporter : IDisposable
     private CancellationTokenSource? _cts;
     private Task?                   _loop;
     private long                    _alertEventsTotal;
+    private long                    _anomalyEventsTotal;
 
     public bool IsRunning => _listener is { IsListening: true };
 
@@ -33,6 +34,10 @@ public sealed class PrometheusExporter : IDisposable
     /// <summary>Increments the <c>nexus_alert_events_total</c> counter.
     /// Wire to <c>AlertsService.Events.Subscribe(_ => exporter.RecordAlertFired())</c>.</summary>
     public void RecordAlertFired() => Interlocked.Increment(ref _alertEventsTotal);
+
+    /// <summary>Increments the <c>nexus_anomaly_events_total</c> counter.
+    /// Wire to <c>AnomalyDetectionService.AnomalyDetected.Subscribe(_ => exporter.RecordAnomalyDetected())</c>.</summary>
+    public void RecordAnomalyDetected() => Interlocked.Increment(ref _anomalyEventsTotal);
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -229,6 +234,11 @@ public sealed class PrometheusExporter : IDisposable
         Header(sb, "nexus_alert_events_total", "counter",
             "Total alert threshold breaches since application start");
         sb.AppendLine($"nexus_alert_events_total {Interlocked.Read(ref _alertEventsTotal)}");
+
+        // ── Anomaly Detection ─────────────────────────────────────────────
+        Header(sb, "nexus_anomaly_events_total", "counter",
+            "Total anomaly events detected since application start");
+        sb.AppendLine($"nexus_anomaly_events_total {Interlocked.Read(ref _anomalyEventsTotal)}");
 
         return sb.ToString();
     }

@@ -580,6 +580,85 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== ANOMALY DETECTION ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Anomaly Detection" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Enable toggle -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Automatic Anomaly Detection" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Detects CPU/memory/GPU spikes, network anomalies, and new connections via statistical analysis"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding AnomalyDetectionEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Sensitivity -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Sensitivity" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Low = fewer alerts  ·  High = more alerts (may include false positives)"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:SettingsViewModel.AnomalySensitivities}"
+                    SelectedItem="{Binding AnomalySensitivity}"/>
+        </Grid>
+
+        <!-- Cooldown -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Cooldown (seconds)" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Minimum time between repeated events for the same metric"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <NumericUpDown Grid.Column="1" Width="110" VerticalAlignment="Center"
+                         Value="{Binding AnomalyCooldownSeconds}"
+                         Minimum="10" Maximum="3600" Increment="10"
+                         FormatString="0"/>
+        </Grid>
+
+        <!-- Events retention -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Events Retention (days)" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="How long to keep detected events in the database"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <NumericUpDown Grid.Column="1" Width="110" VerticalAlignment="Center"
+                         Value="{Binding MetricsEventsRetentionDays}"
+                         Minimum="1" Maximum="3650" Increment="30"
+                         FormatString="0"/>
+        </Grid>
+
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap">
+          <Run Text="Note: "/>
+          <Run Text="Sensitivity and cooldown changes take effect on next application restart. View detected anomalies in the History tab."
+               Foreground="{StaticResource TextTertiaryBrush}"/>
+        </TextBlock>
+
+      </StackPanel>
+    </Border>
+
     <!-- ===== TELEMETRY ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

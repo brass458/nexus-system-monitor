@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:conv="using:NexusMonitor.UI.Converters"
              x:Class="NexusMonitor.UI.Views.HistoryView"
              x:DataType="vm:HistoryViewModel"
              x:CompileBindings="False">
@@ -304,6 +305,130 @@
                                Foreground="{StaticResource TextSecondaryBrush}"
                                TextAlignment="Right"
                                FontFamily="{StaticResource FontMono}"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+          </StackPanel>
+        </Border>
+
+        <!-- ── Events Timeline ── -->
+        <Border Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="{StaticResource CornerLG}"
+                BorderBrush="{StaticResource GlassBorderBrush}"
+                BorderThickness="1"
+                Padding="16,12">
+          <StackPanel Spacing="8">
+
+            <!-- Card header: title + event count + type filter -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Events Timeline"
+                           FontSize="{DynamicResource NxFont13}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                <!-- Count badge -->
+                <Border Background="{DynamicResource AccentBlueDimBrush}"
+                        BorderBrush="{DynamicResource AccentBlueBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="8,2"
+                        IsVisible="{Binding EventCount, Converter={x:Static BoolConverters.Not}, ConverterParameter=0}">
+                  <TextBlock Text="{Binding EventCount}"
+                             FontSize="{DynamicResource NxFont11}"
+                             Foreground="{DynamicResource AccentBlueBrush}"
+                             FontFamily="{StaticResource FontMono}"/>
+                </Border>
+              </StackPanel>
+
+              <!-- Event type filter -->
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Filter:"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{StaticResource TextTertiaryBrush}"
+                           VerticalAlignment="Center"/>
+                <ComboBox Width="140"
+                          ItemsSource="{x:Static vm:HistoryViewModel.EventTypeFilters}"
+                          SelectedItem="{Binding EventTypeFilter}"
+                          FontSize="{DynamicResource NxFont11}"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- Empty state -->
+            <TextBlock Text="No events detected in this time range."
+                       FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextTertiaryBrush}"
+                       IsVisible="{Binding Events.Count, Converter={x:Static BoolConverters.Not}}"
+                       Margin="0,4,0,4"/>
+
+            <!-- Column headers -->
+            <Grid ColumnDefinitions="120,50,120,*"
+                  Margin="0,4,0,0"
+                  IsVisible="{Binding Events.Count}">
+              <TextBlock Grid.Column="0" Text="Time"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="1" Text="Sev"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="2" Text="Type"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="3" Text="Description"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         FontWeight="SemiBold"/>
+            </Grid>
+
+            <Border Height="1"
+                    Background="{StaticResource GlassBorderBrush}"
+                    IsVisible="{Binding Events.Count}"/>
+
+            <!-- Event rows -->
+            <ItemsControl ItemsSource="{Binding Events}"
+                          IsVisible="{Binding Events.Count}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="120,50,120,*" Margin="0,3">
+                    <!-- Time -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Timestamp.LocalDateTime, StringFormat='{}{0:MM/dd HH:mm:ss}'}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontFamily="{StaticResource FontMono}"/>
+                    <!-- Severity badge -->
+                    <Border Grid.Column="1"
+                            CornerRadius="4"
+                            Padding="4,1"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Background="{Binding Severity,
+                                Converter={x:Static conv:EventSeverityToBrushConverter.Instance},
+                                ConverterParameter=dim}">
+                      <TextBlock Text="{Binding Severity,
+                                     Converter={x:Static conv:EventSeverityToLabelConverter.Instance}}"
+                                 FontSize="9"
+                                 FontWeight="Bold"
+                                 Foreground="White"/>
+                    </Border>
+                    <!-- Type -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding EventType}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontFamily="{StaticResource FontMono}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <!-- Description -->
+                    <TextBlock Grid.Column="3"
+                               Text="{Binding Description}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Description}"/>
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
