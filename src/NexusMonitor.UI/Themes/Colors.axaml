@@ -26,11 +26,12 @@
   <!-- Text accent — written from code; defaults to AccentBlue -->
   <SolidColorBrush x:Key="TextAccentBrush" Color="{StaticResource AccentBlue}" />
 
-  <!-- Text hierarchy — softer white primary, brighter secondary for legibility -->
+  <!-- Text hierarchy — full-opacity so text stays legible on any glass/wallpaper background.
+       Alpha was reduced for "softness" but caused invisible text on bright wallpapers. -->
   <Color x:Key="TextPrimary">#F5F5FA</Color>
-  <Color x:Key="TextSecondary">#A0EBEBF5</Color>
-  <Color x:Key="TextTertiary">#70EBEBF5</Color>
-  <Color x:Key="TextDisabled">#40EBEBF5</Color>
+  <Color x:Key="TextSecondary">#EBEBF5</Color>
+  <Color x:Key="TextTertiary">#C0EBEBF5</Color>
+  <Color x:Key="TextDisabled">#60EBEBF5</Color>
 
   <!-- Borders — refined for glass surfaces -->
   <Color x:Key="BorderSubtle">#20FFFFFF</Color>

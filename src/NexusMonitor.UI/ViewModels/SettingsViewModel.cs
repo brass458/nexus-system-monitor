@@ -543,7 +543,7 @@ public partial class SettingsViewModel : ViewModelBase
         Application.Current.Resources["GlassTextEffect"] = enabled
             ? (object)new DropShadowDirectionEffect
               {
-                  BlurRadius  = 16,
+                  BlurRadius  = 2,
                   Color       = Colors.Black,
                   ShadowDepth = 0,   // centred → expands in all directions = outline
                   Direction   = 315,

@@ -8,16 +8,14 @@
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     <StyleInclude Source="avares://NexusMonitor/Themes/NexusTheme.axaml" />
 
-    <!-- Liquid Glass text readability: drop shadow on all TextBlocks when glass is active,
-         so content-area text stays legible against any wallpaper bleeding through.
-         DataGridCell TextBlocks are explicitly excluded — the DataGrid has 1200+ cells and
-         applying Gaussian blur to each would devastate frame rate.
-         GlassTextEffect = DropShadowEffect when glass enabled, null when disabled. -->
-    <Style Selector="TextBlock">
+    <!-- Liquid Glass text readability: tight black glow on TextBlocks inside glass-surface
+         panels (sidebar, titlebar). Scoped selector avoids allocating offscreen bitmaps for
+         every TextBlock in the app (global style + large blur radius caused ~25 GB RAM use).
+         GlassTextEffect = DropShadowEffect(BlurRadius=2, ShadowDepth=0) when glass is enabled
+         — the tight centered shadow creates a 2px stroke-like outline without blurriness.
+         Cleared (null) when glass is disabled. -->
+    <Style Selector="Border.glass-surface TextBlock">
       <Setter Property="Effect" Value="{DynamicResource GlassTextEffect}" />
-    </Style>
-    <Style Selector="DataGridCell TextBlock">
-      <Setter Property="Effect" Value="{x:Null}" />
     </Style>
   </Application.Styles>
 
