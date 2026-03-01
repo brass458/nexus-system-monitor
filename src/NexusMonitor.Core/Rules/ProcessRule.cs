@@ -20,7 +20,21 @@ public class ProcessRule
     public Guid   Id                  { get; set; } = Guid.NewGuid();
     public string Name                { get; set; } = "New Rule";
     /// <summary>Process name to match (case-insensitive, * wildcard supported, no .exe needed).</summary>
-    public string ProcessNamePattern  { get; set; } = "";
+    private string _processNamePattern = "";
+    private string _normalizedPattern  = "";
+
+    public string ProcessNamePattern
+    {
+        get => _processNamePattern;
+        set
+        {
+            _processNamePattern = value;
+            // Pre-normalize once so MatchesWildcard never allocates per call
+            _normalizedPattern = (value ?? "")
+                .Replace(".exe", "", StringComparison.OrdinalIgnoreCase)
+                .ToLowerInvariant();
+        }
+    }
     public bool   IsEnabled           { get; set; } = true;
 
     // ── Persistent actions (applied on every process launch) ──────────────
@@ -53,17 +67,16 @@ public class ProcessRule
     }
 
     public bool Matches(string processName) =>
-        !string.IsNullOrWhiteSpace(ProcessNamePattern) &&
-        MatchesWildcard(processName, ProcessNamePattern);
+        !string.IsNullOrWhiteSpace(_normalizedPattern) &&
+        MatchesWildcard(processName, _normalizedPattern);
 
-    private static bool MatchesWildcard(string input, string pattern)
+    private static bool MatchesWildcard(string input, string normalizedPattern)
     {
-        // Strip .exe if present for comparison
+        // Input name: strip .exe and lowercase — the pattern is already normalized
         var name = System.IO.Path.GetFileNameWithoutExtension(input).ToLowerInvariant();
-        pattern = pattern.Replace(".exe", "", StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
-        if (!pattern.Contains('*')) return name == pattern;
+        if (!normalizedPattern.Contains('*')) return name == normalizedPattern;
         // Simple wildcard: split on * and check that each part appears in order
-        var parts = pattern.Split('*');
+        var parts = normalizedPattern.Split('*');
         int idx = 0;
         foreach (var part in parts)
         {

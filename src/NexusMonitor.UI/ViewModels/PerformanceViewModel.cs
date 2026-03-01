@@ -33,6 +33,7 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     private readonly ISystemMetricsProvider _metricsProvider;
     private IDisposable? _subscription;
     private int _initialIntervalMs = 1000;
+    private int _ringIdx;
     private const int HistoryLength = 60;
 
     // CPU
@@ -191,27 +192,45 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
         CpuTempC        = Math.Round(m.Cpu.TemperatureCelsius, 0);
         CpuModelName    = m.Cpu.ModelName;
         LogicalCores    = m.Cpu.LogicalCores;
-        Push(_cpuValues, m.Cpu.TotalPercent);
+        Push(_cpuValues, _ringIdx, m.Cpu.TotalPercent);
 
-        // Per-core heatmap cells
+        // Per-core heatmap cells — update in-place to avoid allocating a new list every tick
         if (m.Cpu.CorePercents.Count > 0)
-            CoreCells = m.Cpu.CorePercents
-                .Select((p, i) => new CoreCellViewModel(i, Math.Round(p, 0)))
-                .ToList();
+        {
+            var corePercents = m.Cpu.CorePercents;
+            var existing     = CoreCells;
+            if (existing.Count == corePercents.Count)
+            {
+                // Update in-place: replace only changed cells (record with{} allocates only for changed)
+                bool changed = false;
+                var updated = new CoreCellViewModel[corePercents.Count];
+                for (int ci = 0; ci < corePercents.Count; ci++)
+                {
+                    var rounded = Math.Round(corePercents[ci], 0);
+                    updated[ci] = existing[ci] with { Percent = rounded };
+                    if (updated[ci].Percent != existing[ci].Percent) changed = true;
+                }
+                if (changed) CoreCells = updated;
+            }
+            else
+            {
+                CoreCells = [.. corePercents.Select((p, i) => new CoreCellViewModel(i, Math.Round(p, 0)))];
+            }
+        }
 
         // Memory
         MemTotalGb = Math.Round(m.Memory.TotalBytes / 1e9, 1);
         MemUsedGb  = Math.Round(m.Memory.UsedBytes  / 1e9, 1);
         MemPercent = Math.Round(m.Memory.UsedPercent, 1);
-        Push(_memValues, m.Memory.UsedPercent);
+        Push(_memValues, _ringIdx, m.Memory.UsedPercent);
 
         // Disk (aggregate first disk)
         if (m.Disks.Count > 0)
         {
             DiskReadMbps  = Math.Round(m.Disks[0].ReadBytesPerSec  / 1e6, 1);
             DiskWriteMbps = Math.Round(m.Disks[0].WriteBytesPerSec / 1e6, 1);
-            Push(_diskReadValues,  m.Disks[0].ReadBytesPerSec  / 1e6);
-            Push(_diskWriteValues, m.Disks[0].WriteBytesPerSec / 1e6);
+            Push(_diskReadValues,  _ringIdx, m.Disks[0].ReadBytesPerSec  / 1e6);
+            Push(_diskWriteValues, _ringIdx, m.Disks[0].WriteBytesPerSec / 1e6);
         }
 
         // Per-drive summary — always update so stale rows are cleared when Disks is empty
@@ -236,9 +255,11 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
                 .First();
             NetSendMbps = Math.Round(activeNic.SendBytesPerSec / 1e6, 2);
             NetRecvMbps = Math.Round(activeNic.RecvBytesPerSec / 1e6, 2);
-            Push(_netSendValues, activeNic.SendBytesPerSec / 1e6);
-            Push(_netRecvValues, activeNic.RecvBytesPerSec / 1e6);
+            Push(_netSendValues, _ringIdx, activeNic.SendBytesPerSec / 1e6);
+            Push(_netRecvValues, _ringIdx, activeNic.RecvBytesPerSec / 1e6);
         }
+
+        _ringIdx++;
 
         // GPU
         if (m.Gpus.Count > 0)
@@ -263,11 +284,8 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
         SyncGpuDevices(m.Gpus);
     }
 
-    private static void Push(ObservableCollection<ObservableValue> col, double value)
-    {
-        col.RemoveAt(0);
-        col.Add(new ObservableValue(value));
-    }
+    private static void Push(ObservableCollection<ObservableValue> col, int ringIdx, double value)
+        => col[ringIdx % col.Count].Value = value;
 
     private void SyncDiskDevices(IReadOnlyList<DiskMetrics> disks)
     {

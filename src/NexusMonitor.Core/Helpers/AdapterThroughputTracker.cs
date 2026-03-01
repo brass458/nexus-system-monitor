@@ -12,12 +12,24 @@ public sealed class AdapterThroughputTracker
 {
     private long _prevSent, _prevRecv, _prevTicks;
 
+    // Cache the interface list — metadata is static; refresh every 30 s
+    private NetworkInterface[]? _cachedInterfaces;
+    private long _interfacesLastRefreshTicks;
+    private static readonly long InterfaceCacheTicks = TimeSpan.FromSeconds(30).Ticks;
+
     public AdapterThroughput Sample()
     {
         try
         {
+            long now30 = DateTime.UtcNow.Ticks;
+            if (_cachedInterfaces is null || (now30 - _interfacesLastRefreshTicks) >= InterfaceCacheTicks)
+            {
+                _cachedInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                _interfacesLastRefreshTicks = now30;
+            }
+
             long sent = 0, recv = 0;
-            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            foreach (var ni in _cachedInterfaces)
             {
                 if (ni.OperationalStatus != OperationalStatus.Up) continue;
                 if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;

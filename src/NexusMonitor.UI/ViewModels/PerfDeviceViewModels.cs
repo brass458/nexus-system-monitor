@@ -20,6 +20,9 @@ public abstract partial class PerfDeviceViewModel : ObservableObject
     [ObservableProperty] private bool _isDragging;
     [ObservableProperty] private bool _isSelected;
 
+    // Ring-buffer index — shared across all collections of this device VM
+    protected int _ringIdx;
+
     // 20-point mini sparkline for the sidebar list item
     public ObservableCollection<ObservableValue> MiniHistory { get; } =
         new(Enumerable.Range(0, 20).Select(_ => new ObservableValue(0)));
@@ -48,10 +51,16 @@ public abstract partial class PerfDeviceViewModel : ObservableObject
 
     public abstract void Update(SystemMetrics m);
 
-    protected static void Push(ObservableCollection<ObservableValue> col, double value)
+    // In-place ring-buffer update: mutates ObservableValue.Value in the oldest slot.
+    // LiveChartsCore detects Value changes via INotifyPropertyChanged — no allocation, no O(n) shift.
+    protected static void Push(ObservableCollection<ObservableValue> col, int ringIdx, double value)
+        => col[ringIdx % col.Count].Value = value;
+
+    protected void PushAll(double value, params ObservableCollection<ObservableValue>[] cols)
     {
-        col.RemoveAt(0);
-        col.Add(new ObservableValue(value));
+        foreach (var col in cols)
+            col[_ringIdx % col.Count].Value = value;
+        _ringIdx++;
     }
 
     protected static string FmtBytes(long bytes) => bytes switch
@@ -157,13 +166,32 @@ public sealed partial class CpuDeviceViewModel : PerfDeviceViewModel
 
         ValueDisplay    = $"{UtilPercent:F1}%";
         SubValueDisplay = SpeedDisplay;
-        Push(History,     m.Cpu.TotalPercent);
-        Push(MiniHistory, m.Cpu.TotalPercent);
+        Push(History,     _ringIdx, m.Cpu.TotalPercent);
+        Push(MiniHistory, _ringIdx, m.Cpu.TotalPercent);
+        _ringIdx++;
 
+        // Update in-place to avoid allocating a new list every tick
         if (m.Cpu.CorePercents.Count > 0)
-            CoreCells = m.Cpu.CorePercents
-                .Select((p, i) => new CoreCellViewModel(i, Math.Round(p, 0)))
-                .ToList();
+        {
+            var corePercents = m.Cpu.CorePercents;
+            var existing     = CoreCells;
+            if (existing.Count == corePercents.Count)
+            {
+                bool changed = false;
+                var updated = new CoreCellViewModel[corePercents.Count];
+                for (int ci = 0; ci < corePercents.Count; ci++)
+                {
+                    var rounded = Math.Round(corePercents[ci], 0);
+                    updated[ci] = existing[ci] with { Percent = rounded };
+                    if (updated[ci].Percent != existing[ci].Percent) changed = true;
+                }
+                if (changed) CoreCells = updated;
+            }
+            else
+            {
+                CoreCells = [.. corePercents.Select((p, i) => new CoreCellViewModel(i, Math.Round(p, 0)))];
+            }
+        }
     }
 }
 
@@ -236,8 +264,9 @@ public sealed partial class MemoryDeviceViewModel : PerfDeviceViewModel
 
         ValueDisplay    = $"{UsedPercent:F1}%";
         SubValueDisplay = $"{UsedGb:F1} / {TotalGb:F0} GB";
-        Push(History,     m.Memory.UsedPercent);
-        Push(MiniHistory, m.Memory.UsedPercent);
+        Push(History,     _ringIdx, m.Memory.UsedPercent);
+        Push(MiniHistory, _ringIdx, m.Memory.UsedPercent);
+        _ringIdx++;
     }
 }
 
@@ -333,9 +362,10 @@ public sealed partial class DiskDeviceViewModel : PerfDeviceViewModel
 
         ValueDisplay    = $"{ActivePercent:F0}%";
         SubValueDisplay = $"R:{ReadRateDisplay} W:{WriteRateDisplay}";
-        Push(ReadHistory,  d.ReadBytesPerSec  / 1e6);
-        Push(WriteHistory, d.WriteBytesPerSec / 1e6);
-        Push(MiniHistory,  ActivePercent);
+        Push(ReadHistory,  _ringIdx, d.ReadBytesPerSec  / 1e6);
+        Push(WriteHistory, _ringIdx, d.WriteBytesPerSec / 1e6);
+        Push(MiniHistory,  _ringIdx, ActivePercent);
+        _ringIdx++;
     }
 
     private static string FormatRate(long bps) => bps switch
@@ -433,9 +463,10 @@ public sealed partial class NetworkDeviceViewModel : PerfDeviceViewModel
 
         ValueDisplay    = RecvRateDisplay;
         SubValueDisplay = $"↑ {SendRateDisplay}";
-        Push(SendHistory, n.SendBytesPerSec / 1e6);
-        Push(RecvHistory, n.RecvBytesPerSec / 1e6);
-        Push(MiniHistory, Math.Min(100, (n.SendBytesPerSec + n.RecvBytesPerSec) / 1e6));
+        Push(SendHistory, _ringIdx, n.SendBytesPerSec / 1e6);
+        Push(RecvHistory, _ringIdx, n.RecvBytesPerSec / 1e6);
+        Push(MiniHistory, _ringIdx, Math.Min(100, (n.SendBytesPerSec + n.RecvBytesPerSec) / 1e6));
+        _ringIdx++;
     }
 
     private static string FormatRate(long bps) => bps switch
@@ -519,7 +550,8 @@ public sealed partial class GpuDeviceViewModel : PerfDeviceViewModel
 
         ValueDisplay    = $"{UsagePercent:F1}%";
         SubValueDisplay = $"{DedicatedUsedGb:F1} / {DedicatedTotalGb:F0} GB VRAM";
-        Push(History,     g.UsagePercent);
-        Push(MiniHistory, g.UsagePercent);
+        Push(History,     _ringIdx, g.UsagePercent);
+        Push(MiniHistory, _ringIdx, g.UsagePercent);
+        _ringIdx++;
     }
 }

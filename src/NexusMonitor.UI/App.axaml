@@ -7,6 +7,16 @@
     <FluentTheme />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     <StyleInclude Source="avares://NexusMonitor/Themes/NexusTheme.axaml" />
+
+    <!-- Liquid Glass text readability: drop shadow applied only to TextBlocks inside
+         glass-surface panels (sidebar, titlebar). Content-area TextBlocks sit on opaque
+         backgrounds and don't need the shadow — scoping avoids 1200+ Gaussian blur passes
+         per frame in the process DataGrid.
+         GlassTextEffect is set to a DropShadowEffect in SettingsViewModel.ApplyGlass(enabled=true)
+         and cleared (null) when glass is disabled. -->
+    <Style Selector="Border.glass-surface TextBlock">
+      <Setter Property="Effect" Value="{DynamicResource GlassTextEffect}" />
+    </Style>
   </Application.Styles>
 
 </Application>

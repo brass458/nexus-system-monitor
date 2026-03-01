@@ -40,9 +40,11 @@ public sealed class ProBalanceService : IDisposable
     {
         if (_running) return;
         _running = true;
-        _subscription = Observable
-            .Timer(TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
-            .SelectMany(_ => Observable.FromAsync(ct => _processProvider.GetProcessesAsync(ct)))
+        // Subscribe to the shared multicast stream (1 s interval) and sample at 500 ms.
+        // This reuses the existing provider stream rather than creating an independent poll.
+        _subscription = _processProvider
+            .GetProcessStream(TimeSpan.FromSeconds(1))
+            .Sample(TimeSpan.FromMilliseconds(500))
             .Subscribe(OnTick, ex => { /* swallow — loop must not crash */ });
         _events.OnNext(new ProBalanceEvent(
             ProBalanceEventType.Started, 0, string.Empty,

@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.UI.Converters;
@@ -73,30 +74,43 @@ public class CpuHeatBrushConverter : IValueConverter
 {
     public static readonly CpuHeatBrushConverter Instance = new();
 
+    // Pre-built frozen brushes at 5% intervals (0%, 5%, 10%, …, 100%) — 21 entries.
+    // Avoids allocating a new SolidColorBrush on every DataGrid cell per tick.
+    private static readonly ImmutableSolidColorBrush[] _brushTable = BuildBrushTable();
+
+    private static ImmutableSolidColorBrush[] BuildBrushTable()
+    {
+        var table = new ImmutableSolidColorBrush[21];
+        for (int i = 0; i <= 20; i++)
+        {
+            double t = i / 20.0;   // 0..1
+            Color color;
+            if (t < 0.5)
+            {
+                var u = t * 2;
+                color = new Color(255,
+                    (byte)(0x34 + (0xFF - 0x34) * u),
+                    (byte)(0xC7 + (0x9F - 0xC7) * u),
+                    (byte)(0x59 + (0x0A - 0x59) * u));
+            }
+            else
+            {
+                var u = (t - 0.5) * 2;
+                color = new Color(255, 0xFF,
+                    (byte)(0x9F + (0x45 - 0x9F) * u),
+                    (byte)(0x0A + (0x3A - 0x0A) * u));
+            }
+            table[i] = new ImmutableSolidColorBrush(color);
+        }
+        return table;
+    }
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not double pct) return Brushes.Transparent;
-        var t = Math.Clamp(pct / 100.0, 0, 1);
-        Color color;
-        if (t < 0.5)
-        {
-            // green (#34C759) → orange (#FF9F0A)
-            var u = t * 2;
-            color = new Color(255,
-                (byte)(0x34 + (0xFF - 0x34) * u),
-                (byte)(0xC7 + (0x9F - 0xC7) * u),
-                (byte)(0x59 + (0x0A - 0x59) * u));
-        }
-        else
-        {
-            // orange (#FF9F0A) → red (#FF453A)
-            var u = (t - 0.5) * 2;
-            color = new Color(255,
-                0xFF,
-                (byte)(0x9F + (0x45 - 0x9F) * u),
-                (byte)(0x0A + (0x3A - 0x0A) * u));
-        }
-        return new SolidColorBrush(color);
+        // Quantize to nearest 5% step and index into pre-built table
+        int idx = (int)Math.Round(Math.Clamp(pct, 0, 100) / 5.0);
+        return _brushTable[idx];
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

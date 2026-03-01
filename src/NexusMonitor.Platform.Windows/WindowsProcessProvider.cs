@@ -18,53 +18,125 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
     private readonly Dictionary<int, (TimeSpan cpu, DateTime time)> _cpuSamples = new();
     // IO delta tracking: pid → (readBytes, writeBytes, sampleTime)
     private readonly Dictionary<int, (ulong read, ulong write, DateTime time)> _ioSamples = new();
-    // Stable per-PID caches (username and commandline never change for a given PID)
+    // Stable per-PID caches (never change for the lifetime of a running process)
     private readonly Dictionary<int, string> _userNameCache    = new();
     private readonly Dictionary<int, string> _commandLineCache = new();
+    private readonly Dictionary<int, int>    _parentPidCache   = new();
+    private readonly Dictionary<int, bool>   _elevationCache   = new();
+    private readonly Dictionary<int, string> _imagePathCache   = new();
+    // Stable per-exe description cache (keyed by imagePath — one entry per unique executable)
+    private readonly Dictionary<string, string> _descriptionCache = new();
+    // Slow-changing per-PID properties (refresh every 10 ticks to avoid 300 extra syscalls/tick)
+    private readonly Dictionary<int, long>           _affinityCache    = new();
+    private readonly Dictionary<int, IoPriority>     _ioPriorityCache  = new();
+    private readonly Dictionary<int, MemoryPriority> _memPriorityCache = new();
+    private readonly Dictionary<int, bool>           _effModeCache     = new();
+    private int _fullRefreshCounter;
+    // Process category: never changes for a running process — cached on first encounter
+    private readonly Dictionary<int, ProcessCategory> _categoryCache = new();
+
+    // Serializes concurrent Snapshot() calls (timer tick vs GetProcessesAsync)
+    private readonly object _snapshotLock = new();
+
+    // Shared multicast observable — all callers share one timer + one Snapshot() call per tick
+    private IObservable<IReadOnlyList<ProcessInfo>>? _shared;
+    private readonly object _sharedLock = new();
 
     private static readonly int s_processorCount = Math.Max(1, Environment.ProcessorCount);
     private static readonly int s_currentPid     = Environment.ProcessId;
 
     // ─── IProcessProvider ─────────────────────────────────────────────────────
 
-    public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval) =>
-        // Observable.Timer fires immediately (delay=0) then on each interval tick,
-        // always on a thread-pool thread — never blocks the UI thread at subscription time.
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot());
+    public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                // One timer + one Snapshot() per tick, shared across all subscribers
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<IReadOnlyList<ProcessInfo>> GetProcessesAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<ProcessInfo>>(() => Snapshot(), ct);
 
     // ─── Snapshot ─────────────────────────────────────────────────────────────
 
-    private List<ProcessInfo> Snapshot()
+    /// <summary>
+    /// Takes ONE system-wide thread snapshot and returns a pid→threadCount dictionary.
+    /// This avoids calling p.Threads.Count per process, which internally calls
+    /// CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) for every process (~300+ times/tick).
+    /// </summary>
+    private static Dictionary<int, int> BuildThreadCountDictionary()
     {
-        var now = DateTime.UtcNow;
-        var procs = Process.GetProcesses();
-        var result = new List<ProcessInfo>(procs.Length);
-
-        foreach (var p in procs)
+        var dict = new Dictionary<int, int>();
+        nint hSnap = Kernel32.CreateToolhelp32Snapshot(Kernel32.TH32CS_SNAPTHREAD, 0);
+        if (hSnap == Kernel32.INVALID_HANDLE_VALUE) return dict;
+        try
         {
-            try   { result.Add(Build(p, now)); }
-            catch { /* process exited between enum and open */ }
-            finally { p.Dispose(); }
+            var entry = new THREADENTRY32 { dwSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<THREADENTRY32>() };
+            if (Kernel32.Thread32First(hSnap, ref entry))
+            {
+                do
+                {
+                    int pid = (int)entry.th32OwnerProcessID;
+                    dict.TryGetValue(pid, out int count);
+                    dict[pid] = count + 1;
+                }
+                while (Kernel32.Thread32Next(hSnap, ref entry));
+            }
         }
-
-        // Evict stale sample entries for dead processes
-        var alive = new HashSet<int>(result.Select(r => r.Pid));
-        foreach (var stale in _cpuSamples.Keys.Where(k => !alive.Contains(k)).ToList())
-        {
-            _cpuSamples.Remove(stale);
-            _ioSamples.Remove(stale);
-            _userNameCache.Remove(stale);
-            _commandLineCache.Remove(stale);
-        }
-
-        return result;
+        finally { Kernel32.CloseHandle(hSnap); }
+        return dict;
     }
 
-    private ProcessInfo Build(Process p, DateTime now)
+    private List<ProcessInfo> Snapshot()
+    {
+        lock (_snapshotLock)
+        {
+            var now = DateTime.UtcNow;
+            var threadCounts = BuildThreadCountDictionary();
+            var procs = Process.GetProcesses();
+            var result = new List<ProcessInfo>(procs.Length);
+
+            foreach (var p in procs)
+            {
+                try   { result.Add(Build(p, now, threadCounts)); }
+                catch { /* process exited between enum and open */ }
+                finally { p.Dispose(); }
+            }
+
+            // Evict stale sample entries for dead processes
+            var alive = new HashSet<int>(result.Select(r => r.Pid));
+            foreach (var stale in _cpuSamples.Keys.Where(k => !alive.Contains(k)).ToList())
+            {
+                _cpuSamples.Remove(stale);
+                _ioSamples.Remove(stale);
+                _userNameCache.Remove(stale);
+                _commandLineCache.Remove(stale);
+                _parentPidCache.Remove(stale);
+                _elevationCache.Remove(stale);
+                _imagePathCache.Remove(stale);
+                _affinityCache.Remove(stale);
+                _ioPriorityCache.Remove(stale);
+                _memPriorityCache.Remove(stale);
+                _effModeCache.Remove(stale);
+                _categoryCache.Remove(stale);
+                // _descriptionCache is keyed by imagePath and shared across PIDs — not evicted here
+            }
+
+            _fullRefreshCounter++;
+            return result;
+        }
+    }
+
+    private ProcessInfo Build(Process p, DateTime now, Dictionary<int, int> threadCounts)
     {
         int  pid         = p.Id;
         bool accessDenied= false;
@@ -99,17 +171,21 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         catch { }
 
         // ── Thread / handle counts ────────────────────────────────────────────
-        int threadCount = 0, handleCount = 0;
-        try { threadCount = p.Threads.Count; }  catch { }
-        try { handleCount = p.HandleCount;   }  catch { }
+        // threadCount: looked up from the single system-wide snapshot (no per-process overhead)
+        threadCounts.TryGetValue(pid, out int threadCount);
+        int handleCount = 0;
+        try { handleCount = p.HandleCount; } catch { }
 
         // ── Start time ────────────────────────────────────────────────────────
         DateTime startTime = default;
         try { startTime = p.StartTime.ToUniversalTime(); } catch { }
 
-        // ── Image path (best-effort) ──────────────────────────────────────────
-        string imagePath = string.Empty;
-        try { imagePath = p.MainModule?.FileName ?? string.Empty; } catch { }
+        // ── Image path (cached — never changes for a running process) ─────────
+        if (!_imagePathCache.TryGetValue(pid, out string? imagePath))
+        {
+            try { imagePath = p.MainModule?.FileName ?? string.Empty; } catch { imagePath = string.Empty; }
+            _imagePathCache[pid] = imagePath;
+        }
 
         // ── P/Invoke supplement: IO counters, parent PID, elevation, username, cmdline ──
         long          ioReadSec         = 0, ioWriteSec = 0;
@@ -122,6 +198,12 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         MemoryPriority memoryPriority   = MemoryPriority.Normal;
         bool          isEfficiencyMode  = false;
 
+        // Determine which cached static values need a process handle
+        bool needParent    = !_parentPidCache.ContainsKey(pid);
+        bool needElevation = !_elevationCache.ContainsKey(pid);
+        bool needUser      = !_userNameCache.ContainsKey(pid);
+        bool needCmdline   = !_commandLineCache.ContainsKey(pid);
+
         nint hProcess = Kernel32.OpenProcess(
             Kernel32.PROCESS_QUERY_LIMITED_INFO | Kernel32.PROCESS_VM_READ,
             false, (uint)pid);
@@ -130,7 +212,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         {
             try
             {
-                // IO counters with delta
+                // IO counters with delta (sampled every tick)
                 if (Kernel32.GetProcessIoCounters(hProcess, out IO_COUNTERS io))
                 {
                     if (_ioSamples.TryGetValue(pid, out var prevIo))
@@ -145,49 +227,93 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                     _ioSamples[pid] = (io.ReadTransferCount, io.WriteTransferCount, now);
                 }
 
-                // Parent PID via NtQueryInformationProcess
-                parentPid = GetParentPid(hProcess);
+                // Parent PID — cached: never changes for a running process
+                if (needParent)
+                    _parentPidCache[pid] = parentPid = GetParentPid(hProcess);
+                else
+                    parentPid = _parentPidCache[pid];
 
-                // Elevation via token
-                isElevated = GetIsElevated(hProcess);
+                // Elevation — cached: admin token doesn't change mid-session
+                if (needElevation)
+                    _elevationCache[pid] = isElevated = GetIsElevated(hProcess);
+                else
+                    isElevated = _elevationCache[pid];
 
                 // Username (cached — never changes for a given PID)
-                if (!_userNameCache.TryGetValue(pid, out userName!))
+                if (needUser)
                     _userNameCache[pid] = userName = GetUserName(hProcess);
+                else
+                    userName = _userNameCache[pid];
 
                 // CommandLine (cached)
-                if (!_commandLineCache.TryGetValue(pid, out commandLine!))
+                if (needCmdline)
                     _commandLineCache[pid] = commandLine = GetCommandLine(hProcess);
+                else
+                    commandLine = _commandLineCache[pid];
             }
             finally { Kernel32.CloseHandle(hProcess); }
         }
-
-        // ── Phase 7: affinity, IO priority, memory priority, efficiency mode ──
-        // These require PROCESS_QUERY_INFORMATION (not LIMITED), so use a separate handle
-        nint hQuery = Kernel32.OpenProcess(
-            Kernel32.PROCESS_QUERY_INFORMATION,
-            false, (uint)pid);
-
-        if (hQuery != nint.Zero)
+        else
         {
-            try
-            {
-                if (GetProcessAffinityMask(hQuery, out nuint procAffinity, out _))
-                    affinityMask = (long)procAffinity;
-                ioPriority       = ReadIoPriority(hQuery);
-                memoryPriority   = ReadMemoryPriority(hQuery);
-                isEfficiencyMode = ReadEfficiencyMode(hQuery);
-            }
-            catch { /* access denied or process exited */ }
-            finally { Kernel32.CloseHandle(hQuery); }
+            // Handle open failed — use cached values if available
+            _parentPidCache.TryGetValue(pid, out parentPid);
+            _elevationCache.TryGetValue(pid, out isElevated);
+            _userNameCache.TryGetValue(pid, out userName!);
+            _commandLineCache.TryGetValue(pid, out commandLine!);
+            userName    ??= string.Empty;
+            commandLine ??= string.Empty;
         }
 
-        // ── File description (version info) ───────────────────────────────────
-        string description = string.Empty;
-        if (!string.IsNullOrEmpty(imagePath))
+        // ── Phase 7: affinity, IO priority, memory priority, efficiency mode ──
+        // These require PROCESS_QUERY_INFORMATION (not LIMITED), so use a separate handle.
+        // Cached: refresh on first encounter and every 10 ticks to save ~300 syscalls/tick.
+        bool needRefresh = !_affinityCache.ContainsKey(pid) || (_fullRefreshCounter % 10 == 0);
+        if (needRefresh)
         {
-            try { description = FileVersionInfo.GetVersionInfo(imagePath).FileDescription ?? string.Empty; }
-            catch { }
+            nint hQuery = Kernel32.OpenProcess(
+                Kernel32.PROCESS_QUERY_INFORMATION,
+                false, (uint)pid);
+            if (hQuery != nint.Zero)
+            {
+                try
+                {
+                    if (GetProcessAffinityMask(hQuery, out nuint procAffinity, out _))
+                    {
+                        affinityMask = (long)procAffinity;
+                        _affinityCache[pid] = affinityMask;
+                    }
+                    ioPriority             = ReadIoPriority(hQuery);
+                    _ioPriorityCache[pid]  = ioPriority;
+                    memoryPriority         = ReadMemoryPriority(hQuery);
+                    _memPriorityCache[pid] = memoryPriority;
+                    isEfficiencyMode       = ReadEfficiencyMode(hQuery);
+                    _effModeCache[pid]     = isEfficiencyMode;
+                }
+                catch { /* access denied or process exited */ }
+                finally { Kernel32.CloseHandle(hQuery); }
+            }
+        }
+        else
+        {
+            _affinityCache.TryGetValue(pid, out affinityMask);
+            _ioPriorityCache.TryGetValue(pid, out ioPriority);
+            _memPriorityCache.TryGetValue(pid, out memoryPriority);
+            _effModeCache.TryGetValue(pid, out isEfficiencyMode);
+        }
+
+        // ── File description (version info, cached per exe path) ──────────────
+        if (!_descriptionCache.TryGetValue(imagePath, out string? description))
+        {
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                try { description = FileVersionInfo.GetVersionInfo(imagePath).FileDescription ?? string.Empty; }
+                catch { description = string.Empty; }
+            }
+            else
+            {
+                description = string.Empty;
+            }
+            _descriptionCache[imagePath] = description;
         }
 
         string name = p.ProcessName;
@@ -201,7 +327,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             ImagePath             = imagePath,
             CommandLine           = commandLine,
             UserName              = userName,
-            Category              = Classify(pid, name, imagePath),
+            Category              = GetOrClassify(pid, name, imagePath),
             State                 = ProcessState.Running,
             StartTime             = startTime,
             CpuPercent            = cpuPercent,
@@ -266,6 +392,14 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
     }
 
     // ─── Process category classification ──────────────────────────────────────
+
+    private ProcessCategory GetOrClassify(int pid, string name, string imagePath)
+    {
+        if (_categoryCache.TryGetValue(pid, out var cached)) return cached;
+        var cat = Classify(pid, name, imagePath);
+        _categoryCache[pid] = cat;
+        return cat;
+    }
 
     private static ProcessCategory Classify(int pid, string name, string imagePath)
     {
@@ -543,6 +677,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             if (h == nint.Zero) throw new InvalidOperationException($"Cannot open process {pid}");
             try   { Kernel32.SetProcessAffinityMask(h, (nint)affinityMask); }
             finally { Kernel32.CloseHandle(h); }
+            lock (_snapshotLock) _affinityCache.Remove(pid);
         }, ct);
 
     public Task SetIoPriorityAsync(int pid, IoPriority priority, CancellationToken ct = default) =>
@@ -556,6 +691,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 NtSetInformationProcess(h, NtProcessInfoClass.ProcessIoPriority, ref value, sizeof(int));
             }
             finally { Kernel32.CloseHandle(h); }
+            lock (_snapshotLock) _ioPriorityCache.Remove(pid);
         }, ct);
 
     public Task SetMemoryPriorityAsync(int pid, MemoryPriority priority, CancellationToken ct = default) =>
@@ -576,6 +712,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 finally { Marshal.FreeHGlobal(buf); }
             }
             finally { Kernel32.CloseHandle(h); }
+            lock (_snapshotLock) _memPriorityCache.Remove(pid);
         }, ct);
 
     public Task TrimWorkingSetAsync(int pid, CancellationToken ct = default) =>
@@ -611,6 +748,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
                 finally { Marshal.FreeHGlobal(buf); }
             }
             finally { Kernel32.CloseHandle(h); }
+            lock (_snapshotLock) _effModeCache.Remove(pid);
         }, ct);
 
     public Task<IReadOnlyList<EnvironmentEntry>> GetEnvironmentAsync(int pid, CancellationToken ct = default)

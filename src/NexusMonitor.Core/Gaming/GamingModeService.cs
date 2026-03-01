@@ -79,11 +79,12 @@ public sealed class GamingModeService : IDisposable
         // -- Initial process throttle -----------------------------------------
         _ = ThrottleBackgroundProcessesAsync(gameProcessName ?? _settings.GamingModeGameProcess);
 
-        // -- Polling loop (re-apply to new processes every 2 s) ---------------
+        // -- Polling loop (re-apply to new processes every 2 s via shared stream) ------
         string capturedGameProcess = gameProcessName ?? _settings.GamingModeGameProcess;
-        _pollingSubscription = Observable
-            .Timer(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2))
-            .Subscribe(tick => { _ = ThrottleBackgroundProcessesAsync(capturedGameProcess); });
+        _pollingSubscription = _processProvider
+            .GetProcessStream(TimeSpan.FromSeconds(1))
+            .Sample(TimeSpan.FromSeconds(2))
+            .Subscribe(processes => { _ = ThrottleBackgroundProcessesAsync(capturedGameProcess, processes); });
 
         _statusMessages.OnNext("Gaming Mode activated");
     }
@@ -126,12 +127,12 @@ public sealed class GamingModeService : IDisposable
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private async Task ThrottleBackgroundProcessesAsync(string? gameProcess)
+    private async Task ThrottleBackgroundProcessesAsync(string? gameProcess, IReadOnlyList<ProcessInfo>? processes = null)
     {
         if (!_active) return;
         try
         {
-            var processes  = await _processProvider.GetProcessesAsync();
+            processes  ??= await _processProvider.GetProcessesAsync();
             var exclusions = _settings.GamingModeExclusions;
 
             var candidates = processes

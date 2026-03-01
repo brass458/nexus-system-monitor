@@ -36,6 +36,16 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private long   _cpuL2CacheBytes;
     private long   _cpuL3CacheBytes;
 
+    // CPU temperature — WMI query is expensive; cache it for 5 s
+    private double   _lastTempC;
+    private DateTime _lastTempSample = DateTime.MinValue;
+    private static readonly TimeSpan TempCacheDuration = TimeSpan.FromSeconds(5);
+
+    // CPU frequency — registry read; cache for 2 s (Windows updates ~every 1 s anyway)
+    private double   _lastFreqMhz;
+    private DateTime _lastFreqSample = DateTime.MinValue;
+    private static readonly TimeSpan FreqCacheDuration = TimeSpan.FromSeconds(2);
+
     // Disk (per-disk counters)
     private (string instance, PerformanceCounter read, PerformanceCounter write, PerformanceCounter active,
              PerformanceCounter? avgResponse)[] _diskCounters = [];
@@ -45,6 +55,15 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     // Network (all active adapters)
     private (string instance, PerformanceCounter send, PerformanceCounter recv)[] _netCounters = [];
+    // NetworkInterface metadata cache: static data refreshed every 30 s
+    private System.Net.NetworkInformation.NetworkInterface[]? _cachedNics;
+    private DateTime _nicsLastRefresh = DateTime.MinValue;
+    private static readonly TimeSpan NicsCacheDuration = TimeSpan.FromSeconds(30);
+
+    // Drive topology cache: refreshed every 60 s (drives rarely added/removed at runtime)
+    private DriveInfo[]? _cachedDrives;
+    private DateTime _drivesLastRefresh = DateTime.MinValue;
+    private static readonly TimeSpan DrivesCacheDuration = TimeSpan.FromSeconds(60);
 
     // Memory — one-shot cached detail
     private int    _memSpeedMhz;
@@ -68,11 +87,33 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private string _gpuDriverVersion   = string.Empty;
     private string _gpuPhysicalLocation = string.Empty;
 
+    // GPU — sample-result cache (2 s) + periodic re-enumeration (30 s)
+    private IReadOnlyList<GpuMetrics>? _gpuCachedResult;
+    private DateTime _gpuLastSampleTime      = DateTime.MinValue;
+    private DateTime _gpuLastReenumerateTime = DateTime.MinValue;
+    private static readonly TimeSpan GpuSampleCacheDuration    = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan GpuReenumerateDuration    = TimeSpan.FromSeconds(30);
+
+    // Shared multicast observable — all callers share one timer + one Sample() call per tick
+    private IObservable<SystemMetrics>? _shared;
+    private readonly object _sharedLock = new();
+
     // ─── ISystemMetricsProvider ───────────────────────────────────────────────
 
-    public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval) =>
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => Sample());
+    public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => Sample())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<SystemMetrics> GetMetricsAsync(CancellationToken ct = default) =>
         Task.Run(Sample, ct);
@@ -82,10 +123,13 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private SystemMetrics Sample()
     {
         EnsureInitialized();
+        // PERFORMANCE_INFORMATION is used by both SampleCpu and SampleMemory — call once here
+        var pi = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
+        PsApi.GetPerformanceInfo(ref pi, pi.cb);
         return new SystemMetrics
         {
-            Cpu            = SampleCpu(),
-            Memory         = SampleMemory(),
+            Cpu            = SampleCpu(pi),
+            Memory         = SampleMemory(pi),
             Disks          = SampleDisks(),
             NetworkAdapters= SampleNetwork(),
             Gpus           = SampleGpu(),
@@ -93,7 +137,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         };
     }
 
-    private CpuMetrics SampleCpu()
+    private CpuMetrics SampleCpu(PERFORMANCE_INFORMATION pi)
     {
         double total = 0;
         try { total = _cpuTotal?.NextValue() ?? 0; } catch { }
@@ -101,10 +145,6 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         var corePercents = new double[_cpuCores.Length];
         for (int i = 0; i < _cpuCores.Length; i++)
             try { corePercents[i] = _cpuCores[i]?.NextValue() ?? 0; } catch { }
-
-        // System-wide process/thread/handle counts from PERFORMANCE_INFORMATION
-        var pi = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
-        PsApi.GetPerformanceInfo(ref pi, pi.cb);
 
         return new CpuMetrics
         {
@@ -127,13 +167,10 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         };
     }
 
-    private MemoryMetrics SampleMemory()
+    private MemoryMetrics SampleMemory(PERFORMANCE_INFORMATION pi)
     {
         var ms = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
         Kernel32.GlobalMemoryStatusEx(ref ms);
-
-        var pi = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
-        PsApi.GetPerformanceInfo(ref pi, pi.cb);
 
         long pageSize = (long)pi.PageSize;
         long totalBytes = (long)ms.ullTotalPhys;
@@ -161,9 +198,16 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     private List<DiskMetrics> SampleDisks()
     {
-        var drives = DriveInfo.GetDrives()
-                              .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
-                              .ToList();
+        // Refresh drive topology at most every 60 s — drives rarely change at runtime
+        var dNow = DateTime.UtcNow;
+        if (_cachedDrives is null || (dNow - _drivesLastRefresh) >= DrivesCacheDuration)
+        {
+            _cachedDrives = DriveInfo.GetDrives()
+                                     .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
+                                     .ToArray();
+            _drivesLastRefresh = dNow;
+        }
+        var drives = _cachedDrives;
         var list = new List<DiskMetrics>();
 
         if (_diskCounters.Length == 0)
@@ -267,7 +311,14 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     {
         if (_netCounters.Length == 0) return [];
 
-        var nics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+        // Refresh adapter metadata (IPs, type, speed, DNS) at most every 30 s — it's static
+        var now = DateTime.UtcNow;
+        if (_cachedNics is null || (now - _nicsLastRefresh) >= NicsCacheDuration)
+        {
+            _cachedNics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            _nicsLastRefresh = now;
+        }
+        var nics = _cachedNics;
         var list  = new List<NetworkAdapterMetrics>();
 
         foreach (var (inst, sendCtr, recvCtr) in _netCounters)
@@ -477,92 +528,76 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         catch { _gpuName = string.Empty; }
 
         // 2. PDH: GPU Engine utilization (Windows 10 1803+, all GPU vendors)
-        try
+        // Enumerate instances once and reuse across all engine-type counter sets
+        string[] gpuEngineInstances = [];
+        try { gpuEngineInstances = new PerformanceCounterCategory("GPU Engine").GetInstanceNames(); }
+        catch { }
+
+        _gpuEngineCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_3D");
+        _gpuCopyCounters   = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_Copy");
+        _gpuDecodeCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_VideoDecode");
+        _gpuEncodeCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_VideoEncode");
+
+        // GPU adapter memory: enumerate instances ONCE for both dedicated + shared
+        string[] memInstances = [];
+        try { memInstances = new PerformanceCounterCategory("GPU Adapter Memory").GetInstanceNames(); }
+        catch { }
+
+        _gpuMemCounters    = InitAdapterMemCounters(memInstances, "Dedicated Usage");
+        _gpuSharedCounters = InitAdapterMemCounters(memInstances, "Shared Usage");
+
+        // Shared total (read once from "Shared Limit" counter)
+        foreach (var inst in memInstances)
         {
-            var cat       = new PerformanceCounterCategory("GPU Engine");
-            var instances = cat.GetInstanceNames();
-            // Each instance is like "pid_X_luid_0xY_phys_0_eng_0_engtype_3D"
-            // Collect all 3D engine instances across all PIDs for total utilization
-            var counters = new List<PerformanceCounter>();
-            foreach (var inst in instances)
+            try
             {
-                if (!inst.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase)) continue;
-                try
-                {
-                    var c = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
-                    c.NextValue(); // warm-up
-                    counters.Add(c);
-                }
-                catch { }
+                using var lim = new PerformanceCounter("GPU Adapter Memory", "Shared Limit", inst, readOnly: true);
+                _gpuSharedTotalBytes += (long)lim.NextValue();
             }
-            _gpuEngineCounters = counters.ToArray();
+            catch { }
         }
-        catch { _gpuEngineCounters = []; }
 
-        _gpuCopyCounters   = InitEngineCounters("engtype_Copy");
-        _gpuDecodeCounters = InitEngineCounters("engtype_VideoDecode");
-        _gpuEncodeCounters = InitEngineCounters("engtype_VideoEncode");
-
-        // GPU dedicated memory usage (Windows 10+, works on NVIDIA/AMD/Intel)
-        try
-        {
-            var memCat = new PerformanceCounterCategory("GPU Adapter Memory");
-            _gpuMemCounters = memCat.GetInstanceNames()
-                .Select(inst => new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", inst, readOnly: true))
-                .ToArray();
-            // Warm up — first read always returns 0
-            foreach (var c in _gpuMemCounters) c.NextValue();
-        }
-        catch { _gpuMemCounters = null; }
-
-        // GPU shared memory usage + total
-        try
-        {
-            var memCat    = new PerformanceCounterCategory("GPU Adapter Memory");
-            var memInsts  = memCat.GetInstanceNames();
-            _gpuSharedCounters = memInsts
-                .Select(inst =>
-                {
-                    var c = new PerformanceCounter("GPU Adapter Memory", "Shared Usage", inst, readOnly: true);
-                    try { c.NextValue(); } catch { }
-                    return c;
-                })
-                .ToArray();
-            // Shared total (read once from "Shared Limit" counter)
-            foreach (var inst in memInsts)
-            {
-                try
-                {
-                    using var lim = new PerformanceCounter("GPU Adapter Memory", "Shared Limit", inst, readOnly: true);
-                    _gpuSharedTotalBytes += (long)lim.NextValue();
-                }
-                catch { }
-            }
-        }
-        catch { _gpuSharedCounters = []; }
+        _gpuLastReenumerateTime = DateTime.UtcNow;
     }
 
     /// <summary>
     /// Reads current CPU clock speed from HKLM\…\CentralProcessor\0\~MHz.
     /// Windows updates this value every second; much faster than WMI.
+    /// Result is cached for <see cref="FreqCacheDuration"/> to avoid opening
+    /// the registry key on every metrics tick.
     /// </summary>
-    private static double SampleCpuFrequencyMhz()
+    private double SampleCpuFrequencyMhz()
     {
+        var now = DateTime.UtcNow;
+        if ((now - _lastFreqSample) < FreqCacheDuration)
+            return _lastFreqMhz;
         try
         {
             using var key = Registry.LocalMachine.OpenSubKey(
                 @"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
-            return System.Convert.ToDouble(key?.GetValue("~MHz") ?? 0);
+            _lastFreqMhz   = System.Convert.ToDouble(key?.GetValue("~MHz") ?? 0);
+            _lastFreqSample = now;
+            return _lastFreqMhz;
         }
-        catch { return 0; }
+        catch
+        {
+            _lastFreqSample = now;
+            return _lastFreqMhz;
+        }
     }
 
     /// <summary>
     /// Reads CPU temperature from ACPI thermal zones via WMI root\wmi.
     /// Returns the maximum zone temperature in Celsius, or 0 if unavailable.
+    /// Result is cached for <see cref="TempCacheDuration"/> to avoid a WMI
+    /// round-trip on every metrics tick.
     /// </summary>
-    private static double SampleCpuTemperatureC()
+    private double SampleCpuTemperatureC()
     {
+        var now = DateTime.UtcNow;
+        if ((now - _lastTempSample) < TempCacheDuration)
+            return _lastTempC;
+
         try
         {
             using var searcher = new ManagementObjectSearcher(
@@ -578,9 +613,15 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 double tempC = (tempK - 2732.0) / 10.0;
                 if (tempC > max) max = tempC;
             }
-            return max < 1.0 ? 0 : Math.Round(max, 1);
+            _lastTempC      = max < 1.0 ? 0 : Math.Round(max, 1);
+            _lastTempSample = now;
+            return _lastTempC;
         }
-        catch { return 0; }
+        catch
+        {
+            _lastTempSample = now;   // don't hammer WMI on failure either
+            return _lastTempC;
+        }
     }
 
     // ─── One-shot WMI cache helpers ────────────────────────────────────────────
@@ -734,35 +775,50 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         _  => code == 0 ? "Unknown" : $"Type {code}"
     };
 
-    private static PerformanceCounter[] InitEngineCounters(string engineType)
-    {
-        try
-        {
-            var cat      = new PerformanceCounterCategory("GPU Engine");
-            var counters = new List<PerformanceCounter>();
-            foreach (var inst in cat.GetInstanceNames())
-            {
-                if (!inst.Contains(engineType, StringComparison.OrdinalIgnoreCase)) continue;
-                try
-                {
-                    var c = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
-                    c.NextValue();
-                    counters.Add(c);
-                }
-                catch { }
-            }
-            return counters.ToArray();
-        }
-        catch { return []; }
-    }
-
     /// <summary>
     /// Sums GPU engine utilization counters and caps at 100%.
     /// Returns an empty list if no GPU was detected at init time.
+    /// Results are cached for 2 seconds; counters are re-enumerated every 30 seconds
+    /// to drop stale per-PID instances and pick up new ones.
     /// </summary>
     private IReadOnlyList<GpuMetrics> SampleGpu()
     {
         if (string.IsNullOrEmpty(_gpuName)) return [];
+
+        var now = DateTime.UtcNow;
+
+        // Periodic re-enumeration: drop stale per-PID counters, add new ones
+        if ((now - _gpuLastReenumerateTime) >= GpuReenumerateDuration)
+        {
+            foreach (var c in _gpuEngineCounters) c?.Dispose();
+            foreach (var c in _gpuCopyCounters)   c?.Dispose();
+            foreach (var c in _gpuDecodeCounters)  c?.Dispose();
+            foreach (var c in _gpuEncodeCounters)  c?.Dispose();
+            if (_gpuMemCounters != null) foreach (var c in _gpuMemCounters) c?.Dispose();
+            foreach (var c in _gpuSharedCounters)  c?.Dispose();
+
+            // Single enumeration of GPU Engine category
+            string[] gpuEngineInstances = [];
+            try { gpuEngineInstances = new PerformanceCounterCategory("GPU Engine").GetInstanceNames(); } catch { }
+
+            _gpuEngineCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_3D");
+            _gpuCopyCounters   = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_Copy");
+            _gpuDecodeCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_VideoDecode");
+            _gpuEncodeCounters = InitEngineCountersFromInstances(gpuEngineInstances, "engtype_VideoEncode");
+
+            // Re-enumerate GPU Adapter Memory once
+            string[] memInstances = [];
+            try { memInstances = new PerformanceCounterCategory("GPU Adapter Memory").GetInstanceNames(); } catch { }
+            _gpuMemCounters = InitAdapterMemCounters(memInstances, "Dedicated Usage");
+            _gpuSharedCounters = InitAdapterMemCounters(memInstances, "Shared Usage");
+
+            _gpuLastReenumerateTime = now;
+            _gpuCachedResult = null; // force fresh sample after re-enum
+        }
+
+        // Return cached result if still fresh
+        if (_gpuCachedResult is not null && (now - _gpuLastSampleTime) < GpuSampleCacheDuration)
+            return _gpuCachedResult;
 
         double usage3D = 0, usageCopy = 0, usageDecode = 0, usageEncode = 0;
         foreach (var c in _gpuEngineCounters)  try { usage3D     += c.NextValue(); } catch { }
@@ -774,15 +830,17 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         usageDecode = Math.Clamp(usageDecode, 0, 100);
         usageEncode = Math.Clamp(usageEncode, 0, 100);
 
-        long dedicatedUsed = _gpuMemCounters is { Length: > 0 }
-            ? (long)_gpuMemCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
-            : 0;
-        long sharedUsed = _gpuSharedCounters is { Length: > 0 }
-            ? (long)_gpuSharedCounters.Sum(c => { try { return (double)c.NextValue(); } catch { return 0d; } })
-            : 0;
+        long dedicatedUsed = 0;
+        if (_gpuMemCounters is { Length: > 0 })
+            foreach (var c in _gpuMemCounters)
+                try { dedicatedUsed += (long)c.NextValue(); } catch { }
 
-        return
-        [
+        long sharedUsed = 0;
+        if (_gpuSharedCounters is { Length: > 0 })
+            foreach (var c in _gpuSharedCounters)
+                try { sharedUsed += (long)c.NextValue(); } catch { }
+
+        _gpuCachedResult = [
             new GpuMetrics
             {
                 Name                      = _gpuName,
@@ -801,6 +859,41 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 PhysicalLocation          = _gpuPhysicalLocation,
             }
         ];
+        _gpuLastSampleTime = now;
+        return _gpuCachedResult;
+    }
+
+    private static PerformanceCounter[] InitEngineCountersFromInstances(string[] instances, string engineType)
+    {
+        var counters = new List<PerformanceCounter>();
+        foreach (var inst in instances)
+        {
+            if (!inst.Contains(engineType, StringComparison.OrdinalIgnoreCase)) continue;
+            try
+            {
+                var c = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
+                c.NextValue();
+                counters.Add(c);
+            }
+            catch { }
+        }
+        return counters.ToArray();
+    }
+
+    private static PerformanceCounter[] InitAdapterMemCounters(string[] instances, string counterName)
+    {
+        var counters = new List<PerformanceCounter>();
+        foreach (var inst in instances)
+        {
+            try
+            {
+                var c = new PerformanceCounter("GPU Adapter Memory", counterName, inst, readOnly: true);
+                c.NextValue();
+                counters.Add(c);
+            }
+            catch { }
+        }
+        return counters.ToArray();
     }
 
     private static int GetPhysicalCoreCount()

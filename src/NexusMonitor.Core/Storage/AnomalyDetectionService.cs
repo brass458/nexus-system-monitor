@@ -32,8 +32,8 @@ public sealed class AnomalyDetectionService : IDisposable
     private readonly HashSet<string> _seenEndpoints = new();
     private readonly DateTime        _startupUtc    = DateTime.UtcNow;
 
-    // ── Cooldown tracking: key = "{eventType}:{metricName}" ───────────────
-    private readonly Dictionary<string, DateTime> _lastFired = new();
+    // ── Cooldown tracking: tuple key avoids string interpolation allocation per call ──
+    private readonly Dictionary<(string EventType, string MetricName), DateTime> _lastFired = new();
 
     // ── Subscriptions ──────────────────────────────────────────────────────
     private IDisposable? _metricsSub;
@@ -237,14 +237,11 @@ public sealed class AnomalyDetectionService : IDisposable
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private bool IsCooldownElapsed(string eventType, string metricName)
-    {
-        var key = $"{eventType}:{metricName}";
-        return !_lastFired.TryGetValue(key, out var last)
-               || (DateTime.UtcNow - last).TotalSeconds >= _config.CooldownSeconds;
-    }
+        => !_lastFired.TryGetValue((eventType, metricName), out var last)
+           || (DateTime.UtcNow - last).TotalSeconds >= _config.CooldownSeconds;
 
     private void MarkCooldown(string eventType, string metricName)
-        => _lastFired[$"{eventType}:{metricName}"] = DateTime.UtcNow;
+        => _lastFired[(eventType, metricName)] = DateTime.UtcNow;
 
     private async Task FireEvent(
         string  eventType, int     severity,

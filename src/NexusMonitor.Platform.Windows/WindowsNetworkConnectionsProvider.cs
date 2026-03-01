@@ -28,15 +28,38 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
     // ── Per-connection EStats state ────────────────────────────────────────────
     // Key: (LocalAddr, LocalPort, RemoteAddr, RemotePort) for TCP4
     private readonly Dictionary<EStatsKey, EStatEntry> _stats = new();
+    // Track connections for which SetPerTcpConnectionEStats has already been called —
+    // the call is idempotent after the first enable, so skip it for known connections.
+    private readonly HashSet<EStatsKey> _enabledEStats = new();
 
     private readonly record struct EStatsKey(uint Local, uint LocalPort, uint Remote, uint RemotePort);
     private readonly record struct EStatEntry(ulong SendBytes, ulong RecvBytes, long Ticks);
 
+    // ── Process name cache (avoids Process.GetProcesses() per subscriber) ─────
+    private Dictionary<int, string> _processNameCache = [];
+    private DateTime _processNameCacheTime = DateTime.MinValue;
+    private static readonly TimeSpan ProcessNameCacheTtl = TimeSpan.FromSeconds(2);
+
+    // ── Shared multicast observable ────────────────────────────────────────────
+    private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
+    private readonly object _sharedLock = new();
+
     // ── Public interface ───────────────────────────────────────────────────────
 
-    public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval) =>
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => (IReadOnlyList<NetworkConnection>)Snapshot());
+    public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => (IReadOnlyList<NetworkConnection>)Snapshot())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<IReadOnlyList<NetworkConnection>> GetConnectionsAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<NetworkConnection>>(() => Snapshot(), ct);
@@ -60,7 +83,10 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
         // Prune cache entries for connections that no longer exist
         foreach (var k in _stats.Keys.Where(k => !seen.Contains(k)).ToList())
+        {
             _stats.Remove(k);
+            _enabledEStats.Remove(k);
+        }
 
         return result;
     }
@@ -249,12 +275,18 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
             dwRemotePort = row.dwRemotePort,
         };
 
-        // Enable EStats data collection (no-op if already on; fails silently
-        // for foreign-process connections without admin — that is expected).
-        var rw = new TCP_ESTATS_DATA_RW_v0 { EnableCollection = 1 };
-        IpHelper.SetPerTcpConnectionEStats(
-            ref tcpRow, IpHelper.TCP_ESTATS_TYPE.TcpConnectionEstatsData,
-            (nint)(&rw), 0, (uint)sizeof(TCP_ESTATS_DATA_RW_v0), 0);
+        var key = new EStatsKey(row.dwLocalAddr, row.dwLocalPort, row.dwRemoteAddr, row.dwRemotePort);
+
+        // Enable EStats data collection once per connection — idempotent after first call;
+        // skip the kernel transition for connections we have already enabled.
+        if (!_enabledEStats.Contains(key))
+        {
+            var rw = new TCP_ESTATS_DATA_RW_v0 { EnableCollection = 1 };
+            IpHelper.SetPerTcpConnectionEStats(
+                ref tcpRow, IpHelper.TCP_ESTATS_TYPE.TcpConnectionEstatsData,
+                (nint)(&rw), 0, (uint)sizeof(TCP_ESTATS_DATA_RW_v0), 0);
+            _enabledEStats.Add(key);
+        }
 
         // Read the cumulative byte counters.
         TCP_ESTATS_DATA_ROD_v0 rod = default;
@@ -266,7 +298,6 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
         if (hr != 0) return;   // EStats not available (needs elevation, or connection just opened)
 
-        var key  = new EStatsKey(row.dwLocalAddr, row.dwLocalPort, row.dwRemoteAddr, row.dwRemotePort);
         var now  = DateTime.UtcNow.Ticks;
 
         seen.Add(key);
@@ -288,8 +319,12 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private static Dictionary<int, string> GetProcessNames()
+    private Dictionary<int, string> GetProcessNames()
     {
+        var now = DateTime.UtcNow;
+        if (_processNameCache.Count > 0 && (now - _processNameCacheTime) < ProcessNameCacheTtl)
+            return _processNameCache;
+
         try
         {
             var procs = Process.GetProcesses();
@@ -299,9 +334,11 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
                 try { dict[p.Id] = p.ProcessName; } catch { }
                 p.Dispose();
             }
+            _processNameCache    = dict;
+            _processNameCacheTime = now;
             return dict;
         }
-        catch { return []; }
+        catch { return _processNameCache; }
     }
 
     // Port: DWORD stores a 16-bit value in network (big-endian) byte order.

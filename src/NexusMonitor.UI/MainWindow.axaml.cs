@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private double _specNy;  // smoothed normalised cursor y (0‥1)
     private DispatcherTimer? _shimmerTimer;
     private double _shimmerPhase; // 0‥2π, drives prismatic cycling
+    private bool   _shimmerEnabled; // tracks whether glass is logically active
 
     public MainWindow()
     {
@@ -60,7 +61,18 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             SetupNavDrag();
-            StartShimmerTimer();
+            // Shimmer timer is started only if glass is enabled (via SetGlassActive).
+            // SettingsViewModel.ApplyBackdropMode calls SetGlassActive after settings load.
+        };
+
+        // Pause shimmer when minimized, resume when restored
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property != WindowStateProperty) return;
+            if (WindowState == WindowState.Minimized)
+                _shimmerTimer?.Stop();
+            else if (_shimmerEnabled)
+                _shimmerTimer?.Start();
         };
     }
 
@@ -205,30 +217,42 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Slowly rotates the prismatic shimmer gradient direction across all
-    /// glass surfaces, creating the subtle "alive" iridescent quality
-    /// of Apple's Liquid Glass material.
+    /// Called by <see cref="SettingsViewModel"/> when the glass/backdrop setting changes.
+    /// Starts the shimmer timer when glass is active, stops it otherwise.
+    /// Also pauses automatically when the window is minimized.
     /// </summary>
-    private void StartShimmerTimer()
+    public void SetGlassActive(bool active)
     {
-        _shimmerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
-        _shimmerTimer.Tick += (_, _) =>
+        _shimmerEnabled = active;
+        if (active)
         {
-            _shimmerPhase += 0.015;        // full cycle ≈ 420 ticks ≈ 21s
-            if (_shimmerPhase > Math.PI * 2) _shimmerPhase -= Math.PI * 2;
+            if (_shimmerTimer is null)
+            {
+                _shimmerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+                _shimmerTimer.Tick += (_, _) =>
+                {
+                    _shimmerPhase += 0.015;        // full cycle ≈ 420 ticks ≈ 21s
+                    if (_shimmerPhase > Math.PI * 2) _shimmerPhase -= Math.PI * 2;
 
-            // Rotate the prismatic gradient direction slowly
-            double angle = _shimmerPhase;
-            double sx = 0.5 + 0.5 * Math.Cos(angle);
-            double sy = 0.5 + 0.5 * Math.Sin(angle);
-            double ex = 0.5 + 0.5 * Math.Cos(angle + Math.PI);
-            double ey = 0.5 + 0.5 * Math.Sin(angle + Math.PI);
+                    double angle = _shimmerPhase;
+                    double sx = 0.5 + 0.5 * Math.Cos(angle);
+                    double sy = 0.5 + 0.5 * Math.Sin(angle);
+                    double ex = 0.5 + 0.5 * Math.Cos(angle + Math.PI);
+                    double ey = 0.5 + 0.5 * Math.Sin(angle + Math.PI);
 
-            RotatePrismatic(TitlePrismatic, sx, sy, ex, ey);
-            RotatePrismatic(SidePrismatic,  sx, sy, ex, ey);
-            RotatePrismatic(ContentPrismatic, sx, sy, ex, ey);
-        };
-        _shimmerTimer.Start();
+                    RotatePrismatic(TitlePrismatic,   sx, sy, ex, ey);
+                    RotatePrismatic(SidePrismatic,    sx, sy, ex, ey);
+                    RotatePrismatic(ContentPrismatic, sx, sy, ex, ey);
+                };
+            }
+            // Only start if not minimized
+            if (WindowState != WindowState.Minimized)
+                _shimmerTimer.Start();
+        }
+        else
+        {
+            _shimmerTimer?.Stop();
+        }
     }
 
     private static void RotatePrismatic(Border? target, double sx, double sy, double ex, double ey)

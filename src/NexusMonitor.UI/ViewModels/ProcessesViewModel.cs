@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Services;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -21,12 +22,15 @@ namespace NexusMonitor.UI.ViewModels;
 public partial class ProcessesViewModel : ViewModelBase, IDisposable
 {
     private readonly IProcessProvider _processProvider;
+    private readonly AppSettings _appSettings;
     private readonly CancellationTokenSource _cts = new();
     private IDisposable? _subscription;
 
     // Master cache: all live processes keyed by PID.
     // Allows in-place property updates so the DataGrid never loses sort state or selection.
     private readonly Dictionary<int, ProcessRowViewModel> _allRows = new();
+    // Pre-allocated working dictionary reused each tick to avoid 300-entry allocs
+    private readonly Dictionary<int, ProcessInfo> _liveByPid = new(400);
 
     [ObservableProperty]
     private ObservableCollection<ProcessRowViewModel> _processes = [];
@@ -88,11 +92,12 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string _handleCountLabel = "";
 
-    public ProcessesViewModel(IProcessProvider processProvider)
+    public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings)
     {
         _processProvider = processProvider;
+        _appSettings     = appSettings;
         Title = "Processes";
-        StartMonitoring();
+        StartMonitoring(_appSettings.UpdateIntervalMs);
 
         WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, msg) =>
             Dispatcher.UIThread.InvokeAsync(() =>
@@ -100,12 +105,17 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 if (_allRows.TryGetValue(msg.Pid, out var row))
                     SelectedProcess = row;
             }));
+
+        // Restart process stream when the global update interval changes
+        WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.InvokeAsync(() => StartMonitoring((int)msg.Interval.TotalMilliseconds)));
     }
 
-    private void StartMonitoring()
+    private void StartMonitoring(int intervalMs)
     {
+        _subscription?.Dispose();
         _subscription = _processProvider
-            .GetProcessStream(TimeSpan.FromSeconds(1))
+            .GetProcessStream(TimeSpan.FromMilliseconds(intervalMs))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(UpdateProcessList);
     }
@@ -113,7 +123,10 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.
     private void UpdateProcessList(IReadOnlyList<ProcessInfo> processes)
     {
-        var liveByPid = processes.ToDictionary(p => p.Pid);
+        // Reuse pre-allocated dictionary to avoid 300-entry heap alloc each tick
+        _liveByPid.Clear();
+        foreach (var p in processes) _liveByPid[p.Pid] = p;
+        var liveByPid = _liveByPid;
 
         // ── 1. Update existing rows in-place; create rows for new PIDs ─────────
         foreach (var (pid, info) in liveByPid)
@@ -121,12 +134,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             if (_allRows.TryGetValue(pid, out var row))
             {
                 // Mutate observable properties — DataGrid keeps its sort & selection
-                row.CpuPercent         = info.CpuPercent;
-                row.WorkingSetBytes    = info.WorkingSetBytes;
-                row.IoReadBytesPerSec  = info.IoReadBytesPerSec;
-                row.IoWriteBytesPerSec = info.IoWriteBytesPerSec;
-                row.ThreadCount        = info.ThreadCount;
-                row.HandleCount        = info.HandleCount;
+                row.CpuPercent      = info.CpuPercent;
+                row.WorkingSetBytes = info.WorkingSetBytes;
+                row.SetIoRates(info.IoReadBytesPerSec, info.IoWriteBytesPerSec);
+                row.ThreadCount     = info.ThreadCount;
+                row.HandleCount     = info.HandleCount;
                 row.PushCpuHistory(info.CpuPercent);
             }
             else
@@ -597,13 +609,33 @@ public partial class ProcessRowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MemDisplay))]
     private long _workingSetBytes;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IoDisplay))]
+    // No [NotifyPropertyChangedFor(nameof(IoDisplay))] here — batched via SetIoRates()
+    // to avoid firing IoDisplay PropertyChanged twice per tick.
     private long _ioReadBytesPerSec;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IoDisplay))]
     private long _ioWriteBytesPerSec;
+
+    public long IoReadBytesPerSec
+    {
+        get => _ioReadBytesPerSec;
+        set => SetProperty(ref _ioReadBytesPerSec, value);
+    }
+
+    public long IoWriteBytesPerSec
+    {
+        get => _ioWriteBytesPerSec;
+        set => SetProperty(ref _ioWriteBytesPerSec, value);
+    }
+
+    /// <summary>
+    /// Updates both I/O rate fields and fires <see cref="IoDisplay"/> only once.
+    /// Avoids double PropertyChanged notification from the two backing fields.
+    /// </summary>
+    public void SetIoRates(long readPerSec, long writePerSec)
+    {
+        bool changed = SetProperty(ref _ioReadBytesPerSec,  readPerSec,  nameof(IoReadBytesPerSec))
+                     | SetProperty(ref _ioWriteBytesPerSec, writePerSec, nameof(IoWriteBytesPerSec));
+        if (changed) OnPropertyChanged(nameof(IoDisplay));
+    }
 
     [ObservableProperty] private int _threadCount;
     [ObservableProperty] private int _handleCount;
@@ -684,11 +716,40 @@ public class ProcessDetailViewModel : INotifyPropertyChanged, IDisposable
     private readonly PropertyChangedEventHandler _handler;
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    // Maps ProcessRowViewModel property names → ProcessDetailViewModel property names
+    // Only includes properties that update at runtime (static ones like Name/ImagePath excluded)
+    private static readonly Dictionary<string, string[]> _propMap = new()
+    {
+        [nameof(ProcessRowViewModel.CpuPercent)]        = [nameof(CpuPercent)],
+        [nameof(ProcessRowViewModel.WorkingSetBytes)]   = [nameof(WorkingSet)],
+        [nameof(ProcessRowViewModel.IoReadBytesPerSec)] = [nameof(ReadRate)],
+        [nameof(ProcessRowViewModel.IoWriteBytesPerSec)]= [nameof(WriteRate)],
+        // IoDisplay fires once (batched via SetIoRates) — map to both read/write display
+        [nameof(ProcessRowViewModel.IoDisplay)]         = [nameof(ReadRate), nameof(WriteRate)],
+        [nameof(ProcessRowViewModel.ThreadCount)]       = [nameof(Threads)],
+        [nameof(ProcessRowViewModel.HandleCount)]       = [nameof(Handles)],
+        [nameof(ProcessRowViewModel.PrivateBytes)]      = [nameof(PrivateBytes)],
+        [nameof(ProcessRowViewModel.VirtualBytes)]      = [nameof(VirtualBytes)],
+    };
+
     public ProcessDetailViewModel(ProcessRowViewModel row)
     {
         _row = row;
-        // Store the handler so we can unsubscribe it in Dispose()
-        _handler = (_, _) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+        // Forward only the properties that actually changed rather than re-evaluating all 20+
+        _handler = (_, e) =>
+        {
+            if (e.PropertyName is null)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+                return;
+            }
+            if (_propMap.TryGetValue(e.PropertyName, out var targets))
+            {
+                foreach (var t in targets)
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(t));
+            }
+            // Other properties (Name, ImagePath, etc.) don't change for a running process
+        };
         _row.PropertyChanged += _handler;
     }
 

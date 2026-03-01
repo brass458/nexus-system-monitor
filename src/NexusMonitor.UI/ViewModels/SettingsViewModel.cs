@@ -7,16 +7,24 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Services;
+using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.Messages;
+using NexusMonitor.UI.Services;
 using SkiaSharp;
 
 namespace NexusMonitor.UI.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase
 {
-    private readonly SettingsService    _settings;
-    private readonly PrometheusExporter _exporter;
+    private readonly SettingsService         _settings;
+    private readonly PrometheusExporter      _exporter;
+    private readonly AnomalyDetectionService _anomalyService;
+    private readonly AnomalyDetectionConfig  _anomalyConfig;
+    private readonly GlassAdaptiveService    _glassAdaptive;
+
+    // Luminance-derived min alpha floor (0x80–0xE0); null = feature disabled
+    private byte? _luminanceMinAlpha;
 
     // ── Appearance ────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isDarkTheme;
@@ -60,7 +68,11 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool   _showOverlayWidget;
 
     // ── Notifications ─────────────────────────────────────────────────────────
-    [ObservableProperty] private bool   _desktopNotificationsEnabled = true;
+    [ObservableProperty] private bool   _desktopNotificationsEnabled  = true;
+    [ObservableProperty] private bool   _anomalyNotificationsEnabled  = true;
+
+    // ── Smart Glass Tint ──────────────────────────────────────────────────────
+    [ObservableProperty] private bool _smartTintEnabled;
 
     // ── Anomaly Detection ─────────────────────────────────────────────────────
     [ObservableProperty] private bool    _anomalyDetectionEnabled;
@@ -133,11 +145,22 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
-    public SettingsViewModel(SettingsService settings, PrometheusExporter exporter)
+    public SettingsViewModel(
+        SettingsService         settings,
+        PrometheusExporter      exporter,
+        AnomalyDetectionService anomalyService,
+        AnomalyDetectionConfig  anomalyConfig,
+        GlassAdaptiveService    glassAdaptive)
     {
-        Title     = "Settings";
-        _settings = settings;
-        _exporter = exporter;
+        Title           = "Settings";
+        _settings       = settings;
+        _exporter       = exporter;
+        _anomalyService = anomalyService;
+        _anomalyConfig  = anomalyConfig;
+        _glassAdaptive  = glassAdaptive;
+
+        // Subscribe to luminance changes from GlassAdaptiveService
+        _glassAdaptive.LuminanceChanged += OnLuminanceChanged;
 
         // Load saved values via backing fields so partial callbacks don't fire during init
         _isDarkTheme        = settings.Current.IsDarkTheme;
@@ -160,6 +183,8 @@ public partial class SettingsViewModel : ViewModelBase
         _fontFamily         = settings.Current.FontFamily;
         _showOverlayWidget             = settings.Current.ShowOverlayWidget;
         _desktopNotificationsEnabled   = settings.Current.DesktopNotificationsEnabled;
+        _anomalyNotificationsEnabled   = settings.Current.AnomalyNotificationsEnabled;
+        _smartTintEnabled              = settings.Current.SmartTintEnabled;
 
         // Map stored CloseAction → index
         _closeActionIndex = Array.IndexOf(_closeActionValues, settings.Current.CloseAction);
@@ -205,7 +230,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settings.Current.IsGlassEnabled = value;
         _settings.Save();
-        ApplyGlass(value, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex);
+        ApplyGlass(value, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
         ApplySpecular(value, IsSpecularEnabled, SpecularIntensity);
         ApplyBackdropMode(value, BackdropBlurMode);
     }
@@ -214,28 +239,28 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settings.Current.GlassOpacity = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, value, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex);
+        ApplyGlass(IsGlassEnabled, value, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
     }
 
     partial void OnCustomWindowBgHexChanged(string value)
     {
         _settings.Current.CustomWindowBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex);
+        ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
     }
 
     partial void OnCustomSurfaceBgHexChanged(string value)
     {
         _settings.Current.CustomSurfaceBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex);
+        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex, _luminanceMinAlpha);
     }
 
     partial void OnCustomSidebarBgHexChanged(string value)
     {
         _settings.Current.CustomSidebarBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value);
+        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value, _luminanceMinAlpha);
     }
 
     partial void OnBackdropBlurModeChanged(string value)
@@ -348,22 +373,55 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.Save();
     }
 
+    partial void OnAnomalyNotificationsEnabledChanged(bool value)
+    {
+        _settings.Current.AnomalyNotificationsEnabled = value;
+        _settings.Save();
+    }
+
+    partial void OnSmartTintEnabledChanged(bool value)
+    {
+        _settings.Current.SmartTintEnabled = value;
+        _settings.Save();
+        if (value)
+            _glassAdaptive.Start();
+        else
+        {
+            _glassAdaptive.Stop();
+            _luminanceMinAlpha = null;
+            ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex);
+        }
+    }
+
+    private void OnLuminanceChanged(byte minAlpha)
+    {
+        _luminanceMinAlpha = minAlpha;
+        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, minAlpha);
+    }
+
     partial void OnAnomalyDetectionEnabledChanged(bool value)
     {
         _settings.Current.AnomalyDetectionEnabled = value;
         _settings.Save();
+        _anomalyConfig.Enabled = value;
+        if (value)
+            _anomalyService.Start();
+        else
+            _anomalyService.Stop();
     }
 
     partial void OnAnomalySensitivityChanged(string value)
     {
         _settings.Current.AnomalySensitivity = value;
         _settings.Save();
+        _anomalyConfig.ApplySensitivity(value);   // mutates in-place, takes effect next tick
     }
 
     partial void OnAnomalyCooldownSecondsChanged(decimal value)
     {
         _settings.Current.AnomalyCooldownSeconds = (int)value;
         _settings.Save();
+        _anomalyConfig.CooldownSeconds = (int)value;
     }
 
     partial void OnMetricsEventsRetentionDaysChanged(decimal value)
@@ -430,7 +488,8 @@ public partial class SettingsViewModel : ViewModelBase
         bool enabled, double opacity,
         string? customWindowBgHex  = null,
         string? customSurfaceBgHex = null,
-        string? customSidebarBgHex = null)
+        string? customSidebarBgHex = null,
+        byte?   luminanceMinAlpha  = null)
     {
         if (Application.Current is null) return;
 
@@ -448,9 +507,10 @@ public partial class SettingsViewModel : ViewModelBase
         byte bgAlpha = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
         SetBrush("BgBaseBrush", bgBase, bgAlpha);
 
-        // Content-area brushes: floor at 0xA0 (~63%) so text stays readable
+        // Content-area brushes: floor raised by wallpaper luminance when Smart Tint is active
+        byte floor = luminanceMinAlpha ?? 0xA0;
         byte contentAlpha = enabled
-            ? (byte)Math.Max(0xA0, (int)Math.Round(opacity * 255))
+            ? (byte)Math.Max(floor, (int)Math.Round(opacity * 255))
             : (byte)0xFF;
         SetBrush("BgPrimaryBrush",   bgSurface,   contentAlpha);
         SetBrush("BgSecondaryBrush", bgSecondary, contentAlpha);
@@ -475,6 +535,19 @@ public partial class SettingsViewModel : ViewModelBase
             : (byte)0xCC;
         Application.Current.Resources["OverlayBgBrush"] =
             new SolidColorBrush(new Color(overlayAlpha, 0x05, 0x05, 0x08));
+
+        // Text readability: dark glow on every TextBlock when glass is active
+        // so text stays legible over any wallpaper or bright backdrop.
+        Application.Current.Resources["GlassTextEffect"] = enabled
+            ? (object)new DropShadowDirectionEffect
+              {
+                  BlurRadius  = 8,
+                  Color       = Colors.Black,
+                  ShadowDepth = 0,   // centred → expands in all directions = outline
+                  Direction   = 315,
+                  Opacity     = 1.0,
+              }
+            : null;
     }
 
     private static Color TryParseColor(string? hex, Color fallback)
@@ -527,7 +600,12 @@ public partial class SettingsViewModel : ViewModelBase
         if (Application.Current?.ApplicationLifetime
                 is IClassicDesktopStyleApplicationLifetime desktop
             && desktop.MainWindow is Window main)
+        {
             main.TransparencyLevelHint = hints;
+            // Gate shimmer timer: run only when glass is visually active
+            if (main is NexusMonitor.UI.MainWindow nexusMain)
+                nexusMain.SetGlassActive(glassEnabled && mode != "None");
+        }
 
         if (_overlayWindow is not null)
         {

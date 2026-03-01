@@ -122,7 +122,7 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     private List<NetworkConnection> Filter(IReadOnlyList<NetworkConnection> src)
     {
         if (string.IsNullOrWhiteSpace(SearchText))
-            return [.. src];
+            return src is List<NetworkConnection> list ? list : [.. src];
 
         var ft = SearchText.Trim();
         return src.Where(c =>

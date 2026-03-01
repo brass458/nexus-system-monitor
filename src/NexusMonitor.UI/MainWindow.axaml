@@ -3,6 +3,7 @@
         xmlns:vm="using:NexusMonitor.UI.ViewModels"
         xmlns:views="using:NexusMonitor.UI.Views"
         xmlns:conv="using:NexusMonitor.UI.Converters"
+        xmlns:controls="using:NexusMonitor.UI.Controls"
         x:Class="NexusMonitor.UI.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Nexus Monitor"
@@ -67,6 +68,7 @@
 
     <!-- ===== TITLEBAR ===== -->
     <Border Grid.Row="0"
+            Classes="glass-surface"
             Height="52"
             Background="{DynamicResource GlassBgBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
@@ -174,6 +176,7 @@
 
       <!-- ===== LEFT SIDEBAR ===== -->
       <Border Grid.Column="0"
+              Classes="glass-surface"
               Background="{DynamicResource GlassBgBrush}"
               BorderBrush="{DynamicResource GlassBorderBrush}"
               BorderThickness="0,0,1,0"
@@ -358,6 +361,13 @@
       </Border>
 
     </Grid>
+
+    <!-- ===== IN-APP NOTIFICATION OVERLAY ===== -->
+    <!-- Spans entire window; host is pointer-transparent, individual toasts are hit-testable -->
+    <controls:NotificationHost x:Name="AppNotificationHost"
+                                Grid.Row="0" Grid.RowSpan="2"
+                                IsHitTestVisible="False"
+                                ZIndex="100"/>
 
   </Grid>
 </Window>
