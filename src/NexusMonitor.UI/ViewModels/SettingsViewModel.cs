@@ -69,11 +69,14 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PrometheusStatusText))]
+    [NotifyPropertyChangedFor(nameof(TelegrafConfig))]
     private decimal _prometheusPort = 9182m;
 
     public string PrometheusStatusText => PrometheusEnabled
         ? $"Active — scrape at http://localhost:{(int)PrometheusPort}/metrics"
         : "Disabled";
+
+    public string TelegrafConfig => TelegrafConfigGenerator.Generate((int)PrometheusPort);
 
     // ── Static lists ─────────────────────────────────────────────────────────
 

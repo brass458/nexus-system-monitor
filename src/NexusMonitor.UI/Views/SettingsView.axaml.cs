@@ -1,6 +1,9 @@
+using System.IO;
+using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI.Views;
@@ -84,6 +87,43 @@ public partial class SettingsView : UserControl
         if (applied)
             vm.CustomSidebarBgHex =
                 $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
+    }
+
+    // ── Telegraf config export ─────────────────────────────────────────────────
+
+    /// <summary>Copies the Telegraf config snippet to the system clipboard.</summary>
+    private async void OnCopyTelegrafConfigClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null)
+            await clipboard.SetTextAsync(vm.TelegrafConfig);
+    }
+
+    /// <summary>Opens a Save dialog and writes the Telegraf config as a .conf file.</summary>
+    private async void OnSaveTelegrafConfigClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var sp = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (sp is null) return;
+
+        var file = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title             = "Save Telegraf Configuration",
+            SuggestedFileName = "nexus-monitor.conf",
+            DefaultExtension  = "conf",
+            FileTypeChoices   =
+            [
+                new FilePickerFileType("Telegraf Config") { Patterns = ["*.conf"] },
+                new FilePickerFileType("All Files")       { Patterns = ["*.*"] },
+            ],
+        });
+
+        if (file is null) return;
+
+        await using var stream = await file.OpenWriteAsync();
+        await using var writer = new StreamWriter(stream, Encoding.UTF8);
+        await writer.WriteAsync(vm.TelegrafConfig);
     }
 
     private static Color TryParseColor(string hex, Color fallback)

@@ -640,6 +640,52 @@
                FontFamily="Consolas,Menlo,monospace" Foreground="{StaticResource TextSecondaryBrush}"/>
         </TextBlock>
 
+        <!-- ── Telegraf Integration ──────────────────────────────────────── -->
+        <Separator Margin="0,6,0,0"/>
+
+        <TextBlock Text="TELEGRAF INTEGRATION" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                   LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap" Margin="0,0,0,6">
+          Paste the snippet below into your <Run Text="telegraf.conf" FontFamily="Consolas,Menlo,monospace"
+               Foreground="{StaticResource TextSecondaryBrush}"/> or save it as a file
+          in Telegraf's <Run Text="conf.d" FontFamily="Consolas,Menlo,monospace"
+               Foreground="{StaticResource TextSecondaryBrush}"/> directory.
+          The port updates automatically if you change it above.
+        </TextBlock>
+
+        <!-- Config preview box -->
+        <Border Background="{DynamicResource BgSecondaryBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="2">
+          <TextBox IsReadOnly="True"
+                   AcceptsReturn="True"
+                   Text="{Binding TelegrafConfig}"
+                   FontFamily="Consolas,Menlo,monospace"
+                   FontSize="{DynamicResource NxFont10}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   MaxHeight="210"
+                   TextWrapping="NoWrap"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   Padding="8,6"/>
+        </Border>
+
+        <!-- Action buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="nx-btn" Click="OnCopyTelegrafConfigClick">
+            <TextBlock Text="Copy to Clipboard" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+          <Button Classes="nx-btn" Click="OnSaveTelegrafConfigClick">
+            <TextBlock Text="Save .conf…" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+        </StackPanel>
+
       </StackPanel>
     </Border>
 
