@@ -36,15 +36,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Request acrylic/blur transparency — set in code since XAML type conversion
-        // differs across Avalonia versions.
-        TransparencyLevelHint =
-        [
-            WindowTransparencyLevel.AcrylicBlur,
-            WindowTransparencyLevel.Blur,
-            WindowTransparencyLevel.Mica,
-            WindowTransparencyLevel.None
-        ];
+        // Default to opaque. Glass effects are opt-in via Settings → Backdrop Blur Mode.
+        // SettingsViewModel.ApplyBackdropMode() will override this on load if the user
+        // has previously enabled glass. Changing this from AcrylicBlur to None prevents
+        // wallpaper bleed-through on light desktops before settings are applied.
+        //
+        // TODO(liquid-glass): Re-evaluate before public release. The Liquid Glass specular
+        // shimmer + prismatic layers are intentional and should stay. The problem is that
+        // AcrylicBlur as a window-wide backdrop makes content unreadable over bright
+        // wallpapers. Options to revisit: per-panel acrylic (sidebar/titlebar only),
+        // minimum-tint enforcement in GlassBg, or a "smart tint" that reads wallpaper
+        // luminance and adjusts the GlassBg alpha accordingly.
+        TransparencyLevelHint = [WindowTransparencyLevel.None];
 
         // Dispose all cached ViewModels when the window closes.
         Closed += (_, _) =>
