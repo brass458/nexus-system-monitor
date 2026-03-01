@@ -89,6 +89,43 @@ public partial class SettingsView : UserControl
                 $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
     }
 
+    // ── Grafana dashboard export ───────────────────────────────────────────────
+
+    /// <summary>Copies the Grafana dashboard JSON to the system clipboard.</summary>
+    private async void OnCopyGrafanaDashboardClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null)
+            await clipboard.SetTextAsync(vm.GrafanaDashboardJson);
+    }
+
+    /// <summary>Opens a Save dialog and writes the Grafana dashboard as a .json file.</summary>
+    private async void OnSaveGrafanaDashboardClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var sp = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (sp is null) return;
+
+        var file = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title             = "Save Grafana Dashboard",
+            SuggestedFileName = "nexus-monitor-dashboard.json",
+            DefaultExtension  = "json",
+            FileTypeChoices   =
+            [
+                new FilePickerFileType("Grafana Dashboard JSON") { Patterns = ["*.json"] },
+                new FilePickerFileType("All Files")              { Patterns = ["*.*"] },
+            ],
+        });
+
+        if (file is null) return;
+
+        await using var stream = await file.OpenWriteAsync();
+        await using var writer = new StreamWriter(stream, Encoding.UTF8);
+        await writer.WriteAsync(vm.GrafanaDashboardJson);
+    }
+
     // ── Telegraf config export ─────────────────────────────────────────────────
 
     /// <summary>Copies the Telegraf config snippet to the system clipboard.</summary>

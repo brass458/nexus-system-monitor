@@ -76,7 +76,8 @@ public partial class SettingsViewModel : ViewModelBase
         ? $"Active — scrape at http://localhost:{(int)PrometheusPort}/metrics"
         : "Disabled";
 
-    public string TelegrafConfig => TelegrafConfigGenerator.Generate((int)PrometheusPort);
+    public string TelegrafConfig      => TelegrafConfigGenerator.Generate((int)PrometheusPort);
+    public string GrafanaDashboardJson => GrafanaDashboard.Json;
 
     // ── Static lists ─────────────────────────────────────────────────────────
 

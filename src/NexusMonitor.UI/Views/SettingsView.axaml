@@ -686,6 +686,59 @@
           </Button>
         </StackPanel>
 
+        <!-- ── Grafana Dashboard ──────────────────────────────────────────── -->
+        <Separator Margin="0,6,0,0"/>
+
+        <TextBlock Text="GRAFANA DASHBOARD" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                   LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap" Margin="0,0,0,8">
+          A pre-built dashboard covering CPU, memory, disk, network, GPU, and alerts.
+          Save the JSON file, then import it in Grafana via
+          <Run Text="Dashboards → Import → Upload JSON file" FontWeight="Medium"
+               Foreground="{StaticResource TextSecondaryBrush}"/>.
+          When prompted, select your Prometheus datasource pointed at the endpoint above.
+        </TextBlock>
+
+        <!-- Step list -->
+        <Border Padding="12,8"
+                Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="8"
+                Margin="0,0,0,8">
+          <StackPanel Spacing="5">
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
+              <Run Text="1." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text=" Enable the Prometheus endpoint above and note the port."/>
+            </TextBlock>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
+              <Run Text="2." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text=" In Grafana, add a Prometheus datasource pointed at "/>
+              <Run Text="http://localhost:{port}/metrics" FontFamily="Consolas,Menlo,monospace"
+                   Foreground="{StaticResource TextSecondaryBrush}"/><Run Text="."/>
+            </TextBlock>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
+              <Run Text="3." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text=" Save the dashboard JSON below and import it into Grafana."/>
+            </TextBlock>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0">
+              <Run Text="Panels: " FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="CPU total + per core · Memory bytes + gauge · Disk I/O + activity + space · Network throughput · GPU usage + memory · Alert events + process/thread/temp stats"/>
+            </TextBlock>
+          </StackPanel>
+        </Border>
+
+        <!-- Export buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="nx-btn" Click="OnSaveGrafanaDashboardClick">
+            <TextBlock Text="Save Dashboard JSON…" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+          <Button Classes="nx-btn" Click="OnCopyGrafanaDashboardClick">
+            <TextBlock Text="Copy JSON to Clipboard" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+        </StackPanel>
+
       </StackPanel>
     </Border>
 
