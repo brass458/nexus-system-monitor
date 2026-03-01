@@ -507,10 +507,12 @@ public partial class SettingsViewModel : ViewModelBase
         byte bgAlpha = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
         SetBrush("BgBaseBrush", bgBase, bgAlpha);
 
-        // Content-area brushes: floor raised by wallpaper luminance when Smart Tint is active
+        // Content-area brushes: floor raised by wallpaper luminance when Smart Tint is active.
+        // Cap at 0xCC (80%) so OS acrylic blur always bleeds through; without it, opacity=1.0
+        // yields alpha=255 (fully opaque) and no glass shows in the content area.
         byte floor = luminanceMinAlpha ?? 0xA0;
         byte contentAlpha = enabled
-            ? (byte)Math.Max(floor, (int)Math.Round(opacity * 255))
+            ? (byte)Math.Min(0xCC, Math.Max(floor, (int)Math.Round(opacity * 255)))
             : (byte)0xFF;
         SetBrush("BgPrimaryBrush",   bgSurface,   contentAlpha);
         SetBrush("BgSecondaryBrush", bgSecondary, contentAlpha);
@@ -541,7 +543,7 @@ public partial class SettingsViewModel : ViewModelBase
         Application.Current.Resources["GlassTextEffect"] = enabled
             ? (object)new DropShadowDirectionEffect
               {
-                  BlurRadius  = 8,
+                  BlurRadius  = 16,
                   Color       = Colors.Black,
                   ShadowDepth = 0,   // centred → expands in all directions = outline
                   Direction   = 315,
