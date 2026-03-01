@@ -119,7 +119,7 @@
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Status" Width="1*" MinWidth="80" SortMemberPath="State">
+            <DataGridTemplateColumn Header="Status" Width="1*" MinWidth="120" SortMemberPath="State">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="models:ServiceInfo">
                   <Border CornerRadius="4" Padding="5,2" Margin="4,2"
@@ -133,7 +133,7 @@
             <DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="1.5*" MinWidth="90"  IsReadOnly="True"/>
             <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="2.5*" MinWidth="145" IsReadOnly="True"/>
             <DataGridTextColumn Header="Start Type"   Binding="{Binding StartType}"   Width="1.3*" MinWidth="120" IsReadOnly="True"/>
-            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   Width="0.7*" MinWidth="50"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   Width="0.7*" MinWidth="65"  IsReadOnly="True"/>
             <DataGridTextColumn Header="Account"      Binding="{Binding UserAccount}" Width="1.3*" MinWidth="90"  IsReadOnly="True"/>
             <DataGridTextColumn Header="Binary Path"  Binding="{Binding BinaryPath}"  Width="3*"   MinWidth="120" IsReadOnly="True"/>
           </DataGrid.Columns>
