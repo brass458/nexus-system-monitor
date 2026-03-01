@@ -3,7 +3,9 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using NexusMonitor.UI.Helpers;
 using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI.Views;
@@ -87,6 +89,21 @@ public partial class SettingsView : UserControl
         if (applied)
             vm.CustomSidebarBgHex =
                 $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
+    }
+
+    // ── Setup guide ───────────────────────────────────────────────────────────
+
+    /// <summary>Writes the embedded Telegraf/Grafana setup guide to a temp file and opens it in the default browser.</summary>
+    private void OnOpenSetupGuideClick(object? sender, RoutedEventArgs e)
+    {
+        var uri = new Uri("avares://NexusMonitor/Assets/grafana-setup-guide.html");
+        using var stream = AssetLoader.Open(uri);
+        using var reader = new StreamReader(stream);
+        var html = reader.ReadToEnd();
+
+        var tempPath = Path.Combine(Path.GetTempPath(), "nexus-monitor-setup-guide.html");
+        File.WriteAllText(tempPath, html);
+        ShellHelper.Launch(tempPath);
     }
 
     // ── Grafana dashboard export ───────────────────────────────────────────────

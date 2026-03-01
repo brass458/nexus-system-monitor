@@ -632,6 +632,11 @@
                      FontFamily="Consolas,Menlo,monospace"/>
         </Border>
 
+        <!-- Setup Guide button -->
+        <Button Classes="nx-btn" Click="OnOpenSetupGuideClick" HorizontalAlignment="Left">
+          <TextBlock Text="Open Setup Guide — Telegraf &amp; Grafana" FontSize="{DynamicResource NxFont11}"/>
+        </Button>
+
         <!-- Metric list hint -->
         <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
                    TextWrapping="Wrap">
