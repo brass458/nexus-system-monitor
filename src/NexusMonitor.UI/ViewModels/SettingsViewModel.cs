@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Services;
+using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.Messages;
 using SkiaSharp;
 
@@ -14,7 +15,8 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase
 {
-    private readonly SettingsService _settings;
+    private readonly SettingsService    _settings;
+    private readonly PrometheusExporter _exporter;
 
     // ── Appearance ────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isDarkTheme;
@@ -59,6 +61,19 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Notifications ─────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _desktopNotificationsEnabled = true;
+
+    // ── Telemetry ─────────────────────────────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PrometheusStatusText))]
+    private bool    _prometheusEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PrometheusStatusText))]
+    private decimal _prometheusPort = 9182m;
+
+    public string PrometheusStatusText => PrometheusEnabled
+        ? $"Active — scrape at http://localhost:{(int)PrometheusPort}/metrics"
+        : "Disabled";
 
     // ── Static lists ─────────────────────────────────────────────────────────
 
@@ -106,10 +121,11 @@ public partial class SettingsViewModel : ViewModelBase
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
-    public SettingsViewModel(SettingsService settings)
+    public SettingsViewModel(SettingsService settings, PrometheusExporter exporter)
     {
         Title     = "Settings";
         _settings = settings;
+        _exporter = exporter;
 
         // Load saved values via backing fields so partial callbacks don't fire during init
         _isDarkTheme        = settings.Current.IsDarkTheme;
@@ -141,6 +157,10 @@ public partial class SettingsViewModel : ViewModelBase
         // Map stored UpdateIntervalMs → index
         _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
         if (_updateIntervalIndex < 0) _updateIntervalIndex = 1;
+
+        // ── Telemetry ────────────────────────────────────────────────────────
+        _prometheusEnabled = settings.Current.PrometheusEnabled;
+        _prometheusPort    = settings.Current.PrometheusPort;
 
         // Restore at startup
         ApplyGlass(_isGlassEnabled, _glassOpacity,
@@ -308,6 +328,27 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _settings.Current.DesktopNotificationsEnabled = value;
         _settings.Save();
+    }
+
+    partial void OnPrometheusEnabledChanged(bool value)
+    {
+        _settings.Current.PrometheusEnabled = value;
+        _settings.Save();
+        if (value)
+            _exporter.Start((int)PrometheusPort);
+        else
+            _exporter.Stop();
+    }
+
+    partial void OnPrometheusPortChanged(decimal value)
+    {
+        _settings.Current.PrometheusPort = (int)value;
+        _settings.Save();
+        if (PrometheusEnabled)
+        {
+            _exporter.Stop();
+            _exporter.Start((int)value);
+        }
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────

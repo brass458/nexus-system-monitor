@@ -10,10 +10,12 @@ using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Mock;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Alerts;
+using System.Reactive;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
+using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 using SkiaSharp;
@@ -85,6 +87,15 @@ public class App : Application
                     TimeSpan.FromMilliseconds(saved.Current.UpdateIntervalMs));
                 Services.GetRequiredService<MetricsRollupService>().Start();
             }
+
+            // Start Prometheus endpoint if enabled
+            var prometheusExporter = Services.GetRequiredService<PrometheusExporter>();
+            if (saved.Current.PrometheusEnabled)
+                prometheusExporter.Start(saved.Current.PrometheusPort);
+
+            // Wire alert events → Prometheus counter
+            Services.GetRequiredService<AlertsService>().Events
+                .Subscribe(_ => prometheusExporter.RecordAlertFired());
 
             // System-tray icon
             SetupTrayIcon(desktop);
@@ -242,6 +253,9 @@ public class App : Application
         services.AddSingleton<MetricsStore>();
         services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<MetricsRollupService>();
+
+        // -- Telemetry --
+        services.AddSingleton<PrometheusExporter>();
 
         // -- Automation services --
         services.AddSingleton<ProBalanceService>();

@@ -580,6 +580,69 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== TELEMETRY ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Telemetry" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Prometheus endpoint toggle -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Prometheus Endpoint" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Exposes system metrics at /metrics for Telegraf, Grafana, or any Prometheus scraper"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding PrometheusEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Port picker -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Port" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Default: 9182  ·  Range: 1024–65535"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       Margin="0,2,0,0"/>
+          </StackPanel>
+          <NumericUpDown Grid.Column="1"
+                         Width="110" VerticalAlignment="Center"
+                         Value="{Binding PrometheusPort}"
+                         Minimum="1024" Maximum="65535" Increment="1"
+                         FormatString="0"
+                         IsEnabled="{Binding PrometheusEnabled}"/>
+        </Grid>
+
+        <!-- Status indicator -->
+        <Border Padding="10,6"
+                Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="8">
+          <TextBlock Text="{Binding PrometheusStatusText}"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{StaticResource TextTertiaryBrush}"
+                     FontFamily="Consolas,Menlo,monospace"/>
+        </Border>
+
+        <!-- Metric list hint -->
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   TextWrapping="Wrap">
+          <Run Text="Exported metrics: "/>
+          <Run Text="nexus_cpu_*  nexus_memory_*  nexus_disk_*  nexus_network_*  nexus_gpu_*  nexus_alert_events_total"
+               FontFamily="Consolas,Menlo,monospace" Foreground="{StaticResource TextSecondaryBrush}"/>
+        </TextBlock>
+
+      </StackPanel>
+    </Border>
+
     <!-- ===== ABOUT ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

@@ -67,4 +67,8 @@ public class AppSettings
     public int  MetricsRollup1mDays      { get; set; } = 7;
     public int  MetricsRollup5mDays      { get; set; } = 30;
     public int  MetricsRollup1hDays      { get; set; } = 365;
+
+    // Telemetry — Prometheus endpoint (Phase 14)
+    public bool PrometheusEnabled { get; set; } = false;
+    public int  PrometheusPort    { get; set; } = 9182;
 }
