@@ -26,6 +26,8 @@
     <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
     <!-- Required by macOS SDK to generate a valid .app bundle identifier -->
     <ApplicationId>com.brass458.nexus-monitor</ApplicationId>
+    <!-- Restore assets for both Intel and Apple Silicon so either SDK arch works in CI -->
+    <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'
     AND !$([MSBuild]::IsOSPlatform('windows'))
