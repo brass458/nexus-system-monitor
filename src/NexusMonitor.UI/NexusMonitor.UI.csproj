@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <!-- WinExe hides the console window on Windows; Exe is required on macOS/Linux -->
+    <OutputType Condition="$([MSBuild]::IsOSPlatform('windows'))">WinExe</OutputType>
+    <OutputType Condition="!$([MSBuild]::IsOSPlatform('windows'))">Exe</OutputType>
     <!-- Single TFM per host OS so dotnet run needs no -f flag.
          CI pipelines for macOS/Linux should override with -f net8.0-macos or -f net8.0 -->
     <TargetFramework Condition="$([MSBuild]::IsOSPlatform('windows'))">net8.0-windows10.0.17763.0</TargetFramework>
