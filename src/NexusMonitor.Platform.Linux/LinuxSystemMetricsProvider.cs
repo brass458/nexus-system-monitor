@@ -53,10 +53,25 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         _totalMemBytes = ReadTotalMem();
     }
 
+    // Shared multicast observable
+    private IObservable<SystemMetrics>? _shared;
+    private readonly object _sharedLock = new();
+
     // ── ISystemMetricsProvider ─────────────────────────────────────────────────
-    public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval) =>
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => BuildMetrics());
+    public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => BuildMetrics())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<SystemMetrics> GetMetricsAsync(CancellationToken ct = default) =>
         Task.FromResult(BuildMetrics());

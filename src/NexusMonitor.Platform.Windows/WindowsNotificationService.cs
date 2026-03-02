@@ -42,14 +42,34 @@ public sealed partial class WindowsNotificationService : INotificationService
             _                      => "ℹ️"
         };
 
+        ShowToast($"{icon} Nexus Monitor — {EscapeXml(ruleName)}", EscapeXml(metricDisplay));
+    }
+
+    public void ShowAnomaly(string eventType, string description, int severity)
+    {
+        if (_notifier is null) return;
+
+        string icon = severity switch
+        {
+            2 => "🔴",  // Critical
+            1 => "⚠️",  // Warning
+            _ => "ℹ️"   // Info
+        };
+
+        ShowToast($"{icon} Anomaly — {EscapeXml(eventType)}", EscapeXml(description));
+    }
+
+    private void ShowToast(string title, string body)
+    {
+        if (_notifier is null) return;
         try
         {
             var xml = new XmlDocument();
             xml.LoadXml($"""
                 <toast duration="short">
                   <visual><binding template="ToastGeneric">
-                    <text>{icon} Nexus Monitor — {EscapeXml(ruleName)}</text>
-                    <text>{EscapeXml(metricDisplay)}</text>
+                    <text>{title}</text>
+                    <text>{body}</text>
                   </binding></visual>
                 </toast>
                 """);

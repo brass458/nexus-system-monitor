@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Abstractions;
@@ -16,9 +17,10 @@ using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
+using NexusMonitor.UI.Controls;
+using NexusMonitor.UI.Services;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
-using SkiaSharp;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
 #elif MACOS
@@ -58,10 +60,15 @@ public class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = Services.GetRequiredService<MainViewModel>()
             };
+            desktop.MainWindow = mainWindow;
+
+            // Attach in-app notification host to service
+            var inAppService = Services.GetRequiredService<IInAppNotificationService>();
+            mainWindow.FindControl<NotificationHost>("AppNotificationHost")?.Attach(inAppService);
 
             // Overlay widget: create the window and wire the Settings toggle
             var overlayVm  = Services.GetRequiredService<OverlayViewModel>();
@@ -77,8 +84,10 @@ public class App : Application
             if (saved.Current.ProBalanceEnabled)
                 Services.GetRequiredService<ProBalanceService>().Start();
 
-            Services.GetRequiredService<RulesEngine>().Start();
-            Services.GetRequiredService<AlertsService>().Start();
+            if (saved.Current.Rules.Count > 0)
+                Services.GetRequiredService<RulesEngine>().Start();
+            if (saved.Current.AlertRules.Count > 0)
+                Services.GetRequiredService<AlertsService>().Start();
 
             // Start metrics persistence
             if (saved.Current.MetricsEnabled)
@@ -92,6 +101,10 @@ public class App : Application
             var anomalyService = Services.GetRequiredService<AnomalyDetectionService>();
             if (saved.Current.AnomalyDetectionEnabled)
                 anomalyService.Start();
+
+            // Start smart glass adaptive service if enabled
+            if (saved.Current.SmartTintEnabled)
+                Services.GetRequiredService<GlassAdaptiveService>().Start();
 
             // Start Prometheus endpoint if enabled
             var prometheusExporter = Services.GetRequiredService<PrometheusExporter>();
@@ -125,9 +138,38 @@ public class App : Application
                     alert.Rule.Threshold, alert.Description);
             });
 
-            // Wire anomaly detection → Prometheus counter
-            anomalyService.AnomalyDetected
-                .Subscribe(_ => prometheusExporter.RecordAnomalyDetected());
+            // Wire anomaly detection → Prometheus counter + OS + in-app notifications
+            var notificationService     = Services.GetRequiredService<INotificationService>();
+            var inAppNotifications      = Services.GetRequiredService<IInAppNotificationService>();
+
+            anomalyService.AnomalyDetected.Subscribe(evt =>
+            {
+                // Prometheus counters: total + per-type
+                prometheusExporter.RecordAnomalyDetected(evt.EventType);
+
+                // OS desktop notification (gated on desktop notifications setting)
+                if (saved.Current.DesktopNotificationsEnabled && notificationService.IsSupported)
+                    notificationService.ShowAnomaly(
+                        evt.EventType,
+                        evt.Description ?? string.Empty,
+                        evt.Severity);
+
+                // In-app pill notification (gated on anomaly notifications setting)
+                if (saved.Current.AnomalyNotificationsEnabled)
+                {
+                    var inAppSeverity = evt.Severity switch
+                    {
+                        EventSeverity.Critical => InAppSeverity.Critical,
+                        EventSeverity.Warning  => InAppSeverity.Warning,
+                        _                      => InAppSeverity.Info,
+                    };
+                    inAppNotifications.Show(new InAppNotification(
+                        Title:       $"Anomaly \u2014 {evt.EventType}",
+                        Body:        evt.Description ?? string.Empty,
+                        Severity:    inAppSeverity,
+                        AutoDismiss: TimeSpan.FromSeconds(5)));
+                }
+            });
 
             // System-tray icon
             SetupTrayIcon(desktop);
@@ -186,29 +228,11 @@ public class App : Application
         TrayIcon.SetIcons(this, [_trayIcon]);
     }
 
-    /// <summary>Generates a 32x32 "N" app icon via SkiaSharp -- no asset file required.</summary>
+    /// <summary>Loads the embedded Nexus Hub app icon from the Assets directory.</summary>
     private static WindowIcon CreateAppIcon()
     {
-        using var bmp    = new SKBitmap(32, 32);
-        using var canvas = new SKCanvas(bmp);
-        canvas.Clear(SKColors.Transparent);
-
-        using var bgPaint = new SKPaint { Color = new SKColor(10, 132, 255), IsAntialias = true };
-        canvas.DrawRoundRect(new SKRoundRect(new SKRect(1, 1, 31, 31), 7, 7), bgPaint);
-
-        using var textPaint = new SKPaint
-        {
-            Color        = SKColors.White,
-            IsAntialias  = true,
-            TextSize     = 21,
-            FakeBoldText = true,
-        };
-        canvas.DrawText("N", 7f, 24f, textPaint);
-
-        using var img     = SKImage.FromBitmap(bmp);
-        using var encoded = img.Encode(SKEncodedImageFormat.Png, 100);
-        using var ms      = new System.IO.MemoryStream(encoded.ToArray());
-        return new WindowIcon(new Bitmap(ms));
+        using var stream = AssetLoader.Open(new Uri("avares://NexusMonitor/Assets/nexus-icon-256.png"));
+        return new WindowIcon(stream);
     }
 
     // -- DI --
@@ -227,6 +251,7 @@ public class App : Application
         services.AddSingleton<IForegroundWindowProvider,    WindowsForegroundWindowProvider>();
         services.AddSingleton<IPowerPlanProvider,           WindowsPowerPlanProvider>();
         services.AddSingleton<INotificationService,         WindowsNotificationService>();
+        services.AddSingleton<IWallpaperService,            WindowsWallpaperService>();
         services.AddSingleton<WindowsHardwareInfoProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
@@ -236,7 +261,8 @@ public class App : Application
         services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
         services.AddSingleton<IPowerPlanProvider,           MacOSPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         NullNotificationService>();
+        services.AddSingleton<INotificationService,         MacOSNotificationService>();
+        services.AddSingleton<IWallpaperService,            MacOSWallpaperService>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -245,7 +271,8 @@ public class App : Application
         services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
         services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
         services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         NullNotificationService>();
+        services.AddSingleton<INotificationService,         LinuxNotificationService>();
+        services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
@@ -255,6 +282,7 @@ public class App : Application
         services.AddSingleton<IForegroundWindowProvider,    MockForegroundWindowProvider>();
         services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
         services.AddSingleton<INotificationService,         NullNotificationService>();
+        services.AddSingleton<IWallpaperService,            NullWallpaperService>();
 #endif
 
         // -- Core services --
@@ -305,6 +333,14 @@ public class App : Application
 
         // -- Telemetry --
         services.AddSingleton<PrometheusExporter>();
+
+        // -- In-app notifications --
+        services.AddSingleton<InAppNotificationService>();
+        services.AddSingleton<IInAppNotificationService>(sp =>
+            sp.GetRequiredService<InAppNotificationService>());
+
+        // -- Smart glass adaptive service --
+        services.AddSingleton<GlassAdaptiveService>();
 
         // -- Automation services --
         services.AddSingleton<ProBalanceService>();

@@ -67,10 +67,25 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         catch { return string.Empty; }
     }
 
+    // Shared multicast observable
+    private IObservable<IReadOnlyList<ProcessInfo>>? _shared;
+    private readonly object _sharedLock = new();
+
     // ── Streaming ──────────────────────────────────────────────────────────────
-    public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval) =>
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot());
+    public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<IReadOnlyList<ProcessInfo>> GetProcessesAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<ProcessInfo>>(() => Snapshot(), ct);

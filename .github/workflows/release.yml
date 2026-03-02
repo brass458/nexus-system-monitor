@@ -1,0 +1,247 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # needed to create GitHub Releases and upload assets
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job: build-test
+#   Runs the full test suite on all 3 platforms.
+#   All publish jobs depend on this passing.
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  build-test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore NexusMonitor.sln
+
+      - name: Build
+        run: dotnet build NexusMonitor.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test NexusMonitor.sln --no-build --configuration Release --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: '**/TestResults/*.trx'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job: build-windows
+#   Publishes win-x64 and win-arm64.
+#   Produces: ZIPs (portable) + Inno Setup EXEs (installer).
+# ─────────────────────────────────────────────────────────────────────────────
+  build-windows:
+    needs: build-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Extract version from tag
+        id: ver
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish win-x64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=win-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish win-arm64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=win-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Create portable ZIP archives
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.VERSION }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path src/NexusMonitor.UI/publish/win-x64/* `
+            -DestinationPath "dist/NexusMonitor-$v-win-x64.zip"
+          Compress-Archive -Path src/NexusMonitor.UI/publish/win-arm64/* `
+            -DestinationPath "dist/NexusMonitor-$v-win-arm64.zip"
+
+      - name: Build installer (win-x64)
+        uses: jrsoftware/iscc@v1
+        with:
+          iss: installer/windows/NexusMonitor.iss
+          args: >-
+            /DAppVersion=${{ steps.ver.outputs.VERSION }}
+            /DAppArch=x64
+            /DPublishDir=..\..\src\NexusMonitor.UI\publish\win-x64
+            /DOutputDir=..\..\dist
+            /DOutputFilename=NexusMonitor-${{ steps.ver.outputs.VERSION }}-win-x64-setup
+
+      - name: Build installer (win-arm64)
+        uses: jrsoftware/iscc@v1
+        with:
+          iss: installer/windows/NexusMonitor.iss
+          args: >-
+            /DAppVersion=${{ steps.ver.outputs.VERSION }}
+            /DAppArch=arm64
+            /DPublishDir=..\..\src\NexusMonitor.UI\publish\win-arm64
+            /DOutputDir=..\..\dist
+            /DOutputFilename=NexusMonitor-${{ steps.ver.outputs.VERSION }}-win-arm64-setup
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job: build-macos
+#   Publishes osx-x64 and osx-arm64.
+#   Produces: tar.gz (portable) + .dmg (installer).
+# ─────────────────────────────────────────────────────────────────────────────
+  build-macos:
+    needs: build-test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish osx-arm64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=osx-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish osx-x64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=osx-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build .app bundles and .dmg packages
+        run: |
+          mkdir -p dist
+          bash installer/macos/create-app-bundle.sh osx-arm64 ${{ steps.ver.outputs.VERSION }} dist
+          # Move the arm64 .app out of the way before building x64
+          mv dist/NexusMonitor.app dist/NexusMonitor-arm64.app
+          bash installer/macos/create-app-bundle.sh osx-x64 ${{ steps.ver.outputs.VERSION }} dist
+          mv dist/NexusMonitor.app dist/NexusMonitor-x64.app
+          rm -rf dist/NexusMonitor-arm64.app dist/NexusMonitor-x64.app
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: dist/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job: build-linux
+#   Publishes linux-x64 and linux-arm64.
+#   Produces: tar.gz (portable) + AppImage + .deb (x64 only).
+# ─────────────────────────────────────────────────────────────────────────────
+  build-linux:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish linux-x64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=linux-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish linux-arm64
+        run: >
+          dotnet publish src/NexusMonitor.UI/NexusMonitor.UI.csproj
+          -p:PublishProfile=linux-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Create portable tar.gz archives
+        run: |
+          V="${{ steps.ver.outputs.VERSION }}"
+          mkdir -p dist
+          tar -czf "dist/NexusMonitor-${V}-linux-x64.tar.gz" \
+            -C src/NexusMonitor.UI/publish/linux-x64 .
+          tar -czf "dist/NexusMonitor-${V}-linux-arm64.tar.gz" \
+            -C src/NexusMonitor.UI/publish/linux-arm64 .
+
+      - name: Build AppImage (x64)
+        run: bash installer/linux/create-appimage.sh ${{ steps.ver.outputs.VERSION }} dist
+
+      - name: Build .deb (x64)
+        run: bash installer/linux/create-deb.sh ${{ steps.ver.outputs.VERSION }} dist
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: dist/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job: create-release
+#   Downloads all platform artifacts and creates the GitHub Release.
+# ─────────────────────────────────────────────────────────────────────────────
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: release-assets
+
+      - name: List release assets
+        run: ls -lh release-assets/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Nexus System Monitor $GITHUB_REF_NAME" \
+            --generate-notes \
+            release-assets/*

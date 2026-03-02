@@ -1,3 +1,3 @@
-// Phase 2: Windows-specific providers will be implemented here
-// Targets: Windows 10 22H2+ (net8.0-windows)
+// Placeholder compiled on non-Windows platforms.
+// All Windows-specific implementations are excluded from compilation on Linux/macOS.
 namespace NexusMonitor.Platform.Windows;

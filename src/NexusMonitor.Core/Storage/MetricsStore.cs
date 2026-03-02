@@ -22,6 +22,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
     // Write buffers — guarded by _lock
     private readonly List<SystemMetrics>                               _metricsBuffer = new();
+    // Process buffer stores top-N only (pre-filtered at ingest) to avoid holding 300 rows × 30 ticks in memory
     private readonly List<(long ts, IReadOnlyList<ProcessInfo> procs)> _processBuffer = new();
     private readonly List<(long ts, IReadOnlyList<NetworkConnection> conns)> _networkBuffer = new();
     private readonly object _lock = new();
@@ -82,9 +83,14 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
     private void OnProcessTick(IReadOnlyList<ProcessInfo> procs)
     {
+        // Pre-filter to top-N at ingest time: avoids holding ~300 ProcessInfo × 30 ticks in memory.
+        // FlushProcesses() performs the same top-N logic, so results are equivalent.
+        var topCpu = procs.OrderByDescending(p => p.CpuPercent).Take(_config.TopNProcesses);
+        var topMem = procs.OrderByDescending(p => p.WorkingSetBytes).Take(_config.TopNProcesses);
+        IReadOnlyList<ProcessInfo> topN = topCpu.Union(topMem).ToList();
         var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         lock (_lock)
-            _processBuffer.Add((ts, procs));
+            _processBuffer.Add((ts, topN));
     }
 
     private void OnNetworkTick(IReadOnlyList<NetworkConnection> conns)
@@ -214,17 +220,9 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
         foreach (var (ts, procs) in _processBuffer)
         {
-            // Top-N by CPU and by memory (deduped)
-            var topCpu = procs
-                .OrderByDescending(p => p.CpuPercent)
-                .Take(_config.TopNProcesses);
-            var topMem = procs
-                .OrderByDescending(p => p.WorkingSetBytes)
-                .Take(_config.TopNProcesses);
-            var topN = topCpu.Union(topMem);
-
+            // procs already contains the pre-filtered top-N from OnProcessTick
             pTs.Value = ts;
-            foreach (var p in topN)
+            foreach (var p in procs)
             {
                 pPid.Value  = p.Pid;
                 pName.Value = p.Name;

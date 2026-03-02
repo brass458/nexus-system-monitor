@@ -34,7 +34,7 @@ public static class GrafanaDashboard
             {"type":"panel", "id":"stat",       "name":"Stat",        "version":""}
           ],
           "title": "Nexus Monitor",
-          "uid": "nexus-monitor-v1",
+          "uid": "nexus-monitor-v2",
           "description": "System metrics from Nexus System Monitor (https://github.com/brass458/nexus-system-monitor). Requires Prometheus datasource pointed at http://localhost:9182/metrics.",
           "schemaVersion": 38,
           "version": 1,
@@ -342,6 +342,66 @@ public static class GrafanaDashboard
               "options": {
                 "reduceOptions": {"calcs":["lastNotNull"],"fields":"","values":false},
                 "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area"
+              }
+            },
+
+            {"id":21,"type":"row","title":"Anomaly Detection","collapsed":false,"gridPos":{"h":1,"w":24,"x":0,"y":56},"panels":[]},
+
+            {
+              "id": 22, "type": "stat", "title": "Anomaly Events (total)",
+              "gridPos": {"h":4,"w":6,"x":0,"y":57},
+              "datasource": {"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+              "targets": [{"refId":"A","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+                "expr": "nexus_anomaly_events_total", "legendFormat": "Anomalies"}],
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "color": {"mode":"thresholds"},
+                  "thresholds": {"mode":"absolute","steps":[
+                    {"value":null,"color":"blue"},{"value":1,"color":"orange"},{"value":20,"color":"red"}]}
+                }
+              },
+              "options": {
+                "reduceOptions": {"calcs":["lastNotNull"],"fields":"","values":false},
+                "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none"
+              }
+            },
+
+            {
+              "id": 23, "type": "timeseries", "title": "Anomaly Rate",
+              "gridPos": {"h":8,"w":9,"x":6,"y":57},
+              "datasource": {"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+              "targets": [{"refId":"A","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+                "expr": "rate(nexus_anomaly_events_total[5m])", "legendFormat": "Anomaly rate"}],
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "cps",
+                  "color": {"mode":"palette-classic"},
+                  "custom": {"lineWidth":2,"fillOpacity":15,"drawStyle":"line"}
+                }
+              },
+              "options": {
+                "legend": {"displayMode":"list","placement":"bottom","showLegend":true},
+                "tooltip": {"mode":"multi","sort":"none"}
+              }
+            },
+
+            {
+              "id": 24, "type": "timeseries", "title": "Anomalies by Type",
+              "gridPos": {"h":8,"w":9,"x":15,"y":57},
+              "datasource": {"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+              "targets": [{"refId":"A","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+                "expr": "rate(nexus_anomaly_events_by_type_total[5m])", "legendFormat": "{{type}}"}],
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "cps",
+                  "color": {"mode":"palette-classic"},
+                  "custom": {"lineWidth":1,"fillOpacity":10,"drawStyle":"line"}
+                }
+              },
+              "options": {
+                "legend": {"displayMode":"list","placement":"bottom","showLegend":true},
+                "tooltip": {"mode":"multi","sort":"none"}
               }
             }
 

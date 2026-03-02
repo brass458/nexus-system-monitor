@@ -484,6 +484,21 @@
           </StackPanel>
         </StackPanel>
 
+        <!-- Smart wallpaper tint -->
+        <TextBlock Text="SMART TINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
+                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGlassEnabled}">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Smart Wallpaper Tint" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Automatically adjusts glass opacity based on wallpaper brightness"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding SmartTintEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
       </StackPanel>
     </Border>
 
@@ -605,6 +620,20 @@
                         VerticalAlignment="Center"/>
         </Grid>
 
+        <!-- In-app anomaly notifications -->
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="In-App Notifications" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock Text="Show pill notifications inside the app when anomalies are detected"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding AnomalyNotificationsEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
         <!-- Sensitivity -->
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -652,7 +681,7 @@
         <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
                    TextWrapping="Wrap">
           <Run Text="Note: "/>
-          <Run Text="Sensitivity and cooldown changes take effect on next application restart. View detected anomalies in the History tab."
+          <Run Text="All changes take effect immediately. View detected anomalies in the History tab."
                Foreground="{StaticResource TextTertiaryBrush}"/>
         </TextBlock>
 

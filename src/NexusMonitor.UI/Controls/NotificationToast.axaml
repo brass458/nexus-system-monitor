@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NexusMonitor.UI.Controls.NotificationToast"
+             Opacity="0">
+
+  <UserControl.Transitions>
+    <Transitions>
+      <DoubleTransition Property="Opacity" Duration="0:0:0.25">
+        <DoubleTransition.Easing><CubicEaseOut/></DoubleTransition.Easing>
+      </DoubleTransition>
+    </Transitions>
+  </UserControl.Transitions>
+
+  <Border x:Name="RootBorder"
+          CornerRadius="16"
+          BoxShadow="0 4 24 0 #44000000, 0 1 4 0 #22000000"
+          Background="{DynamicResource GlassBgBrush}"
+          BorderBrush="{DynamicResource GlassBorderBrush}"
+          BorderThickness="1"
+          MaxWidth="360"
+          MinWidth="260">
+
+    <Border.RenderTransform>
+      <TranslateTransform Y="-40">
+        <TranslateTransform.Transitions>
+          <Transitions>
+            <DoubleTransition Property="Y" Duration="0:0:0.3">
+              <DoubleTransition.Easing><CubicEaseOut/></DoubleTransition.Easing>
+            </DoubleTransition>
+          </Transitions>
+        </TranslateTransform.Transitions>
+      </TranslateTransform>
+    </Border.RenderTransform>
+
+    <Grid ColumnDefinitions="4,*,Auto">
+
+      <!-- Left severity accent bar -->
+      <Border Grid.Column="0"
+              x:Name="AccentBar"
+              Width="4"
+              CornerRadius="16,0,0,16"/>
+
+      <!-- Content -->
+      <StackPanel Grid.Column="1" Margin="12,10,8,10" Spacing="3">
+        <TextBlock x:Name="TitleText"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}"
+                   TextTrimming="CharacterEllipsis"/>
+        <TextBlock x:Name="BodyText"
+                   FontSize="11"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   MaxLines="3"/>
+      </StackPanel>
+
+      <!-- Dismiss button -->
+      <Button Grid.Column="2"
+              Margin="0,6,6,6"
+              Padding="6,4"
+              VerticalAlignment="Top"
+              Classes="nx-btn-ghost"
+              CornerRadius="8"
+              Click="OnDismissClick">
+        <TextBlock Text="✕" FontSize="10"
+                   Foreground="{StaticResource TextTertiaryBrush}"/>
+      </Button>
+
+    </Grid>
+  </Border>
+
+</UserControl>

@@ -36,6 +36,7 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
 
     private readonly ISystemMetricsProvider _provider;
     private IDisposable? _sub;
+    private int _cpuRingIdx;
 
     public OverlayViewModel(ISystemMetricsProvider provider, SettingsService settings)
     {
@@ -90,8 +91,8 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         HasGpu = gpu is not null;
         if (gpu is not null) GpuDisplay = $"{gpu.UsagePercent:F0}%";
 
-        CpuHistory.RemoveAt(0);
-        CpuHistory.Add(new ObservableValue(m.Cpu.TotalPercent));
+        CpuHistory[_cpuRingIdx % CpuHistory.Count].Value = m.Cpu.TotalPercent;
+        _cpuRingIdx++;
     }
 
     public void Dispose()

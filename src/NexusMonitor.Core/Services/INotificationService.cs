@@ -13,6 +13,9 @@ public interface INotificationService
 
     /// <summary>Show an alert notification for a triggered rule.</summary>
     void ShowAlert(string ruleName, string metricDisplay, AlertSeverity severity);
+
+    /// <summary>Show an anomaly detection notification.</summary>
+    void ShowAnomaly(string eventType, string description, int severity);
 }
 
 /// <summary>
@@ -22,4 +25,5 @@ public sealed class NullNotificationService : INotificationService
 {
     public bool IsSupported => false;
     public void ShowAlert(string ruleName, string metricDisplay, AlertSeverity severity) { }
+    public void ShowAnomaly(string eventType, string description, int severity) { }
 }

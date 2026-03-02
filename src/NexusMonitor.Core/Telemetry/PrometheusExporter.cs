@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using NexusMonitor.Core.Abstractions;
@@ -23,6 +24,8 @@ public sealed class PrometheusExporter : IDisposable
     private Task?                   _loop;
     private long                    _alertEventsTotal;
     private long                    _anomalyEventsTotal;
+    // Per-type anomaly counters — ConcurrentDictionary for lock-free increments
+    private readonly ConcurrentDictionary<string, long> _anomalyByType = new();
 
     public bool IsRunning => _listener is { IsListening: true };
 
@@ -35,9 +38,15 @@ public sealed class PrometheusExporter : IDisposable
     /// Wire to <c>AlertsService.Events.Subscribe(_ => exporter.RecordAlertFired())</c>.</summary>
     public void RecordAlertFired() => Interlocked.Increment(ref _alertEventsTotal);
 
-    /// <summary>Increments the <c>nexus_anomaly_events_total</c> counter.
-    /// Wire to <c>AnomalyDetectionService.AnomalyDetected.Subscribe(_ => exporter.RecordAnomalyDetected())</c>.</summary>
+    /// <summary>Increments the <c>nexus_anomaly_events_total</c> counter.</summary>
     public void RecordAnomalyDetected() => Interlocked.Increment(ref _anomalyEventsTotal);
+
+    /// <summary>Increments both the total and per-type anomaly counters.</summary>
+    public void RecordAnomalyDetected(string eventType)
+    {
+        Interlocked.Increment(ref _anomalyEventsTotal);
+        _anomalyByType.AddOrUpdate(eventType, 1L, (_, v) => Interlocked.Increment(ref v));
+    }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -239,6 +248,18 @@ public sealed class PrometheusExporter : IDisposable
         Header(sb, "nexus_anomaly_events_total", "counter",
             "Total anomaly events detected since application start");
         sb.AppendLine($"nexus_anomaly_events_total {Interlocked.Read(ref _anomalyEventsTotal)}");
+
+        if (!_anomalyByType.IsEmpty)
+        {
+            Header(sb, "nexus_anomaly_events_by_type_total", "counter",
+                "Anomaly events broken down by event type since application start");
+            foreach (var (type, _) in _anomalyByType)
+            {
+                // Read each type's counter; AddOrUpdate uses Interlocked.Increment so reads are atomic
+                if (_anomalyByType.TryGetValue(type, out long count))
+                    sb.AppendLine($"nexus_anomaly_events_by_type_total{{type=\"{Esc(type)}\"}} {count}");
+            }
+        }
 
         return sb.ToString();
     }

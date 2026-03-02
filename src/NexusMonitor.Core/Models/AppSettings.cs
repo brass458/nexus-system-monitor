@@ -27,7 +27,7 @@ public class AppSettings
     public string FontFamily         { get; set; } = "";     // "" = system default
 
     // Performance
-    public int    UpdateIntervalMs   { get; set; } = 1000;   // 500 | 1000 | 2000 | 5000
+    public int    UpdateIntervalMs   { get; set; } = 2000;   // 500 | 1000 | 2000 | 5000
 
     // Tray / window close behaviour
     /// <summary>"" = always ask, "Tray" = minimize to tray, "Exit" = close application.</summary>
@@ -38,7 +38,8 @@ public class AppSettings
     public bool   ShowOverlayWidget  { get; set; } = false;
 
     // Notifications
-    public bool   DesktopNotificationsEnabled { get; set; } = true;
+    public bool   DesktopNotificationsEnabled  { get; set; } = true;
+    public bool   AnomalyNotificationsEnabled  { get; set; } = true;
 
     // ProBalance
     public bool          ProBalanceEnabled      { get; set; } = false;
@@ -71,6 +72,9 @@ public class AppSettings
     // Telemetry — Prometheus endpoint (Phase 14)
     public bool PrometheusEnabled { get; set; } = false;
     public int  PrometheusPort    { get; set; } = 9182;
+
+    // Smart Glass Tint (Phase 4 enhancements)
+    public bool SmartTintEnabled { get; set; } = false;
 
     // Anomaly Detection (Phase 13)
     public bool   AnomalyDetectionEnabled     { get; set; } = true;

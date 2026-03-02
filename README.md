@@ -207,7 +207,27 @@ dotnet publish src/NexusMonitor.UI /p:PublishProfile=linux-arm64
 
 ### Pre-Built Releases
 
-Pre-compiled binaries for Windows, macOS, and Linux are not yet available. They will be published under [Releases](https://github.com/brass458/nexus-system-monitor/releases) once platform testing is complete.
+Download the latest release for your platform from the [**Releases**](https://github.com/brass458/nexus-system-monitor/releases) page:
+
+| Platform | Installer | Portable |
+|----------|-----------|----------|
+| Windows x64 | `NexusMonitor-*-win-x64-setup.exe` | `NexusMonitor-*-win-x64.zip` |
+| Windows ARM64 | `NexusMonitor-*-win-arm64-setup.exe` | `NexusMonitor-*-win-arm64.zip` |
+| macOS Intel (x64) | `NexusMonitor-*-osx-x64.dmg` | `NexusMonitor-*-osx-x64.tar.gz` |
+| macOS Apple Silicon (arm64) | `NexusMonitor-*-osx-arm64.dmg` | `NexusMonitor-*-osx-arm64.tar.gz` |
+| Linux x64 | `NexusMonitor-*-linux-x64.AppImage` / `nexus-monitor_*_amd64.deb` | `NexusMonitor-*-linux-x64.tar.gz` |
+| Linux ARM64 | — | `NexusMonitor-*-linux-arm64.tar.gz` |
+
+> **macOS note:** The app is unsigned. On first launch, right-click → **Open** to bypass Gatekeeper, or run:
+> ```bash
+> xattr -d com.apple.quarantine NexusMonitor.app
+> ```
+>
+> **Linux note:** AppImages require FUSE. If your distribution ships FUSE3 (Ubuntu 22.04+), install FUSE2:
+> ```bash
+> sudo apt install libfuse2
+> ```
+> Alternatively, run any AppImage without FUSE via `--appimage-extract-and-run`.
 
 ---
 
