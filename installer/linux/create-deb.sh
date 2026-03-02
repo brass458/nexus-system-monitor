@@ -41,6 +41,7 @@ mkdir -p "${PKG_DIR}/usr/share/applications"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/16x16/apps"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/32x32/apps"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/48x48/apps"
+mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/64x64/apps"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "${PKG_DIR}/usr/share/icons/hicolor/512x512/apps"
@@ -70,7 +71,7 @@ StartupNotify=true
 EOF
 
 # Icons at multiple resolutions
-for RES in 16 32 48 128 256 512; do
+for RES in 16 32 48 64 128 256 512; do
   SRC="src/NexusMonitor.UI/Assets/nexus-icon-${RES}.png"
   DST="${PKG_DIR}/usr/share/icons/hicolor/${RES}x${RES}/apps/nexus-monitor.png"
   if [[ -f "${SRC}" ]]; then

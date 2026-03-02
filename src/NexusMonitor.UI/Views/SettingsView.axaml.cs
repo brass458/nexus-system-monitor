@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -12,7 +13,21 @@ namespace NexusMonitor.UI.Views;
 
 public partial class SettingsView : UserControl
 {
-    public SettingsView() => InitializeComponent();
+    public SettingsView()
+    {
+        InitializeComponent();
+
+        var asm = Assembly.GetExecutingAssembly();
+        var version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                         ?.InformationalVersion
+                      ?? asm.GetName().Version?.ToString(3)
+                      ?? "0.1.0";
+        var plusIndex = version.IndexOf('+');
+        if (plusIndex >= 0)
+            version = version[..plusIndex];
+
+        AboutVersionText.Text = $"Version {version}";
+    }
 
     /// <summary>
     /// Opens the <see cref="ColorPickerWindow"/> as a modal dialog.
@@ -178,6 +193,18 @@ public partial class SettingsView : UserControl
         await using var stream = await file.OpenWriteAsync();
         await using var writer = new StreamWriter(stream, Encoding.UTF8);
         await writer.WriteAsync(vm.TelegrafConfig);
+    }
+
+    // ── About ─────────────────────────────────────────────────────────────────
+
+    private async void OnAboutClick(object? sender, RoutedEventArgs e)
+    {
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        var dlg = new AboutWindow();
+        if (owner is not null)
+            await dlg.ShowDialog(owner);
+        else
+            dlg.Show();
     }
 
     private static Color TryParseColor(string hex, Color fallback)

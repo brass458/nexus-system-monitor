@@ -1,5 +1,9 @@
 # Nexus System Monitor
 
+<p align="center">
+  <img src="Nexus System Monitor.png" width="128" alt="Nexus System Monitor">
+</p>
+
 **One tool. Every platform. Complete system visibility.**
 
 Nexus System Monitor is a cross-platform desktop application that gives you deep, granular insight into your system's processes, performance, services, and hardware — with a single, consistent interface whether you're on Windows, macOS, or Linux.

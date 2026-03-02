@@ -861,14 +861,29 @@
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
-      <StackPanel Spacing="4">
-        <TextBlock Text="Nexus Monitor" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"/>
-        <TextBlock Text="Version 0.7.0 — System Info · Handle Viewer · Toast Alerts"
-                   FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
-        <TextBlock Text="MIT License · Open Source · Cross-Platform"
-                   FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0"/>
-      </StackPanel>
+      <Grid ColumnDefinitions="Auto,16,*">
+        <!-- Icon -->
+        <Image Grid.Column="0"
+               Source="avares://NexusMonitor/Assets/nexus-icon-256.png"
+               Width="48" Height="48"
+               VerticalAlignment="Center"/>
+        <!-- Info + button -->
+        <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="Nexus System Monitor"
+                     FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"/>
+          <TextBlock x:Name="AboutVersionText"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"/>
+          <TextBlock Text="MIT License · Open Source · Cross-Platform"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"/>
+          <Button Classes="nx-btn" Click="OnAboutClick"
+                  HorizontalAlignment="Left" Padding="10,4" Margin="0,8,0,0">
+            <TextBlock Text="About Nexus System Monitor…" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+        </StackPanel>
+      </Grid>
     </Border>
 
   </StackPanel>

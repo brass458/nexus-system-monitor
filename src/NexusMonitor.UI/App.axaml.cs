@@ -228,6 +228,16 @@ public class App : Application
         widgetItem.Click += (_, _) =>
             settingsVm.ShowOverlayWidget = !settingsVm.ShowOverlayWidget;
 
+        var aboutItem = new NativeMenuItem("About Nexus System Monitor");
+        aboutItem.Click += (_, _) =>
+        {
+            var dlg = new AboutWindow();
+            if (desktop.MainWindow is { } owner)
+                dlg.ShowDialog(owner);
+            else
+                dlg.Show();
+        };
+
         var exitItem = new NativeMenuItem("Exit Nexus Monitor");
         exitItem.Click += (_, _) => desktop.Shutdown();
 
@@ -235,6 +245,8 @@ public class App : Application
         _trayIcon.Menu.Add(showItem);
         _trayIcon.Menu.Add(new NativeMenuItemSeparator());
         _trayIcon.Menu.Add(widgetItem);
+        _trayIcon.Menu.Add(new NativeMenuItemSeparator());
+        _trayIcon.Menu.Add(aboutItem);
         _trayIcon.Menu.Add(new NativeMenuItemSeparator());
         _trayIcon.Menu.Add(exitItem);
 
