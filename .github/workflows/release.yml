@@ -92,27 +92,33 @@ jobs:
           Compress-Archive -Path src/NexusMonitor.UI/publish/win-arm64/* `
             -DestinationPath "dist/NexusMonitor-$v-win-arm64.zip"
 
-      - name: Build installer (win-x64)
-        uses: jrsoftware/iscc@v1
-        with:
-          iss: installer/windows/NexusMonitor.iss
-          args: >-
-            /DAppVersion=${{ steps.ver.outputs.VERSION }}
-            /DAppArch=x64
-            /DPublishDir=..\..\src\NexusMonitor.UI\publish\win-x64
-            /DOutputDir=..\..\dist
-            /DOutputFilename=NexusMonitor-${{ steps.ver.outputs.VERSION }}-win-x64-setup
-
-      - name: Build installer (win-arm64)
-        uses: jrsoftware/iscc@v1
-        with:
-          iss: installer/windows/NexusMonitor.iss
-          args: >-
-            /DAppVersion=${{ steps.ver.outputs.VERSION }}
-            /DAppArch=arm64
-            /DPublishDir=..\..\src\NexusMonitor.UI\publish\win-arm64
-            /DOutputDir=..\..\dist
-            /DOutputFilename=NexusMonitor-${{ steps.ver.outputs.VERSION }}-win-arm64-setup
+      - name: Build installers (Inno Setup)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.VERSION }}"
+          # Inno Setup is pre-installed on windows-latest — find iscc.exe
+          $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            $iscc = Get-Item "C:\Program Files (x86)\Inno Setup*\iscc.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+          if (-not $iscc) {
+            Write-Host "Inno Setup not found — installing via Chocolatey..."
+            choco install innosetup -y --no-progress
+            $iscc = Get-Item "C:\Program Files (x86)\Inno Setup*\iscc.exe" | Select-Object -First 1
+          }
+          $isccPath = if ($iscc -is [System.IO.FileInfo]) { $iscc.FullName } else { $iscc.Source }
+          Write-Host "Using iscc: $isccPath"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & $isccPath installer\windows\NexusMonitor.iss `
+            /DAppVersion=$v /DAppArch=x64 `
+            "/DPublishDir=..\..\src\NexusMonitor.UI\publish\win-x64" `
+            /DOutputDir=..\..\dist `
+            "/DOutputFilename=NexusMonitor-$v-win-x64-setup"
+          & $isccPath installer\windows\NexusMonitor.iss `
+            /DAppVersion=$v /DAppArch=arm64 `
+            "/DPublishDir=..\..\src\NexusMonitor.UI\publish\win-arm64" `
+            /DOutputDir=..\..\dist `
+            "/DOutputFilename=NexusMonitor-$v-win-arm64-setup"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
