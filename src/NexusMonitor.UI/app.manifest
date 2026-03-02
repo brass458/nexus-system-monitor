@@ -4,8 +4,10 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- asInvoker = run as current user, request elevation only when needed -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+        <!-- requireAdministrator: needed for SetPerTcpConnectionEStats (per-connection
+             throughput), elevated process access, and other system-monitor APIs.
+             Windows will show a UAC prompt on launch. -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

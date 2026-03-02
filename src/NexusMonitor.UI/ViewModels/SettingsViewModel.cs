@@ -684,7 +684,7 @@ public partial class SettingsViewModel : ViewModelBase
             ? Avalonia.Media.FontFamily.Default
             : new Avalonia.Media.FontFamily(family);
 
-        const double BaseFontSize = 14.0; // matches NxFont13 token
+        const double BaseFontSize = 15.0; // matches NxFont13 token (bumped from 14→15)
         if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = BaseFontSize; }
         if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = BaseFontSize; }
     }
