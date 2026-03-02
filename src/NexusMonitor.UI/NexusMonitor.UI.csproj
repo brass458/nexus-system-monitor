@@ -24,6 +24,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0-macos'))">
     <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+    <!-- Required by macOS SDK to generate a valid .app bundle identifier -->
+    <ApplicationId>com.brass458.nexus-monitor</ApplicationId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'
     AND !$([MSBuild]::IsOSPlatform('windows'))
