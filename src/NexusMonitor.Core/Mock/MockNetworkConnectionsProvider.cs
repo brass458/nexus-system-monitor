@@ -16,6 +16,8 @@ public sealed class MockNetworkConnectionsProvider : INetworkConnectionsProvider
         new() { Protocol = ConnectionProtocol.Tcp6, LocalAddress = "::",          LocalPort = 135,   RemoteAddress = "::",            RemotePort = 0,   State = TcpConnectionState.Listen,      ProcessId = 4,    ProcessName = "System"  },
     ];
 
+    public bool SupportsPerConnectionThroughput => false;
+
     public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval) =>
         Observable.Timer(TimeSpan.Zero, interval).Select(_ => _mock);
 

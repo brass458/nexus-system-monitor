@@ -10,9 +10,25 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
 {
     private readonly AdapterThroughputTracker _adapterTracker = new();
 
-    public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval) =>
-        Observable.Timer(TimeSpan.Zero, interval)
-                  .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections());
+    private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
+    private readonly object _sharedLock = new();
+
+    public bool SupportsPerConnectionThroughput => false;
+
+    public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval)
+    {
+        lock (_sharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                                    .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
+                                    .Publish()
+                                    .RefCount();
+            }
+            return _shared;
+        }
+    }
 
     public Task<IReadOnlyList<NetworkConnection>> GetConnectionsAsync(CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<NetworkConnection>>(GetConnections, ct);

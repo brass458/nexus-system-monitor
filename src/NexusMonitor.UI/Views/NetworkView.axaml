@@ -89,7 +89,8 @@
     <Grid ColumnDefinitions="*,Auto,Auto">
 
       <!-- DataGrid -->
-      <DataGrid Grid.Column="0"
+      <DataGrid x:Name="ConnectionGrid"
+                Grid.Column="0"
                 Classes="nx-grid"
                 ItemsSource="{Binding Connections}"
                 SelectedItem="{Binding SelectedConnection}"
@@ -196,21 +197,24 @@
               <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RemotePort}"   Classes="detail-value"/>
             </Grid>
 
-            <!-- Throughput -->
-            <TextBlock Text="THROUGHPUT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
-                       LetterSpacing="0.8" Margin="0,0,0,6"/>
+            <!-- Throughput (only shown when per-connection stats are available) -->
+            <StackPanel IsVisible="{Binding DataContext.ShowThroughputColumns,
+                        RelativeSource={RelativeSource AncestorType=UserControl}}">
+              <TextBlock Text="THROUGHPUT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                         Foreground="{StaticResource TextTertiaryBrush}"
+                         LetterSpacing="0.8" Margin="0,0,0,6"/>
 
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,12">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Protocol" Classes="detail-label"/>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Protocol}"    Classes="detail-value"/>
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="&#x2191; Send" Classes="detail-label"/>
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SendDisplay}" Classes="detail-value"
-                         Foreground="{DynamicResource AccentBlueBrush}"/>
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="&#x2193; Recv" Classes="detail-label"/>
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RecvDisplay}" Classes="detail-value"
-                         Foreground="{DynamicResource AccentBlueBrush}"/>
-            </Grid>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,12">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Protocol" Classes="detail-label"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Protocol}"    Classes="detail-value"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="&#x2191; Send" Classes="detail-label"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SendDisplay}" Classes="detail-value"
+                           Foreground="{DynamicResource AccentBlueBrush}"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="&#x2193; Recv" Classes="detail-label"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RecvDisplay}" Classes="detail-value"
+                           Foreground="{DynamicResource AccentBlueBrush}"/>
+              </Grid>
+            </StackPanel>
 
           </StackPanel>
         </ScrollViewer>

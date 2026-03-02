@@ -32,6 +32,10 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
     // the call is idempotent after the first enable, so skip it for known connections.
     private readonly HashSet<EStatsKey> _enabledEStats = new();
 
+    // ── EStats capability probe ────────────────────────────────────────────────
+    private bool _estatsProbed;
+    private bool _estatsAvailable;
+
     private readonly record struct EStatsKey(uint Local, uint LocalPort, uint Remote, uint RemotePort);
     private readonly record struct EStatEntry(ulong SendBytes, ulong RecvBytes, long Ticks);
 
@@ -45,6 +49,9 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
     private readonly object _sharedLock = new();
 
     // ── Public interface ───────────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public bool SupportsPerConnectionThroughput => !_estatsProbed || _estatsAvailable;
 
     public IObservable<IReadOnlyList<NetworkConnection>> GetConnectionStream(TimeSpan interval)
     {
@@ -296,7 +303,19 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
             nint.Zero, 0, 0,
             (nint)(&rod), 0, (uint)sizeof(TCP_ESTATS_DATA_ROD_v0));
 
-        if (hr != 0) return;   // EStats not available (needs elevation, or connection just opened)
+        if (hr != 0)
+        {
+            // Record failure on first ESTABLISHED connection — driver doesn't support EStats.
+            if (!_estatsProbed && row.dwState == 5)
+            {
+                _estatsAvailable = false;
+                _estatsProbed    = true;
+            }
+            return;
+        }
+
+        _estatsAvailable = true;
+        _estatsProbed    = true;
 
         var now  = DateTime.UtcNow.Ticks;
 

@@ -25,6 +25,9 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool   _isDetailPanelVisible = true;
     [ObservableProperty] private string _adapterSendDisplay = "—";
     [ObservableProperty] private string _adapterRecvDisplay = "—";
+    [ObservableProperty] private bool   _showThroughputColumns = true;
+
+    private bool _throughputChecked;
 
     /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
     public bool IsConnectionDetailShown => SelectedConnection is not null && IsDetailPanelVisible;
@@ -58,6 +61,13 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     {
         _allConnections = all;
         TotalCount      = all.Count;
+
+        if (!_throughputChecked)
+        {
+            _throughputChecked    = true;
+            ShowThroughputColumns = _provider.SupportsPerConnectionThroughput;
+        }
+
         ApplyFilter();
     }
 
