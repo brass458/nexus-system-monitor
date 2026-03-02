@@ -93,7 +93,7 @@ public partial class FindWindowOverlay : Window
             string name = "";
             try
             {
-                var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
                 name = proc.ProcessName;
             }
             catch { }

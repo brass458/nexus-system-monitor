@@ -108,7 +108,8 @@ public sealed class WindowsStartupProvider : IStartupProvider
             foreach (string name in key.GetValueNames())
             {
                 if (key.GetValue(name) is byte[] bytes && bytes.Length > 0)
-                    result[name] = bytes[0] != 0x02;
+                    // Low bit clear (0x00, 0x02) = disabled; low bit set (0x01, 0x03) = enabled
+                    result[name] = (bytes[0] & 0x01) != 0;
             }
         }
         catch { }

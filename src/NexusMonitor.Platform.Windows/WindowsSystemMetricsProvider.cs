@@ -140,11 +140,11 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private CpuMetrics SampleCpu(PERFORMANCE_INFORMATION pi)
     {
         double total = 0;
-        try { total = _cpuTotal?.NextValue() ?? 0; } catch { }
+        try { total = SanitizeCounter(_cpuTotal?.NextValue() ?? 0); } catch { }
 
         var corePercents = new double[_cpuCores.Length];
         for (int i = 0; i < _cpuCores.Length; i++)
-            try { corePercents[i] = _cpuCores[i]?.NextValue() ?? 0; } catch { }
+            try { corePercents[i] = SanitizeCounter(_cpuCores[i]?.NextValue() ?? 0); } catch { }
 
         return new CpuMetrics
         {
@@ -228,10 +228,10 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         foreach (var (inst, readCtr, writeCtr, activeCtr, avgRespCtr) in _diskCounters)
         {
             double readBytes = 0, writeBytes = 0, activePercent = 0, avgRespSec = 0;
-            try { readBytes    = readCtr.NextValue();   } catch { }
-            try { writeBytes   = writeCtr.NextValue();  } catch { }
-            try { activePercent= activeCtr.NextValue(); } catch { }
-            try { if (avgRespCtr != null) avgRespSec = avgRespCtr.NextValue(); } catch { }
+            try { readBytes    = SanitizeCounter(readCtr.NextValue());   } catch { }
+            try { writeBytes   = SanitizeCounter(writeCtr.NextValue());  } catch { }
+            try { activePercent= SanitizeCounter(activeCtr.NextValue()); } catch { }
+            try { if (avgRespCtr != null) avgRespSec = SanitizeCounter(avgRespCtr.NextValue()); } catch { }
 
             var (idx, letters) = ParseDiskInstance(inst);
             string allLetters  = string.Join(" ", letters.Select(l => l + ":"));
@@ -324,8 +324,8 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         foreach (var (inst, sendCtr, recvCtr) in _netCounters)
         {
             double send = 0, recv = 0;
-            try { send = sendCtr.NextValue(); } catch { }
-            try { recv = recvCtr.NextValue(); } catch { }
+            try { send = SanitizeCounter(sendCtr.NextValue()); } catch { }
+            try { recv = SanitizeCounter(recvCtr.NextValue()); } catch { }
 
             // Fuzzy-match PDH instance name to a NetworkInterface (PDH replaces / with _)
             var nic = nics.FirstOrDefault(n =>
@@ -510,20 +510,35 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private void InitGpu()
     {
         // 1. WMI: name + total VRAM + driver + location (runs once; slow but acceptable at startup)
+        // Iterate all GPUs and pick the one with the most VRAM so that on systems with both
+        // an iGPU and a dGPU (e.g. Ryzen iGPU + RTX) we show the discrete adapter.
+        // Note: AdapterRAM is a uint32 field capped at ~4 GB — PDH step below corrects this.
         try
         {
             using var searcher = new ManagementObjectSearcher(
                 "SELECT Name, AdapterRAM, DriverVersion, PNPDeviceID FROM Win32_VideoController WHERE VideoProcessor <> NULL");
             using var results = searcher.Get();
+            string bestName = string.Empty, bestDriver = string.Empty, bestPnp = string.Empty;
+            long bestVram = -1;
             foreach (ManagementBaseObject obj in results)
             using (obj)
             {
-                _gpuName            = (obj["Name"]          as string ?? string.Empty).Trim();
-                _gpuTotalVram       = Convert.ToInt64(obj["AdapterRAM"] ?? 0L);
-                _gpuDriverVersion   = (obj["DriverVersion"] as string ?? string.Empty).Trim();
-                _gpuPhysicalLocation= (obj["PNPDeviceID"]   as string ?? string.Empty).Trim();
-                break; // first GPU
+                long   vram   = Convert.ToInt64(obj["AdapterRAM"] ?? 0L);
+                string name   = (obj["Name"]          as string ?? string.Empty).Trim();
+                string driver = (obj["DriverVersion"] as string ?? string.Empty).Trim();
+                string pnp    = (obj["PNPDeviceID"]   as string ?? string.Empty).Trim();
+                if (vram > bestVram)
+                {
+                    bestVram   = vram;
+                    bestName   = name;
+                    bestDriver = driver;
+                    bestPnp    = pnp;
+                }
             }
+            _gpuName             = bestName;
+            _gpuTotalVram        = Math.Max(0, bestVram);
+            _gpuDriverVersion    = bestDriver;
+            _gpuPhysicalLocation = bestPnp;
         }
         catch { _gpuName = string.Empty; }
 
@@ -556,6 +571,23 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             }
             catch { }
         }
+
+        // Dedicated VRAM total (read once from "Dedicated Limit" counter).
+        // PDH stores this as a 64-bit value — no 4 GB cap unlike WMI AdapterRAM (uint32).
+        // Take the maximum across all adapter instances to match the discrete GPU selected above.
+        long pdhDedicatedMax = 0;
+        foreach (var inst in memInstances)
+        {
+            try
+            {
+                using var lim = new PerformanceCounter("GPU Adapter Memory", "Dedicated Limit", inst, readOnly: true);
+                long val = (long)lim.NextValue();
+                if (val > pdhDedicatedMax) pdhDedicatedMax = val;
+            }
+            catch { }
+        }
+        if (pdhDedicatedMax > _gpuTotalVram)
+            _gpuTotalVram = pdhDedicatedMax;
 
         _gpuLastReenumerateTime = DateTime.UtcNow;
     }
@@ -821,10 +853,10 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
             return _gpuCachedResult;
 
         double usage3D = 0, usageCopy = 0, usageDecode = 0, usageEncode = 0;
-        foreach (var c in _gpuEngineCounters)  try { usage3D     += c.NextValue(); } catch { }
-        foreach (var c in _gpuCopyCounters)    try { usageCopy   += c.NextValue(); } catch { }
-        foreach (var c in _gpuDecodeCounters)  try { usageDecode += c.NextValue(); } catch { }
-        foreach (var c in _gpuEncodeCounters)  try { usageEncode += c.NextValue(); } catch { }
+        foreach (var c in _gpuEngineCounters)  try { usage3D     += SanitizeCounter(c.NextValue()); } catch { }
+        foreach (var c in _gpuCopyCounters)    try { usageCopy   += SanitizeCounter(c.NextValue()); } catch { }
+        foreach (var c in _gpuDecodeCounters)  try { usageDecode += SanitizeCounter(c.NextValue()); } catch { }
+        foreach (var c in _gpuEncodeCounters)  try { usageEncode += SanitizeCounter(c.NextValue()); } catch { }
         usage3D     = Math.Clamp(usage3D,     0, 100);
         usageCopy   = Math.Clamp(usageCopy,   0, 100);
         usageDecode = Math.Clamp(usageDecode, 0, 100);
@@ -833,12 +865,12 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         long dedicatedUsed = 0;
         if (_gpuMemCounters is { Length: > 0 })
             foreach (var c in _gpuMemCounters)
-                try { dedicatedUsed += (long)c.NextValue(); } catch { }
+                try { dedicatedUsed += (long)SanitizeCounter(c.NextValue()); } catch { }
 
         long sharedUsed = 0;
         if (_gpuSharedCounters is { Length: > 0 })
             foreach (var c in _gpuSharedCounters)
-                try { sharedUsed += (long)c.NextValue(); } catch { }
+                try { sharedUsed += (long)SanitizeCounter(c.NextValue()); } catch { }
 
         _gpuCachedResult = [
             new GpuMetrics
@@ -898,21 +930,25 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     private static int GetPhysicalCoreCount()
     {
-        // Read from registry (fastest, no WMI)
+        // Registry keys are per logical processor, not per physical core.
+        // Use Win32_Processor.NumberOfCores which correctly reports physical cores.
         try
         {
-            int count = 0;
-            for (int i = 0; ; i++)
-            {
-                using var key = Registry.LocalMachine.OpenSubKey(
-                    $@"HARDWARE\DESCRIPTION\System\CentralProcessor\{i}");
-                if (key is null) break;
-                count++;
-            }
-            return Math.Max(1, count);
+            int total = 0;
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT NumberOfCores FROM Win32_Processor");
+            using var results = searcher.Get();
+            foreach (ManagementBaseObject obj in results)
+            using (obj)
+                total += Convert.ToInt32(obj["NumberOfCores"] ?? 0);
+            if (total > 0) return total;
         }
-        catch { return Environment.ProcessorCount / 2; }
+        catch { }
+        return Math.Max(1, Environment.ProcessorCount / 2);
     }
+
+    private static float SanitizeCounter(float val) =>
+        float.IsNaN(val) || float.IsInfinity(val) ? 0f : val;
 
     // ─── IDisposable ──────────────────────────────────────────────────────────
 

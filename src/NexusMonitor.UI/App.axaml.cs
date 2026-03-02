@@ -12,6 +12,7 @@ using NexusMonitor.Core.Mock;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Alerts;
 using System.Reactive;
+using System.Reactive.Disposables;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
@@ -37,6 +38,9 @@ public class App : Application
 
     // Keep tray icon alive for the app lifetime
     private TrayIcon? _trayIcon;
+
+    // 4F: Rx subscriptions that must be disposed on shutdown
+    private readonly CompositeDisposable _subscriptions = new();
 
     public override void Initialize()
     {
@@ -111,13 +115,22 @@ public class App : Application
             if (saved.Current.PrometheusEnabled)
                 prometheusExporter.Start(saved.Current.PrometheusPort);
 
+            // 4A: Flush MetricsStore + dispose services on shutdown so the last buffered
+            //     data points are persisted and Rx subscriptions are released cleanly.
+            desktop.ShutdownRequested += (_, _) =>
+            {
+                Services.GetRequiredService<MetricsStore>().Stop();
+                _subscriptions.Dispose();
+                (Services as IDisposable)?.Dispose();
+            };
+
             // Wire alert events → Prometheus counter
             var alertsService = Services.GetRequiredService<AlertsService>();
-            alertsService.Events.Subscribe(_ => prometheusExporter.RecordAlertFired());
+            _subscriptions.Add(alertsService.Events.Subscribe(_ => prometheusExporter.RecordAlertFired()));
 
             // Wire alert events → events table (bridge)
             var eventWriter = Services.GetRequiredService<IEventWriter>();
-            alertsService.Events.Subscribe(alert =>
+            _subscriptions.Add(alertsService.Events.Subscribe(alert =>
             {
                 var eventType = alert.Rule.Metric switch
                 {
@@ -136,13 +149,13 @@ public class App : Application
                     eventType, severity,
                     alert.Rule.Metric.ToString().ToLowerInvariant(), alert.Value,
                     alert.Rule.Threshold, alert.Description);
-            });
+            }));
 
             // Wire anomaly detection → Prometheus counter + OS + in-app notifications
             var notificationService     = Services.GetRequiredService<INotificationService>();
             var inAppNotifications      = Services.GetRequiredService<IInAppNotificationService>();
 
-            anomalyService.AnomalyDetected.Subscribe(evt =>
+            _subscriptions.Add(anomalyService.AnomalyDetected.Subscribe(evt =>
             {
                 // Prometheus counters: total + per-type
                 prometheusExporter.RecordAnomalyDetected(evt.EventType);
@@ -169,7 +182,7 @@ public class App : Application
                         Severity:    inAppSeverity,
                         AutoDismiss: TimeSpan.FromSeconds(5)));
                 }
-            });
+            }));
 
             // System-tray icon
             SetupTrayIcon(desktop);

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using NexusMonitor.Core.Models;
 #if WINDOWS
@@ -31,11 +32,14 @@ public partial class SystemInfoViewModel : ViewModelBase
 
     private async Task LoadCrossPlatformAsync()
     {
+        SystemHardwareInfo? info = null;
+        string? error = null;
+
         await Task.Run(() =>
         {
             try
             {
-                var uptime  = TimeSpan.FromMilliseconds(Environment.TickCount64);
+                var uptime   = TimeSpan.FromMilliseconds(Environment.TickCount64);
                 var ramBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
 
                 var cpu = new CpuHardwareInfo(
@@ -49,7 +53,7 @@ public partial class SystemInfoViewModel : ViewModelBase
                     Socket:        string.Empty,
                     Stepping:      string.Empty);
 
-                Info = new SystemHardwareInfo(
+                info = new SystemHardwareInfo(
                     Hostname:               Environment.MachineName,
                     OsName:                 RuntimeInformation.OSDescription,
                     OsBuild:                Environment.OSVersion.ToString(),
@@ -67,10 +71,17 @@ public partial class SystemInfoViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoadError = $"Failed to read system info: {ex.Message}";
+                error = $"Failed to read system info: {ex.Message}";
             }
         });
-        IsLoading = false;
+
+        // Assign ObservableProperties on the UI thread to avoid off-thread PropertyChanged
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (info is not null)  Info = info;
+            if (error is not null) LoadError = error;
+            IsLoading = false;
+        });
     }
 #endif
 }

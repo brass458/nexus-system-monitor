@@ -15,7 +15,7 @@ using SkiaSharp;
 
 namespace NexusMonitor.UI.ViewModels;
 
-public partial class SettingsViewModel : ViewModelBase
+public partial class SettingsViewModel : ViewModelBase, IDisposable
 {
     private readonly SettingsService         _settings;
     private readonly PrometheusExporter      _exporter;
@@ -224,6 +224,10 @@ public partial class SettingsViewModel : ViewModelBase
                 value ? ThemeVariant.Dark : ThemeVariant.Light;
         _settings.Current.IsDarkTheme = value;
         _settings.Save();
+        // Re-apply glass so background brushes (written over ThemeDictionary defaults
+        // by ApplyGlass) are recalculated with the correct theme-aware fallback colours.
+        ApplyGlass(IsGlassEnabled, GlassOpacity,
+            CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
     }
 
     partial void OnIsGlassEnabledChanged(bool value)
@@ -493,15 +497,25 @@ public partial class SettingsViewModel : ViewModelBase
     {
         if (Application.Current is null) return;
 
-        // Resolve base colors — custom hex wins if valid; else fall back to defaults.
-        Color bgBase    = TryParseColor(customWindowBgHex,  Color.Parse("#0A0A12"));
-        Color bgSurface = TryParseColor(customSurfaceBgHex, Color.Parse("#131318"));
-        Color bgSidebar = TryParseColor(customSidebarBgHex, Color.Parse("#131318"));
+        // Determine current theme so fallback colours match the active palette.
+        bool isDark = Application.Current.RequestedThemeVariant != ThemeVariant.Light;
 
-        // Derive slightly lighter variants from the custom surface base
-        Color bgSecondary = LightenBy(bgSurface, 9);    // +9 brightness
-        Color bgElevated  = LightenBy(bgSurface, 16);   // +16 brightness
-        Color bgHover     = LightenBy(bgSurface, 26);   // +26 brightness
+        Color defaultBgBase    = isDark ? Color.Parse("#0A0A12") : Color.Parse("#F5F5FA");
+        Color defaultBgSurface = isDark ? Color.Parse("#131318") : Color.Parse("#FFFFFF");
+
+        // Resolve base colors — custom hex wins if valid; else use theme-appropriate defaults.
+        Color bgBase    = TryParseColor(customWindowBgHex,  defaultBgBase);
+        Color bgSurface = TryParseColor(customSurfaceBgHex, defaultBgSurface);
+        Color bgSidebar = TryParseColor(customSidebarBgHex, defaultBgSurface);
+
+        // Derive surface variants: lighten for dark mode, darken for light mode.
+        // AdjustBrightness clamps to [0,255] in both directions.
+        int secondaryDelta = isDark ?  9 : -15;
+        int elevatedDelta  = isDark ? 16 : -23;
+        int hoverDelta     = isDark ? 26 : -34;
+        Color bgSecondary = AdjustBrightness(bgSurface, secondaryDelta);
+        Color bgElevated  = AdjustBrightness(bgSurface, elevatedDelta);
+        Color bgHover     = AdjustBrightness(bgSurface, hoverDelta);
 
         // Window-frame brush can go fully transparent (that IS the glass effect)
         byte bgAlpha = enabled ? (byte)Math.Round(opacity * 255) : (byte)0xFF;
@@ -520,31 +534,37 @@ public partial class SettingsViewModel : ViewModelBase
         SetBrush("BgHoverBrush",     bgHover,     contentAlpha);
 
         // Sidebar / nav glass layer.
-        // Floor at 0xA0 (63%) so the sidebar is never so transparent that white text
+        // Floor at 0xA0 (63%) so the sidebar is never so transparent that text
         // becomes unreadable over bright wallpapers (e.g. pure white desktop).
         byte glassAlpha = enabled
             ? (byte)Math.Max(0xA0, (int)Math.Round(opacity * 0xB2))
             : (byte)0xB2;
         SetBrush("GlassBgBrush", bgSidebar, glassAlpha);
 
-        // Glass border — derive from sidebar base with low alpha
+        // Glass border — derive from sidebar base with low alpha; use light or dark tint.
         byte borderAlpha = enabled ? (byte)0x60 : (byte)0x40;
-        Application.Current.Resources["GlassBorderBrush"] =
-            new SolidColorBrush(new Color(borderAlpha,
+        Application.Current.Resources["GlassBorderBrush"] = isDark
+            ? new SolidColorBrush(new Color(borderAlpha,
                 (byte)Math.Min(255, bgSidebar.R + 0x20),
                 (byte)Math.Min(255, bgSidebar.G + 0x20),
-                (byte)Math.Min(255, bgSidebar.B + 0x20)));
+                (byte)Math.Min(255, bgSidebar.B + 0x20)))
+            : new SolidColorBrush(new Color(borderAlpha,
+                (byte)Math.Max(0, bgSidebar.R - 0x20),
+                (byte)Math.Max(0, bgSidebar.G - 0x20),
+                (byte)Math.Max(0, bgSidebar.B - 0x20)));
 
-        // Overlay widget: always semi-transparent; floor at alpha=0x80 (50%)
+        // Overlay widget: always semi-transparent; use theme-appropriate base colour.
         byte overlayAlpha = enabled
             ? (byte)Math.Max(0x80, (int)Math.Round(opacity * 0xCC))
             : (byte)0xCC;
+        (byte oR, byte oG, byte oB) = isDark ? ((byte)0x05, (byte)0x05, (byte)0x08)
+                                              : ((byte)0xF0, (byte)0xF0, (byte)0xF5);
         Application.Current.Resources["OverlayBgBrush"] =
-            new SolidColorBrush(new Color(overlayAlpha, 0x05, 0x05, 0x08));
+            new SolidColorBrush(new Color(overlayAlpha, oR, oG, oB));
 
-        // Text readability: dark glow on every TextBlock when glass is active
-        // so text stays legible over any wallpaper or bright backdrop.
-        Application.Current.Resources["GlassTextEffect"] = enabled
+        // Text readability: dark glow in dark mode, no effect in light mode
+        // (light backgrounds don't need an outline to stay legible).
+        Application.Current.Resources["GlassTextEffect"] = (enabled && isDark)
             ? (object)new DropShadowDirectionEffect
               {
                   BlurRadius  = 6,
@@ -563,12 +583,15 @@ public partial class SettingsViewModel : ViewModelBase
         catch { return fallback; }
     }
 
-    /// <summary>Adds <paramref name="amount"/> to each R, G, B channel, clamped to 255.</summary>
-    private static Color LightenBy(Color c, int amount) =>
+    /// <summary>
+    /// Adds <paramref name="amount"/> to each R, G, B channel, clamped to [0, 255].
+    /// Positive values lighten; negative values darken.
+    /// </summary>
+    private static Color AdjustBrightness(Color c, int amount) =>
         new Color(c.A,
-            (byte)Math.Min(255, c.R + amount),
-            (byte)Math.Min(255, c.G + amount),
-            (byte)Math.Min(255, c.B + amount));
+            (byte)Math.Clamp(c.R + amount, 0, 255),
+            (byte)Math.Clamp(c.G + amount, 0, 255),
+            (byte)Math.Clamp(c.B + amount, 0, 255));
 
     /// <summary>
     /// Controls the opacity of ALL specular highlight overlays in MainWindow and OverlayWindow.
@@ -694,5 +717,10 @@ public partial class SettingsViewModel : ViewModelBase
         if (Application.Current is null) return;
         Application.Current.Resources[key] =
             new SolidColorBrush(new Color(alpha, baseColor.R, baseColor.G, baseColor.B));
+    }
+
+    public void Dispose()
+    {
+        _glassAdaptive.LuminanceChanged -= OnLuminanceChanged;
     }
 }

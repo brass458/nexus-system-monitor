@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              x:Class="NexusMonitor.UI.Views.RulesView"
@@ -11,13 +11,13 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Process Rules"
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <!-- Search box -->
         <Border DockPanel.Dock="Right"
@@ -72,7 +72,7 @@
                   BorderThickness="0,0,0,1">
             <TextBlock Text="Rules automatically apply priority, affinity, I/O priority, and other settings to matching processes when they launch. Watchdog conditions can act when a process exceeds a threshold."
                        FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
           </Border>
 
           <!-- Empty state -->
@@ -81,13 +81,13 @@
                   IsVisible="{Binding FilteredRules.Count, Converter={x:Static BoolConverters.Not}}">
             <StackPanel HorizontalAlignment="Center" Spacing="10">
               <TextBlock Text="📋" FontSize="36" HorizontalAlignment="Center"
-                         Foreground="{StaticResource TextTertiaryBrush}"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}"/>
               <TextBlock Text="No rules configured"
                          FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          HorizontalAlignment="Center"/>
               <TextBlock Text="Click + Add Rule to create your first process rule."
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"
                          HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
@@ -146,7 +146,7 @@
                                     Spacing="2" Width="200">
                           <TextBlock Text="{Binding Name}"
                                      FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
                                      TextTrimming="CharacterEllipsis"/>
                           <TextBlock Text="{Binding ProcessNamePattern}"
                                      FontSize="{DynamicResource NxFont11}"
@@ -159,7 +159,7 @@
                         <TextBlock DockPanel.Dock="Left"
                                    Text="{Binding Summary}"
                                    FontSize="{DynamicResource NxFont11}"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"
                                    Margin="12,0"/>
@@ -201,7 +201,7 @@
               <TextBlock DockPanel.Dock="Left"
                          Text="{Binding EditorTitle}"
                          FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          VerticalAlignment="Center"/>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                 <Button Classes="nx-btn"
@@ -220,7 +220,7 @@
           <!-- Validation error -->
           <Border DockPanel.Dock="Top"
                   Padding="16,8"
-                  Background="#30FF453A"
+                  Background="{StaticResource ProcSuspiciousBgBrush}"
                   IsVisible="{Binding ValidationError.Length,
                               Converter={x:Static BoolConverters.Not},
                               ConverterParameter=0}">
@@ -239,21 +239,21 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="12">
                   <TextBlock Text="IDENTITY" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <Grid ColumnDefinitions="*,14,*">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Rule Name" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditName}" Watermark="My Rule"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="Process Name Pattern *" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditPattern}"
                                FontFamily="Consolas,Courier New,monospace"
                                Watermark="chrome  or  *helper*"/>
                       <TextBlock Text="Supports * wildcard. Case-insensitive. No .exe needed."
-                                 FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                                 FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </StackPanel>
                   </Grid>
                   <StackPanel Orientation="Horizontal" Spacing="8">
@@ -264,7 +264,7 @@
                               Foreground="{StaticResource ColorDangerBrush}"/>
                     <CheckBox IsChecked="{Binding EditKeepRunning}"
                               Content="Keep running (restart on exit)"
-                              Foreground="#30D158"/>
+                              Foreground="{StaticResource ColorSuccessBrush}"/>
                   </StackPanel>
                 </StackPanel>
               </Border>
@@ -278,30 +278,30 @@
                 <StackPanel Spacing="12">
                   <StackPanel Spacing="2">
                     <TextBlock Text="PERSISTENT ACTIONS" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                               LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                               LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     <TextBlock Text="Applied every time this process launches."
-                               FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                               FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   </StackPanel>
 
                   <Grid ColumnDefinitions="*,14,*,14,*">
                     <!-- Priority -->
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="CPU Priority" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.PriorityOptions}"
                                 SelectedIndex="{Binding EditPriorityIndex}"/>
                     </StackPanel>
                     <!-- I/O Priority -->
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="I/O Priority" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.IoPriorityOptions}"
                                 SelectedIndex="{Binding EditIoPriorityIndex}"/>
                     </StackPanel>
                     <!-- Memory Priority -->
                     <StackPanel Grid.Column="4" Spacing="4">
                       <TextBlock Text="Memory Priority" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.MemPriorityOptions}"
                                 SelectedIndex="{Binding EditMemPriorityIndex}"/>
                     </StackPanel>
@@ -311,22 +311,22 @@
                     <!-- Efficiency Mode -->
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Efficiency Mode (EcoQoS)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.EfficiencyOptions}"
                                 SelectedIndex="{Binding EditEfficiencyIndex}"/>
                       <TextBlock Text="Windows 11+ EcoQoS: reduces power and heat for background apps."
-                                 FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                                 FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextWrapping="Wrap"/>
                     </StackPanel>
                     <!-- CPU Affinity -->
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="CPU Affinity Mask (hex)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditAffinityHex}"
                                FontFamily="Consolas,Courier New,monospace"
                                Watermark="e.g. 0xF  (first 4 cores)"/>
                       <TextBlock Text="Bitmask of allowed CPUs. 0xFF = all 8 cores. Leave blank to keep default."
-                                 FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                                 FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextWrapping="Wrap"/>
                     </StackPanel>
                   </Grid>
@@ -342,21 +342,21 @@
                 <StackPanel Spacing="12">
                   <StackPanel Spacing="2">
                     <TextBlock Text="WATCHDOG CONDITION" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                               LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                               LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     <TextBlock Text="Action taken when the process exceeds a threshold for a sustained duration."
-                               FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                               FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   </StackPanel>
 
                   <Grid ColumnDefinitions="*,14,*">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Trigger Condition" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.ConditionTypeOptions}"
                                 SelectedIndex="{Binding EditConditionTypeIndex}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="Watchdog Action" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.WatchdogActionOptions}"
                                 SelectedIndex="{Binding EditWatchdogActionIndex}"/>
                     </StackPanel>
@@ -367,7 +367,7 @@
                         IsVisible="{Binding IsConditionEnabled}">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="CPU Threshold (%)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <Grid ColumnDefinitions="*,Auto">
                         <Slider Grid.Column="0" Minimum="1" Maximum="99"
                                 Value="{Binding EditConditionCpuThreshold}"
@@ -382,7 +382,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="RAM Threshold (MB)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <Grid ColumnDefinitions="*,Auto">
                         <Slider Grid.Column="0" Minimum="64" Maximum="8192"
                                 Value="{Binding EditConditionRamMb}"
@@ -397,7 +397,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="4" Spacing="4">
                       <TextBlock Text="Duration (seconds)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <NumericUpDown Value="{Binding EditConditionDurationSecs}"
                                      Minimum="1" Maximum="3600" Increment="1"
                                      FormatString="0"/>

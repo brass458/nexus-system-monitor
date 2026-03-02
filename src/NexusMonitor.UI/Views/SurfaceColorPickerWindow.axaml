@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusMonitor.UI.ViewModels"
         xmlns:controls="using:NexusMonitor.UI.Controls"
@@ -31,11 +31,11 @@
                 Click="OnCancel"
                 ToolTip.Tip="Cancel">
           <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
         </Button>
         <TextBlock Text="Custom Background Color"
                    FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
       </DockPanel>
 
@@ -51,13 +51,13 @@
           <TextBlock Grid.Column="0"
                      Text="HEX"
                      FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"
                      Margin="0,0,8,0"/>
           <TextBlock Grid.Column="1"
                      Text="{Binding PickerSurfaceHex}"
                      FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                     Foreground="{StaticResource TextSecondaryBrush}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
                      VerticalAlignment="Center"/>
         </Grid>
       </Border>

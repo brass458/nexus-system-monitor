@@ -123,6 +123,9 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         RefreshDbInfo();
     }
 
+    // 4B: Re-load when event type filter changes
+    partial void OnEventTypeFilterChanged(string value) => _ = Refresh();
+
     // ── Range commands ───────────────────────────────────────────────────────
     [RelayCommand] private Task Load1h()  => LoadAsync(TimeSpan.FromHours(1),  is1h:  true);
     [RelayCommand] private Task Load6h()  => LoadAsync(TimeSpan.FromHours(6),  is6h:  true);
@@ -146,6 +149,7 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         bool is7d = false, bool is30d = false)
     {
         _loadCts?.Cancel();
+        _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var ct = _loadCts.Token;
 

@@ -6,6 +6,8 @@ namespace NexusMonitor.UI.Views;
 
 public partial class NetworkView : UserControl
 {
+    private NetworkViewModel? _previousVm;
+
     public NetworkView()
     {
         InitializeComponent();
@@ -14,10 +16,19 @@ public partial class NetworkView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
+        // 4D: Unsubscribe from the previous VM to prevent accumulating duplicate handlers
+        if (_previousVm is not null)
+            _previousVm.PropertyChanged -= OnViewModelPropertyChanged;
+
         if (DataContext is NetworkViewModel vm)
         {
+            _previousVm = vm;
             vm.PropertyChanged += OnViewModelPropertyChanged;
             ApplyThroughputVisibility(vm.ShowThroughputColumns);
+        }
+        else
+        {
+            _previousVm = null;
         }
     }
 

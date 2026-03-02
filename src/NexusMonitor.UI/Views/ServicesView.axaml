@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
@@ -18,13 +18,13 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Services"
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,12,0"/>
 
@@ -67,7 +67,7 @@
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <DockPanel>
 
@@ -81,11 +81,11 @@
 
         <!-- Stats -->
         <StackPanel Orientation="Horizontal" Spacing="24">
-          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}">
             <Run Text="Total: "/>
-            <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Medium"/>
+            <Run Text="{Binding TotalCount}"   Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium"/>
           </TextBlock>
-          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}">
             <Run Text="Running: "/>
             <Run Text="{Binding RunningCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
           </TextBlock>
@@ -141,7 +141,7 @@
 
         <!-- Loading overlay -->
         <Border IsVisible="{Binding IsLoading}"
-                Background="#80000000">
+                Background="{DynamicResource OverlayBgBrush}">
           <TextBlock Text="Loading services&#x2026;"
                      FontSize="{DynamicResource NxFont14}"
                      Foreground="White"
@@ -153,7 +153,7 @@
       <!-- Splitter -->
       <GridSplitter Grid.Column="1"
                     Width="1"
-                    Background="{StaticResource BorderSubtleBrush}"
+                    Background="{DynamicResource BorderSubtleBrush}"
                     IsVisible="{Binding IsServiceDetailShown}"/>
 
       <!-- Detail sidebar -->
@@ -169,15 +169,15 @@
             <!-- Header: service name -->
             <TextBlock Text="{Binding DisplayName}"
                        FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,2"/>
             <TextBlock Text="{Binding Name}"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,0,0,10"/>
 
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- State badge -->
             <Border CornerRadius="4" Padding="8,3" Margin="0,0,0,10"
@@ -188,7 +188,7 @@
 
             <!-- Section: Identity -->
             <TextBlock Text="IDENTITY" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,12">
@@ -204,23 +204,23 @@
 
             <!-- Section: Description -->
             <TextBlock Text="DESCRIPTION" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding Description}"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,12"/>
 
             <!-- Section: Binary Path -->
             <TextBlock Text="BINARY PATH" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding BinaryPath}"
                        FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap"/>
 
           </StackPanel>

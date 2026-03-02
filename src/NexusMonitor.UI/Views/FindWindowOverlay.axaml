@@ -12,30 +12,30 @@
 
   <Panel>
     <!-- Semi-transparent overlay to indicate crosshair mode -->
-    <Border Background="#18FFFFFF" IsHitTestVisible="False"/>
+    <Border Background="{DynamicResource GlassHighlightBrush}" IsHitTestVisible="False"/>
 
     <!-- Info box at top-center -->
     <Border HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,40,0,0"
             Padding="16,10"
-            Background="#DD1A1A1E"
+            Background="{DynamicResource BgElevatedBrush}"
             CornerRadius="8"
             IsHitTestVisible="False">
       <StackPanel Spacing="4" HorizontalAlignment="Center">
         <TextBlock x:Name="InfoText"
                    Text="Click on any window to identify its process"
                    FontSize="14" FontWeight="Medium"
-                   Foreground="White"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"/>
         <TextBlock x:Name="PidText"
                    Text=""
                    FontSize="12"
-                   Foreground="#AAAAAA"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    HorizontalAlignment="Center"/>
         <TextBlock Text="Press ESC to cancel"
                    FontSize="11"
-                   Foreground="#777777"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    HorizontalAlignment="Center"/>
       </StackPanel>
     </Border>

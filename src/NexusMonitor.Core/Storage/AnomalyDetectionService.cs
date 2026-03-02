@@ -26,7 +26,12 @@ public sealed class AnomalyDetectionService : IDisposable
     private readonly SlidingStats _netStats = new(60);
 
     // Per-process windows (keyed by process name)
-    private readonly Dictionary<string, SlidingStats> _procStats = new();
+    private struct ProcStatsEntry
+    {
+        public SlidingStats Stats;
+        public DateTime     LastUpdated;
+    }
+    private readonly Dictionary<string, ProcStatsEntry> _procStats = new();
 
     // ── New-connection tracking ────────────────────────────────────────────
     private readonly HashSet<string> _seenEndpoints = new();
@@ -141,17 +146,16 @@ public sealed class AnomalyDetectionService : IDisposable
     {
         foreach (var p in procs)
         {
-            if (!_procStats.TryGetValue(p.Name, out var stats))
-            {
-                stats = new SlidingStats(_config.WindowSize);
-                _procStats[p.Name] = stats;
-            }
+            if (!_procStats.TryGetValue(p.Name, out var entry))
+                entry = new ProcStatsEntry { Stats = new SlidingStats(_config.WindowSize) };
 
             double cpu      = p.CpuPercent;
-            bool isAnomaly  = stats.IsAnomaly(cpu, _config.SigmaProcess);
-            double baseline = stats.Mean();
+            bool isAnomaly  = entry.Stats.IsAnomaly(cpu, _config.SigmaProcess);
+            double baseline = entry.Stats.Mean();
 
-            stats.Push(cpu);   // push AFTER checking
+            entry.Stats.Push(cpu);   // push AFTER checking
+            entry.LastUpdated = DateTime.UtcNow;
+            _procStats[p.Name] = entry;
 
             if (!isAnomaly) continue;
             if (cpu - baseline < _config.ProcessSpikeMinDeltaCpu) continue;
@@ -166,11 +170,23 @@ public sealed class AnomalyDetectionService : IDisposable
                 $"{{\"pid\":{p.Pid}}}");
         }
 
-        // Trim procStats if it grows unbounded (long-lived processes accumulate)
+        // Trim: remove the 100 oldest entries by LastUpdated to keep memory bounded
         if (_procStats.Count > 500)
         {
-            var toDrop = _procStats.Keys.Take(100).ToList();
+            var toDrop = _procStats
+                .OrderBy(kv => kv.Value.LastUpdated)
+                .Take(100)
+                .Select(kv => kv.Key)
+                .ToList();
             foreach (var k in toDrop) _procStats.Remove(k);
+
+            // Also prune stale _lastFired cooldown entries (unbounded without pruning)
+            var cutoff = DateTime.UtcNow - TimeSpan.FromSeconds(_config.CooldownSeconds * 2);
+            var staleKeys = _lastFired
+                .Where(kv => kv.Value < cutoff)
+                .Select(kv => kv.Key)
+                .ToList();
+            foreach (var k in staleKeys) _lastFired.Remove(k);
         }
     }
 

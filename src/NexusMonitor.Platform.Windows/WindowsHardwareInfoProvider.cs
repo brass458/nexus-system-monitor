@@ -1,4 +1,5 @@
 ﻿using System.Management;
+using Microsoft.Win32;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.Windows;
@@ -128,21 +129,65 @@ public sealed class WindowsHardwareInfoProvider
     private static IReadOnlyList<GpuHardwareInfo> QueryGpus()
     {
         var list = new List<GpuHardwareInfo>();
+
+        // Build a DriverDesc → 64-bit VRAM lookup from the registry display adapter class.
+        // This overrides the WMI AdapterRAM uint32 field which is capped at ~4 GB.
+        var registryVram = BuildRegistryVramMap();
+
         try
         {
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
             foreach (ManagementObject obj in searcher.Get())
             {
-                string name    = obj["Name"]?.ToString()?.Trim()          ?? "";
-                string driver  = obj["DriverVersion"]?.ToString()?.Trim() ?? "";
-                long   vram    = Convert.ToInt64(obj["AdapterRAM"]        ?? 0L);
+                string name    = obj["Name"]?.ToString()?.Trim()           ?? "";
+                string driver  = obj["DriverVersion"]?.ToString()?.Trim()  ?? "";
+                long   vram    = Convert.ToInt64(obj["AdapterRAM"]         ?? 0L);
                 string vp      = obj["VideoProcessor"]?.ToString()?.Trim() ?? "";
-                string status  = obj["Status"]?.ToString()?.Trim()        ?? "";
+                string status  = obj["Status"]?.ToString()?.Trim()         ?? "";
+
+                // Use 64-bit registry value if available (avoids 4 GB uint32 truncation).
+                if (registryVram.TryGetValue(name, out long regVram) && regVram > vram)
+                    vram = regVram;
+
                 list.Add(new GpuHardwareInfo(name, driver, vram, vp, status));
             }
         }
         catch { }
         return list;
+    }
+
+    /// <summary>
+    /// Reads <c>HardwareInformation.qwMemorySize</c> (REG_QWORD, 64-bit) from every
+    /// subkey of the display adapter class GUID in the registry and returns a
+    /// DriverDesc → bytes map.  Falls back gracefully when keys are absent or
+    /// access is denied.
+    /// </summary>
+    private static Dictionary<string, long> BuildRegistryVramMap()
+    {
+        var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        const string classGuid =
+            @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
+        try
+        {
+            using var classKey = Registry.LocalMachine.OpenSubKey(classGuid);
+            if (classKey is null) return map;
+            foreach (var subName in classKey.GetSubKeyNames())
+            {
+                try
+                {
+                    using var sub = classKey.OpenSubKey(subName);
+                    if (sub is null) continue;
+                    var driverDesc = sub.GetValue("DriverDesc") as string;
+                    var qwMem      = sub.GetValue("HardwareInformation.qwMemorySize");
+                    if (driverDesc is null || qwMem is null) continue;
+                    long bytes = Convert.ToInt64(qwMem);
+                    if (bytes > 0) map[driverDesc] = bytes;
+                }
+                catch { }
+            }
+        }
+        catch { }
+        return map;
     }
 
     // -- Storage ----------------------------------------------------------------

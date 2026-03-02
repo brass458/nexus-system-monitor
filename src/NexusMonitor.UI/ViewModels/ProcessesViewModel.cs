@@ -24,6 +24,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private readonly IProcessProvider _processProvider;
     private readonly AppSettings _appSettings;
     private readonly CancellationTokenSource _cts = new();
+    // 4E: Per-selection CTS — cancelled each time SelectedProcess changes to abort stale detail loads
+    private CancellationTokenSource _detailCts = new();
     private IDisposable? _subscription;
 
     // Master cache: all live processes keyed by PID.
@@ -237,10 +239,13 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             .OrderBy(r => r.Name)
             .ToList();
 
-        // Depth-first traversal
+        // Depth-first traversal with cycle guard and depth limit
         var ordered = new List<ProcessRowViewModel>();
+        var visited = new HashSet<int>();
         void Traverse(ProcessRowViewModel row, int depth)
         {
+            if (!visited.Add(row.Pid)) return;  // cycle guard
+            if (depth > 64) return;              // depth limit safety net
             if (wantPids.Contains(row.Pid))
             {
                 row.TreeDepth = depth;
@@ -450,21 +455,27 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         ProcessHandles     = [];
         ProcessMemoryMap   = [];
         HandleCountLabel   = "";
+
+        // 4E: Cancel any in-flight detail loads from the previous selection
+        _detailCts.Cancel();
+        _detailCts.Dispose();
+        _detailCts = new CancellationTokenSource();
+
         if (value is not null)
         {
-            _ = LoadModulesAsync(value.Pid);
-            _ = LoadThreadsAsync(value.Pid);
-            _ = LoadEnvironmentAsync(value.Pid);
-            _ = LoadHandlesAsync(value.Pid);
-            _ = LoadMemoryMapAsync(value.Pid);
+            _ = LoadModulesAsync(value.Pid, _detailCts.Token);
+            _ = LoadThreadsAsync(value.Pid, _detailCts.Token);
+            _ = LoadEnvironmentAsync(value.Pid, _detailCts.Token);
+            _ = LoadHandlesAsync(value.Pid, _detailCts.Token);
+            _ = LoadMemoryMapAsync(value.Pid, _detailCts.Token);
         }
     }
 
-    private async Task LoadModulesAsync(int pid)
+    private async Task LoadModulesAsync(int pid, CancellationToken ct)
     {
         try
         {
-            var modules = await _processProvider.GetModulesAsync(pid, _cts.Token);
+            var modules = await _processProvider.GetModulesAsync(pid, ct);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (SelectedProcess?.Pid == pid)
@@ -482,11 +493,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task LoadThreadsAsync(int pid)
+    private async Task LoadThreadsAsync(int pid, CancellationToken ct)
     {
         try
         {
-            var threads = await _processProvider.GetThreadsAsync(pid, _cts.Token);
+            var threads = await _processProvider.GetThreadsAsync(pid, ct);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (SelectedProcess?.Pid == pid)
@@ -504,11 +515,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task LoadEnvironmentAsync(int pid)
+    private async Task LoadEnvironmentAsync(int pid, CancellationToken ct)
     {
         try
         {
-            var env = await _processProvider.GetEnvironmentAsync(pid, _cts.Token);
+            var env = await _processProvider.GetEnvironmentAsync(pid, ct);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (SelectedProcess?.Pid == pid)
@@ -526,11 +537,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task LoadHandlesAsync(int pid)
+    private async Task LoadHandlesAsync(int pid, CancellationToken ct)
     {
         try
         {
-            var handles = await _processProvider.GetHandlesAsync(pid, _cts.Token);
+            var handles = await _processProvider.GetHandlesAsync(pid, ct);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (SelectedProcess?.Pid == pid)
@@ -551,11 +562,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task LoadMemoryMapAsync(int pid)
+    private async Task LoadMemoryMapAsync(int pid, CancellationToken ct)
     {
         try
         {
-            var regions = await _processProvider.GetMemoryMapAsync(pid, _cts.Token);
+            var regions = await _processProvider.GetMemoryMapAsync(pid, ct);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (SelectedProcess?.Pid == pid)
@@ -577,6 +588,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     {
         _cts.Cancel();
         _cts.Dispose();
+        _detailCts.Cancel();
+        _detailCts.Dispose();
         _subscription?.Dispose();
         (SelectedDetails as IDisposable)?.Dispose();
         _allRows.Clear();

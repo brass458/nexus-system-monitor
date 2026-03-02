@@ -73,7 +73,7 @@
             <TextBlock Text="✕  Close Application" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                        Foreground="White"/>
             <TextBlock Text="Stops monitoring and exits completely. Widgets also close."
-                       FontSize="{DynamicResource NxFont10}" Foreground="#CCffffff"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"/>
           </StackPanel>
         </Button>

@@ -30,10 +30,11 @@ public sealed class MetricsRollupService : IDisposable
 
     public void Start()
     {
-        // First run after 60s, then every 60s
+        // Use infinite period: the timer re-arms itself at the END of RunCycle,
+        // which prevents overlapping callbacks if RunCycle takes more than 60 s.
         _timer = new Timer(_ => RunCycle(), null,
-            dueTime:  TimeSpan.FromSeconds(60),
-            period:   TimeSpan.FromSeconds(60));
+            dueTime: TimeSpan.FromSeconds(60),
+            period:  Timeout.InfiniteTimeSpan);
     }
 
     public void Stop()
@@ -60,6 +61,11 @@ public sealed class MetricsRollupService : IDisposable
             }
         }
         catch { /* never crash the app */ }
+        finally
+        {
+            // Re-arm only after work completes — guarantees no overlapping callbacks
+            _timer?.Change(TimeSpan.FromSeconds(60), Timeout.InfiniteTimeSpan);
+        }
     }
 
     // ── 1-minute rollups ───────────────────────────────────────────────────────

@@ -80,7 +80,10 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
             : 0;
         MemDisplay  = $"{m.Memory.UsedBytes / 1e9:F1} / {m.Memory.TotalBytes / 1e9:F1} GB";
 
-        var net = m.NetworkAdapters.FirstOrDefault();
+        var net = m.NetworkAdapters
+            .OrderByDescending(a => a.SendBytesPerSec + a.RecvBytesPerSec)
+            .ThenByDescending(a => a.IsConnected ? 1 : 0)
+            .FirstOrDefault();
         if (net is not null)
         {
             NetSendDisplay = $"↑ {FmtRate(net.SendBytesPerSec)}";

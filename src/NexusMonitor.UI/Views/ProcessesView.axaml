@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
@@ -22,14 +22,14 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto">
 
         <!-- Search -->
         <Border Grid.Column="0"
                 Background="{DynamicResource BgElevatedBrush}"
-                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
                 BorderThickness="1"
                 CornerRadius="{StaticResource CornerMD}"
                 MaxWidth="320"
@@ -40,7 +40,7 @@
                        FontSize="{DynamicResource NxFont13}"
                        Margin="10,0,6,0"
                        VerticalAlignment="Center"
-                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                       Foreground="{DynamicResource TextTertiaryBrush}"/>
             <TextBox Grid.Column="1"
                      Name="SearchBox"
                      Classes="nx-input"
@@ -119,7 +119,7 @@
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <DockPanel>
 
@@ -135,25 +135,25 @@
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="Processes:"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalProcessCount}"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="Threads:"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalThreadCount}"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="Medium"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="CPU:"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="{Binding TotalCpuPercent, StringFormat='{}{0:F1}%'}"
                        FontSize="{DynamicResource NxFont11}"
                        Foreground="{DynamicResource AccentBlueBrush}"
@@ -281,7 +281,7 @@
                             FontSize="{DynamicResource NxFont11}"
                             HorizontalAlignment="Right"
                             Margin="0,0,8,0"
-                            Foreground="{StaticResource TextSecondaryBrush}"/>
+                            Foreground="{DynamicResource TextSecondaryBrush}"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
@@ -293,7 +293,7 @@
                             FontSize="{DynamicResource NxFont10}"
                             HorizontalAlignment="Right"
                             Margin="0,0,8,0"
-                            Foreground="{StaticResource TextTertiaryBrush}"
+                            Foreground="{DynamicResource TextTertiaryBrush}"
                             TextTrimming="CharacterEllipsis"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
@@ -326,7 +326,7 @@
       <!-- ── SPLITTER ── -->
       <GridSplitter Grid.Column="1"
                     Width="1"
-                    Background="{StaticResource BorderSubtleBrush}"
+                    Background="{DynamicResource BorderSubtleBrush}"
                     ResizeDirection="Columns"
                     IsVisible="{Binding IsDetailPanelShown}"/>
 
@@ -344,21 +344,21 @@
             <!-- Header: process name + PID -->
             <TextBlock Text="{Binding Name}"
                        FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,2"/>
-            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,12">
+            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,12">
               <Run Text="PID "/>
-              <Run Text="{Binding Pid}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="{Binding Pid}" FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
               <Run Text="  ·  PPID "/>
-              <Run Text="{Binding ParentPid}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="{Binding ParentPid}" FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </TextBlock>
 
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Section: Identity -->
             <TextBlock Text="IDENTITY" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,12">
@@ -374,7 +374,7 @@
 
             <!-- Section: Performance -->
             <TextBlock Text="PERFORMANCE" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
@@ -411,7 +411,7 @@
 
             <!-- Section: I/O -->
             <TextBlock Text="DISK I/O" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
@@ -423,27 +423,27 @@
 
             <!-- Section: Image -->
             <TextBlock Text="IMAGE" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding Description}"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding ImagePath}"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"/>
 
             <TextBlock Text="{Binding CommandLine}"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,6"
                        FontStyle="Italic"/>
 
             <!-- Section: Loaded Modules -->
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,6,0,10"/>
 
             <TextBlock Text="MODULES" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <ScrollViewer MaxHeight="160">
@@ -452,7 +452,7 @@
                   <DataTemplate>
                     <TextBlock Text="{Binding Name}"
                                FontSize="{DynamicResource NxFont11}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                ToolTip.Tip="{Binding Path}"
                                Margin="0,1"/>
                   </DataTemplate>
@@ -461,9 +461,9 @@
             </ScrollViewer>
 
             <!-- Section: Threads -->
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,6,0,10"/>
             <TextBlock Text="THREADS" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="140">
               <ItemsControl ItemsSource="{Binding DataContext.ProcessThreads,
@@ -474,12 +474,12 @@
                       <TextBlock Grid.Column="0"
                                  Text="{Binding ThreadId, StringFormat='TID {0}'}"
                                  FontSize="{DynamicResource NxFont11}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBlock Grid.Column="1"
                                  Text="{Binding BasePriority, StringFormat='Pri {0}'}"
                                  FontSize="{DynamicResource NxFont11}"
                                  HorizontalAlignment="Right"
-                                 Foreground="{StaticResource TextTertiaryBrush}"/>
+                                 Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -487,9 +487,9 @@
             </ScrollViewer>
 
             <!-- Section: Environment Variables -->
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,6,0,10"/>
             <TextBlock Text="ENVIRONMENT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="160">
               <ItemsControl ItemsSource="{Binding DataContext.ProcessEnvironment,
@@ -498,12 +498,12 @@
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="0,1">
                       <TextBlock Text="{Binding Key}"   FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextTertiaryBrush}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextTrimming="CharacterEllipsis" MaxWidth="90"
                                  ToolTip.Tip="{Binding Key}"/>
-                      <TextBlock Text="=" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="2,0"/>
+                      <TextBlock Text="=" FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="2,0"/>
                       <TextBlock Text="{Binding Value}" FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                  TextTrimming="CharacterEllipsis" MaxWidth="130"
                                  ToolTip.Tip="{Binding Value}"/>
                     </StackPanel>
@@ -513,15 +513,15 @@
             </ScrollViewer>
 
             <!-- Section: Handles -->
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,6,0,10"/>
             <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
               <TextBlock Grid.Column="0" Text="HANDLES" FontSize="{DynamicResource NxFont11}"
-                         FontWeight="Medium" Foreground="{StaticResource TextTertiaryBrush}"
+                         FontWeight="Medium" Foreground="{DynamicResource TextTertiaryBrush}"
                          LetterSpacing="0.8"/>
               <TextBlock Grid.Column="1"
                          Text="{Binding DataContext.HandleCountLabel, RelativeSource={RelativeSource AncestorType=UserControl}}"
                          FontSize="{DynamicResource NxFont10}"
-                         Foreground="{StaticResource TextTertiaryBrush}"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}"/>
             </Grid>
             <ScrollViewer MaxHeight="160">
               <ItemsControl ItemsSource="{Binding DataContext.ProcessHandles, RelativeSource={RelativeSource AncestorType=UserControl}}">
@@ -530,11 +530,11 @@
                     <Grid ColumnDefinitions="90,*" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding TypeName}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextTertiaryBrush}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextTrimming="CharacterEllipsis"/>
                       <TextBlock Grid.Column="1" Text="{Binding ObjectName}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                  TextTrimming="CharacterEllipsis"
                                  ToolTip.Tip="{Binding ObjectName}"/>
                     </Grid>
@@ -544,9 +544,9 @@
             </ScrollViewer>
 
             <!-- Section: Memory Map -->
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,6,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,6,0,10"/>
             <TextBlock Text="MEMORY MAP" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
             <ScrollViewer MaxHeight="160">
               <ItemsControl ItemsSource="{Binding DataContext.ProcessMemoryMap, RelativeSource={RelativeSource AncestorType=UserControl}}">
@@ -555,22 +555,22 @@
                     <Grid ColumnDefinitions="100,60,60,50,50" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding BaseAddressHex}"
                                  FontSize="{DynamicResource NxFont10}" FontFamily="Consolas,Monospace"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                 Foreground="{DynamicResource TextPrimaryBrush}"/>
                       <TextBlock Grid.Column="1" Text="{Binding RegionSizeDisplay}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                  HorizontalAlignment="Right"/>
                       <TextBlock Grid.Column="2" Text="{Binding State}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextTertiaryBrush}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
                                  HorizontalAlignment="Center"/>
                       <TextBlock Grid.Column="3" Text="{Binding RegionType}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextTertiaryBrush}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
                                  HorizontalAlignment="Center"/>
                       <TextBlock Grid.Column="4" Text="{Binding Protection}"
                                  FontSize="{DynamicResource NxFont10}"
-                                 Foreground="{StaticResource TextTertiaryBrush}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
                                  HorizontalAlignment="Center"/>
                     </Grid>
                   </DataTemplate>

@@ -372,8 +372,15 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     public Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default) =>
         throw new PlatformNotSupportedException("Process dump is not yet implemented on macOS.");
 
-    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
-        Task.FromResult(((long)(1L << Environment.ProcessorCount) - 1, (long)(1L << Environment.ProcessorCount) - 1));
+    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default)
+    {
+        // 5C: 1L << 64 is undefined behavior (wraps to 1). Use -1L for 64+ core systems
+        //     which represents all-bits-set and is the correct "all cores" mask.
+        long allCoresMask = Environment.ProcessorCount >= 64
+            ? -1L
+            : (1L << Environment.ProcessorCount) - 1;
+        return Task.FromResult((allCoresMask, allCoresMask));
+    }
 
 
     // ── IDisposable ────────────────────────────────────────────────────────────

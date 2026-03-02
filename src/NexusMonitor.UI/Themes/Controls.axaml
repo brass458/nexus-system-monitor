@@ -170,22 +170,17 @@
 
   <!-- ===== CONTEXT MENU ===== -->
   <!--
-    Background uses hardcoded gradient with high alpha floor (~94% opaque)
-    to stay visible regardless of glass opacity settings.
+    Background and border use DynamicResource so both adapt to Light/Dark theme.
+    ContextMenuBgBrush and ContextMenuBorderBrush are defined in Colors.axaml
+    ThemeDictionaries with ~94% opaque fills so they stay visible regardless of
+    glass opacity settings.
   -->
   <Style Selector="ContextMenu">
-    <Setter Property="BorderBrush" Value="#45FFFFFF" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ContextMenuBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Padding" Value="5" />
-    <Setter Property="Background">
-      <Setter.Value>
-        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-          <GradientStop Color="#F0222230" Offset="0.0"/>
-          <GradientStop Color="#F0121218" Offset="1.0"/>
-        </LinearGradientBrush>
-      </Setter.Value>
-    </Setter>
+    <Setter Property="Background" Value="{DynamicResource ContextMenuBgBrush}" />
   </Style>
   <Style Selector="MenuItem">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -203,7 +198,7 @@
   </Style>
   <!-- Separator styling -->
   <Style Selector="Separator">
-    <Setter Property="Background" Value="#25FFFFFF" />
+    <Setter Property="Background" Value="{DynamicResource SeparatorBrush}" />
     <Setter Property="Height" Value="1" />
     <Setter Property="Margin" Value="8,4" />
   </Style>

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:ctrl="using:NexusMonitor.UI.Controls"
@@ -19,7 +19,7 @@
 
     <!-- ── Row 0: Toolbar ─────────────────────────────────────────────── -->
     <Border Grid.Row="0" Padding="16,10" Background="{DynamicResource BgPrimaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="Auto,8,*,8,Auto,8,Auto,8,Auto,*">
 
         <ComboBox Grid.Column="0"
@@ -71,7 +71,7 @@
           <Button.Styles>
             <Style Selector="Button">
               <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
-              <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
               <Setter Property="CornerRadius" Value="8"/>
             </Style>
           </Button.Styles>
@@ -81,7 +81,7 @@
         <TextBlock Grid.Column="8"
                    Text="{Binding ScanStatus}"
                    VerticalAlignment="Center"
-                   Foreground="{StaticResource TextTertiaryBrush}"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    FontSize="{DynamicResource NxFont12}"
                    Margin="8,0,0,0"
                    MaxWidth="280"
@@ -102,7 +102,7 @@
     <!-- ── Row 1: Volume stats bar ────────────────────────────────────── -->
     <Border Grid.Row="1" Padding="16,8"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1"
             IsVisible="{Binding HasScanResult}">
       <Grid ColumnDefinitions="*,1,*,1,*">
@@ -110,20 +110,20 @@
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
           <TextBlock Text="Total:"
                      FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"/>
           <TextBlock Text="{Binding VolumeTotalDisplay}"
                      FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                     Foreground="{StaticResource TextPrimaryBrush}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      VerticalAlignment="Center"/>
         </StackPanel>
 
-        <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource BorderSubtleBrush}"/>
+        <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource BorderSubtleBrush}"/>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
           <TextBlock Text="Used:"
                      FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"/>
           <TextBlock Text="{Binding VolumeUsedDisplay}"
                      FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
@@ -131,16 +131,16 @@
                      VerticalAlignment="Center"/>
           <TextBlock Text="{Binding VolumeUsedPercent, StringFormat='({0:F1}%)'}"
                      FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"/>
         </StackPanel>
 
-        <Rectangle Grid.Column="3" Width="1" Fill="{StaticResource BorderSubtleBrush}"/>
+        <Rectangle Grid.Column="3" Width="1" Fill="{DynamicResource BorderSubtleBrush}"/>
 
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
           <TextBlock Text="Free:"
                      FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"/>
           <TextBlock Text="{Binding VolumeFreeDisplay}"
                      FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
@@ -154,7 +154,7 @@
     <!-- ── Row 2: Tab bar ─────────────────────────────────────────────── -->
     <Border Grid.Row="2" Padding="12,0"
             Background="{DynamicResource BgPrimaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal">
         <Button Command="{Binding SelectFolderViewCommand}" Padding="16,9" CornerRadius="0">
@@ -170,7 +170,7 @@
           <Panel>
             <TextBlock Text="Folder View"
                        FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <Border Height="2" VerticalAlignment="Bottom"
                     Background="{DynamicResource AccentBlueBrush}"
                     IsVisible="{Binding IsFolderViewActive}"/>
@@ -189,7 +189,7 @@
           <Panel>
             <TextBlock Text="File View"
                        FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <Border Height="2" VerticalAlignment="Bottom"
                     Background="{DynamicResource AccentBlueBrush}"
                     IsVisible="{Binding IsFileViewActive}"/>
@@ -209,7 +209,7 @@
 
           <Border Grid.Row="0" Padding="10,7"
                   Background="{DynamicResource BgPrimaryBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}"
                   BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <Button Content="Up" Command="{Binding NavigateUpCommand}" Padding="8,4"
@@ -218,7 +218,7 @@
                   <Style Selector="Button">
                     <Setter Property="CornerRadius" Value="6"/>
                     <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
-                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                   </Style>
                 </Button.Styles>
               </Button>
@@ -231,7 +231,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate DataType="models:DiskNode">
                     <StackPanel Orientation="Horizontal" Spacing="2">
-                      <TextBlock Text=" > " Foreground="{StaticResource TextTertiaryBrush}"
+                      <TextBlock Text=" > " Foreground="{DynamicResource TextTertiaryBrush}"
                                  VerticalAlignment="Center" FontSize="{DynamicResource NxFont11}"/>
                       <Button Content="{Binding Name}"
                               Command="{Binding $parent[UserControl].DataContext.NavigateToBreadcrumbCommand}"
@@ -273,7 +273,7 @@
                                  IsVisible="{Binding IsDirectory}"/>
                       <TextBlock Text="{Binding Name}"
                                  FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                  VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
@@ -307,7 +307,7 @@
 
         <!-- Vertical splitter -->
         <GridSplitter Grid.Column="1" Width="4" VerticalAlignment="Stretch"
-                      Background="{StaticResource BorderSubtleBrush}"/>
+                      Background="{DynamicResource BorderSubtleBrush}"/>
 
         <!-- Right panel: File Types + Selected File + Duplicates -->
         <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
@@ -315,12 +315,12 @@
           <!-- File Types header -->
           <Border Grid.Row="0" Padding="12,10"
                   Background="{DynamicResource BgPrimaryBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}"
                   BorderThickness="0,0,0,1">
             <TextBlock Text="FILE TYPES"
                        FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                        LetterSpacing="0.8"
-                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                       Foreground="{DynamicResource TextTertiaryBrush}"/>
           </Border>
 
           <!-- File type list -->
@@ -335,17 +335,17 @@
                             HorizontalAlignment="Left">
                       <TextBlock Text="{Binding Extension}"
                                  FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                 Foreground="{DynamicResource TextPrimaryBrush}"/>
                     </Border>
                     <StackPanel Grid.Column="1" Margin="6,0">
                       <TextBlock Text="{Binding SizeDisplay}"
                                  FontSize="{DynamicResource NxFont11}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="2"
                                Text="{Binding PercentDisplay}"
                                FontSize="{DynamicResource NxFont11}"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                VerticalAlignment="Center"/>
                   </Grid>
                 </DataTemplate>
@@ -356,34 +356,34 @@
           <!-- Selected file mini-details -->
           <Border Grid.Row="2" Padding="12,10"
                   Background="{DynamicResource BgPrimaryBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}"
                   BorderThickness="0,1,0,1"
                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
             <StackPanel Spacing="4">
               <TextBlock Text="{Binding SelectedFile.Name, FallbackValue=''}"
                          FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
                          TextWrapping="Wrap"
-                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                         Foreground="{DynamicResource TextPrimaryBrush}"/>
               <Grid ColumnDefinitions="70,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Size"
-                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                           Foreground="{DynamicResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
                 <TextBlock Grid.Row="0" Grid.Column="1"
                            Text="{Binding SelectedFile.SizeDisplay}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Modified"
-                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                           Foreground="{DynamicResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
                 <TextBlock Grid.Row="1" Grid.Column="1"
                            Text="{Binding SelectedFile.LastModified, StringFormat='yyyy-MM-dd HH:mm'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="% Parent"
-                           Foreground="{StaticResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
+                           Foreground="{DynamicResource TextTertiaryBrush}" FontSize="{DynamicResource NxFont11}"/>
                 <TextBlock Grid.Row="2" Grid.Column="1"
                            Text="{Binding SelectedFile.PercentOfParent, StringFormat='{}{0:F1}%'}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
               </Grid>
               <TextBlock Text="{Binding SelectedFile.FullPath}"
                          FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                         Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
             </StackPanel>
           </Border>
 
@@ -391,13 +391,13 @@
           <Grid Grid.Row="3" RowDefinitions="Auto,180">
             <Border Grid.Row="0" Padding="12,8"
                     Background="{DynamicResource BgPrimaryBrush}"
-                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="0,0,0,1">
               <DockPanel>
                 <TextBlock DockPanel.Dock="Left" Text="DUPLICATE FILES"
                            FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
                            LetterSpacing="0.8"
-                           Foreground="{StaticResource TextTertiaryBrush}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
                            VerticalAlignment="Center"/>
                 <Button DockPanel.Dock="Right"
                         Content="Find"
@@ -408,13 +408,13 @@
                   <Button.Styles>
                     <Style Selector="Button">
                       <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
-                      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                     </Style>
                   </Button.Styles>
                 </Button>
                 <TextBlock Text="{Binding DuplicateSummary}"
                            FontSize="{DynamicResource NxFont10}"
-                           Foreground="{StaticResource TextTertiaryBrush}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
                            Margin="8,0"
@@ -427,8 +427,8 @@
                   <DataTemplate DataType="models:DuplicateGroup">
                     <Border Margin="0,0,0,6" Padding="8"
                             CornerRadius="8"
-                            Background="#0DEBEBF5"
-                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                            Background="{DynamicResource BgHoverBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
                             BorderThickness="1">
                       <StackPanel Spacing="3">
                         <StackPanel Orientation="Horizontal" Spacing="4">
@@ -437,10 +437,10 @@
                                      Foreground="{StaticResource ColorWarningBrush}"
                                      FontSize="{DynamicResource NxFont11}"/>
                           <TextBlock Text="wasted"
-                                     Foreground="{StaticResource TextTertiaryBrush}"
+                                     Foreground="{DynamicResource TextTertiaryBrush}"
                                      FontSize="{DynamicResource NxFont11}"/>
                           <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
-                                     Foreground="{StaticResource TextTertiaryBrush}"
+                                     Foreground="{DynamicResource TextTertiaryBrush}"
                                      FontSize="{DynamicResource NxFont11}"/>
                         </StackPanel>
                         <ItemsControl ItemsSource="{Binding Files}">
@@ -448,7 +448,7 @@
                             <DataTemplate DataType="models:DiskNode">
                               <TextBlock Text="{Binding FullPath}"
                                          FontSize="{DynamicResource NxFont10}"
-                                         Foreground="{StaticResource TextTertiaryBrush}"
+                                         Foreground="{DynamicResource TextTertiaryBrush}"
                                          TextTrimming="CharacterEllipsis"/>
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
@@ -469,7 +469,7 @@
 
         <Border Grid.Row="0" Padding="12,8"
                 Background="{DynamicResource BgSecondaryBrush}"
-                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
                 BorderThickness="0,0,0,1">
           <Grid ColumnDefinitions="*,Auto">
             <TextBox Grid.Column="0"
@@ -482,7 +482,7 @@
             <TextBlock Grid.Column="1"
                        Text="{Binding FileViewSummary}"
                        FontSize="{DynamicResource NxFont11}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        VerticalAlignment="Center"
                        Margin="12,0,4,0"/>
           </Grid>
@@ -491,7 +491,7 @@
         <TextBlock Grid.Row="1"
                    Text="Run a scan to populate the file list."
                    FontSize="{DynamicResource NxFont14}"
-                   Foreground="{StaticResource TextTertiaryBrush}"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    HorizontalAlignment="Center"
                    Margin="0,24,0,0"
                    IsVisible="{Binding !HasScanResult}"/>
@@ -530,14 +530,14 @@
 
     <!-- ── Row 4: Splitter above treemap ──────────────────────────────── -->
     <GridSplitter Grid.Row="4" Height="4" HorizontalAlignment="Stretch"
-                  Background="{StaticResource BorderSubtleBrush}"/>
+                  Background="{DynamicResource BorderSubtleBrush}"/>
 
     <!-- ── Row 5: Treemap (always visible) ───────────────────────────── -->
-    <Border Grid.Row="5" Background="#0A0A0C" ClipToBounds="True">
+    <Border Grid.Row="5" Background="{DynamicResource BgBaseBrush}" ClipToBounds="True">
       <Panel>
         <TextBlock Text="Click 'Scan' to analyze disk usage"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Foreground="{StaticResource TextTertiaryBrush}"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    FontSize="{DynamicResource NxFont14}"
                    IsVisible="{Binding !HasScanResult}"/>
         <ctrl:TreemapControl x:Name="TheTreemap"

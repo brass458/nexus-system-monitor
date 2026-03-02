@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusMonitor.UI.ViewModels"
         xmlns:views="using:NexusMonitor.UI.Views"
@@ -7,6 +7,7 @@
         x:Class="NexusMonitor.UI.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Nexus Monitor"
+        Icon="avares://NexusMonitor/Assets/nexus-icon-256.png"
         Width="1280" Height="800"
         MinWidth="900" MinHeight="600"
         Background="{DynamicResource BgBaseBrush}"
@@ -84,20 +85,12 @@
                       Orientation="Horizontal"
                       Spacing="10"
                       VerticalAlignment="Center">
-            <Border Width="24" Height="24"
-                    CornerRadius="7"
-                    Background="{DynamicResource AccentBlueBrush}">
-              <TextBlock Text="N"
-                         FontSize="{DynamicResource NxFont13}"
-                         FontWeight="Bold"
-                         Foreground="White"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"/>
-            </Border>
+            <Image Source="avares://NexusMonitor/Assets/nexus-icon-256.png"
+                   Width="24" Height="24"/>
             <TextBlock Text="Nexus Monitor"
                        FontSize="{DynamicResource NxFont13}"
                        FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        VerticalAlignment="Center"/>
           </StackPanel>
 
@@ -109,17 +102,17 @@
             <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnMinimize"
                     ToolTip.Tip="Minimize">
-              <TextBlock Text="—" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="—" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnMaximize"
                     ToolTip.Tip="Maximize">
-              <TextBlock Text="⬜" FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="⬜" FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Button>
             <Button Classes="nx-btn-ghost" Padding="10,7"
                     Click="OnClose"
                     ToolTip.Tip="Close">
-              <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Button>
           </StackPanel>
 
@@ -201,7 +194,7 @@
                                FontSize="12"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                Cursor="Hand"
                                ToolTip.Tip="Drag to reorder"/>
                     <!-- Navigation button -->

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NexusMonitor.UI.Controls.NotificationToast"
              Opacity="0">
@@ -45,11 +45,11 @@
         <TextBlock x:Name="TitleText"
                    FontSize="13"
                    FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    TextTrimming="CharacterEllipsis"/>
         <TextBlock x:Name="BodyText"
                    FontSize="11"
-                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    TextWrapping="Wrap"
                    MaxLines="3"/>
       </StackPanel>
@@ -63,7 +63,7 @@
               CornerRadius="8"
               Click="OnDismissClick">
         <TextBlock Text="✕" FontSize="10"
-                   Foreground="{StaticResource TextTertiaryBrush}"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}"/>
       </Button>
 
     </Grid>

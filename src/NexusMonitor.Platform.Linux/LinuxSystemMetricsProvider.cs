@@ -38,6 +38,8 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     // ── Delta tracking ─────────────────────────────────────────────────────────
     private long[]   _prevCpuFields   = [];
     private DateTime _prevCpuTime     = DateTime.MinValue;
+    // Per-core delta tracking: core index → previous fields array
+    private readonly Dictionary<int, long[]> _prevCoreFields = new();
 
     private readonly Dictionary<string, (long readSectors, long writeSectors)> _prevDisk = new();
     private DateTime _prevDiskTime = DateTime.MinValue;
@@ -125,7 +127,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 _prevCpuTime   = now;
             }
 
-            // Per-core lines: cpu0 cpu1 ...
+            // Per-core lines: cpu0 cpu1 ... — use deltas like the total CPU line
             for (int i = 0; ; i++)
             {
                 var coreLine = lines.FirstOrDefault(l => l.StartsWith($"cpu{i} ", StringComparison.Ordinal));
@@ -133,9 +135,17 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 var fields = ParseCpuLine(coreLine);
                 if (fields.Length >= 4)
                 {
-                    var total = fields.Sum();
-                    var idle  = fields[3];
-                    double pct = total > 0 ? Math.Clamp((double)(total - idle) / total * 100.0, 0, 100) : 0;
+                    double pct = 0;
+                    if (_prevCoreFields.TryGetValue(i, out var prevFields) && prevFields.Length >= 4)
+                    {
+                        var curTotal  = fields.Sum();
+                        var prevTotal = prevFields.Sum();
+                        var totalDelta = curTotal - prevTotal;
+                        var idleDelta  = fields[3] - prevFields[3];
+                        if (totalDelta > 0)
+                            pct = Math.Clamp((double)(totalDelta - idleDelta) / totalDelta * 100.0, 0, 100);
+                    }
+                    _prevCoreFields[i] = fields;
                     corePercents.Add(pct);
                 }
             }
@@ -318,32 +328,53 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         // nvme: nvme0n1 is whole, nvme0n1p1 is partition
         if (name.StartsWith("nvme", StringComparison.Ordinal))
             return !name.Contains('p') || name.IndexOf('p') < 6;
-        // sd*, vd*, hd*: whole disk has no trailing digit after letters
+        // sd*, vd*, hd*: whole disk = pure letters (e.g. "sda"), partition = trailing digits (e.g. "sda1")
         if (name.StartsWith("sd", StringComparison.Ordinal) ||
             name.StartsWith("vd", StringComparison.Ordinal) ||
             name.StartsWith("hd", StringComparison.Ordinal))
         {
-            // "sda" = whole, "sda1" = partition
             var lettersEnd = 0;
             while (lettersEnd < name.Length && char.IsLetter(name[lettersEnd]))
                 lettersEnd++;
-            var afterLetters = name[lettersEnd..];
-            return afterLetters.Length == 1 && char.IsLetter(afterLetters[0]);
+            // afterLetters is empty → whole disk (pure letters like "sda")
+            return lettersEnd == name.Length;
         }
         return false;
     }
 
     private static string? FindMountPoint(string devName)
     {
+        // Whole disks (e.g. "sda") are rarely mounted directly — their partitions are.
+        // Search /proc/mounts for an exact match first, then any partition of this disk.
         try
         {
-            foreach (var line in File.ReadAllLines("/proc/mounts"))
+            var lines = File.ReadAllLines("/proc/mounts");
+            string? partitionMount = null;
+            foreach (var line in lines)
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2) continue;
-                if (parts[0].EndsWith(devName, StringComparison.Ordinal))
+                var dev = parts[0];
+                // Exact match (e.g. /dev/sda or sda)
+                if (dev.EndsWith("/" + devName, StringComparison.Ordinal) ||
+                    dev.Equals(devName, StringComparison.Ordinal))
                     return parts[1];
+                // Partition match: device starts with devName followed by a digit (e.g. sda1, sda2)
+                if (partitionMount is null)
+                {
+                    var devBase = dev.Length > devName.Length
+                        ? dev[^(devName.Length + 1)..] // last (devName.Length+1) chars
+                        : string.Empty;
+                    // Check if last segment of dev path is devName + digits
+                    var lastSlash = dev.LastIndexOf('/');
+                    var devLeaf   = lastSlash >= 0 ? dev[(lastSlash + 1)..] : dev;
+                    if (devLeaf.StartsWith(devName, StringComparison.Ordinal) &&
+                        devLeaf.Length > devName.Length &&
+                        char.IsDigit(devLeaf[devName.Length]))
+                        partitionMount = parts[1];
+                }
             }
+            return partitionMount;
         }
         catch { }
         return null;
@@ -467,16 +498,24 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     {
         try
         {
-            var cores = new HashSet<string>();
+            // Track (physical_id, core_id) pairs to handle multi-socket systems
+            // where core IDs repeat across sockets.
+            var coreIds = new HashSet<(string physId, string coreId)>();
+            string curPhysId = "0";
             foreach (var line in File.ReadAllLines("/proc/cpuinfo"))
             {
-                if (line.StartsWith("core id", StringComparison.OrdinalIgnoreCase))
+                if (line.StartsWith("physical id", StringComparison.OrdinalIgnoreCase))
                 {
                     var colon = line.IndexOf(':');
-                    if (colon >= 0) cores.Add(line[(colon + 1)..].Trim());
+                    if (colon >= 0) curPhysId = line[(colon + 1)..].Trim();
+                }
+                else if (line.StartsWith("core id", StringComparison.OrdinalIgnoreCase))
+                {
+                    var colon = line.IndexOf(':');
+                    if (colon >= 0) coreIds.Add((curPhysId, line[(colon + 1)..].Trim()));
                 }
             }
-            if (cores.Count > 0) return cores.Count;
+            if (coreIds.Count > 0) return coreIds.Count;
         }
         catch { }
         return Environment.ProcessorCount;

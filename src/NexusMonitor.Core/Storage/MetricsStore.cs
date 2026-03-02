@@ -16,6 +16,11 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     private readonly IProcessProvider           _processProvider;
     private readonly INetworkConnectionsProvider _networkProvider;
 
+    // Dedicated read-only connection — WAL mode allows concurrent readers alongside the writer.
+    // This avoids SqliteConnection thread-safety issues when reader queries run on Task.Run threads
+    // while FlushAll() is executing on the writer connection under _lock.
+    private readonly SqliteConnection _readConn;
+
     private IDisposable? _metricsSub;
     private IDisposable? _processSub;
     private IDisposable? _networkSub;
@@ -41,6 +46,14 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         _metricsProvider = metricsProvider;
         _processProvider = processProvider;
         _networkProvider = networkProvider;
+
+        // Open a second connection to the same DB file for read queries.
+        // SQLite WAL mode supports concurrent readers on separate connections.
+        _readConn = new SqliteConnection($"Data Source={_db.Connection.DataSource}");
+        _readConn.Open();
+        using var pragma = _readConn.CreateCommand();
+        pragma.CommandText = "PRAGMA query_only = ON; PRAGMA journal_mode = WAL;";
+        pragma.ExecuteNonQuery();
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -114,12 +127,12 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
             FlushProcesses(tx);
             FlushNetwork(tx);
             tx.Commit();
+            // Clear buffers only after a successful commit — data is safe on disk
+            _metricsBuffer.Clear();
+            _processBuffer.Clear();
+            _networkBuffer.Clear();
         }
         catch { /* swallow — never crash the monitoring loop */ }
-
-        _metricsBuffer.Clear();
-        _processBuffer.Clear();
-        _networkBuffer.Clear();
     }
 
     private void FlushMetrics(SqliteTransaction tx)
@@ -347,7 +360,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     private IReadOnlyList<MetricsDataPoint> QueryRaw(long fromMs, long toMs)
     {
         var result = new List<MetricsDataPoint>();
-        using var cmd = _db.Connection.CreateCommand();
+        using var cmd = _readConn.CreateCommand();
         cmd.CommandText = @"
             SELECT ts, cpu_percent, mem_used_bytes, mem_total_bytes,
                    disk_read_bps, disk_write_bps, net_send_bps, net_recv_bps,
@@ -381,7 +394,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     private IReadOnlyList<MetricsDataPoint> QueryRollup(string table, long fromMs, long toMs)
     {
         var result = new List<MetricsDataPoint>();
-        using var cmd = _db.Connection.CreateCommand();
+        using var cmd = _readConn.CreateCommand();
         cmd.CommandText = $@"
             SELECT ts, cpu_avg, cpu_max, mem_avg_bytes, mem_max_bytes,
                    disk_read_avg, disk_write_avg, net_send_avg, net_recv_avg,
@@ -417,7 +430,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         Task.Run<IReadOnlyList<ProcessDataPoint>>(() =>
         {
             var result = new List<ProcessDataPoint>();
-            using var cmd = _db.Connection.CreateCommand();
+            using var cmd = _readConn.CreateCommand();
             cmd.CommandText = @"
                 SELECT ts, pid, name, cpu_percent, mem_bytes,
                        io_read_bps, io_write_bps, gpu_percent
@@ -450,7 +463,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         Task.Run<IReadOnlyList<NetworkDataPoint>>(() =>
         {
             var result = new List<NetworkDataPoint>();
-            using var cmd = _db.Connection.CreateCommand();
+            using var cmd = _readConn.CreateCommand();
 
             var where = "ts >= $from AND ts <= $to";
             if (remoteAddress != null) where += " AND remote_addr = $rAddr";
@@ -492,7 +505,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         Task.Run<IReadOnlyList<StoredEvent>>(() =>
         {
             var result = new List<StoredEvent>();
-            using var cmd = _db.Connection.CreateCommand();
+            using var cmd = _readConn.CreateCommand();
             var where = "ts >= $from AND ts <= $to";
             if (eventType != null) where += " AND event_type = $type";
 
@@ -527,7 +540,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         CancellationToken ct = default) =>
         Task.Run(() =>
         {
-            using var cmd = _db.Connection.CreateCommand();
+            using var cmd = _readConn.CreateCommand();
             cmd.CommandText = "SELECT MIN(ts), MAX(ts) FROM system_metrics";
             using var reader = cmd.ExecuteReader();
             if (!reader.Read() || reader.IsDBNull(0))
@@ -544,7 +557,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
             var fromMs = from.ToUnixTimeMilliseconds();
             var toMs   = to.ToUnixTimeMilliseconds();
 
-            using var cmd = _db.Connection.CreateCommand();
+            using var cmd = _readConn.CreateCommand();
             cmd.CommandText = @"
                 SELECT name,
                        AVG(cpu_percent)      AS avg_cpu,
@@ -578,5 +591,6 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         if (_disposed) return;
         _disposed = true;
         Stop();
+        _readConn.Dispose();
     }
 }

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              x:Class="NexusMonitor.UI.Views.AlertsView"
@@ -11,13 +11,13 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="System Alerts"
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
         <!-- Search box -->
         <Border DockPanel.Dock="Right"
@@ -76,7 +76,7 @@
                 BorderThickness="0,0,0,1">
           <TextBlock Text="Alerts notify you when system metrics (CPU, RAM, Disk, GPU, Temperature) exceed configured thresholds for a sustained period. Each rule can have its own severity, sustain duration, and cooldown to prevent alert fatigue."
                      FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
-                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
         </Border>
 
         <ScrollViewer Padding="16">
@@ -93,12 +93,12 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="4">
                   <TextBlock Text="TOTAL ALERTS" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Text="{Binding AlertCount}"
                              FontSize="28" FontWeight="Bold"
                              Foreground="{DynamicResource AccentBlueBrush}"/>
                   <TextBlock Text="this session" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}"/>
                 </StackPanel>
               </Border>
 
@@ -110,12 +110,12 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="4">
                   <TextBlock Text="CRITICAL" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Text="{Binding CriticalCount}"
                              FontSize="28" FontWeight="Bold"
                              Foreground="{StaticResource ColorDangerBrush}"/>
                   <TextBlock Text="this session" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}"/>
                 </StackPanel>
               </Border>
 
@@ -127,12 +127,12 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="4">
                   <TextBlock Text="WARNINGS" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Text="{Binding WarningCount}"
                              FontSize="28" FontWeight="Bold"
                              Foreground="{StaticResource ColorWarningBrush}"/>
                   <TextBlock Text="this session" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}"/>
                 </StackPanel>
               </Border>
 
@@ -156,12 +156,12 @@
                     <TextBlock DockPanel.Dock="Left"
                                Text="Alert Rules"
                                FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <TextBlock DockPanel.Dock="Right"
                                Text="{Binding FilteredRules.Count, StringFormat='{}{0} rules'}"
                                FontSize="{DynamicResource NxFont11}"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                VerticalAlignment="Center"/>
                   </DockPanel>
                 </Border>
@@ -171,13 +171,13 @@
                         IsVisible="{Binding FilteredRules.Count, Converter={x:Static BoolConverters.Not}}">
                   <StackPanel HorizontalAlignment="Center" Spacing="10">
                     <TextBlock Text="🔔" FontSize="36" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextTertiaryBrush}"/>
+                               Foreground="{DynamicResource TextTertiaryBrush}"/>
                     <TextBlock Text="No alert rules configured"
                                FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Click + Add Rule to create your first alert."
-                               FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"
+                               FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"
                                HorizontalAlignment="Center"/>
                   </StackPanel>
                 </Border>
@@ -236,14 +236,14 @@
                                          VerticalAlignment="Center"/>
                               <TextBlock Text="{Binding Name}"
                                          FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                                         Foreground="{StaticResource TextPrimaryBrush}"
+                                         Foreground="{DynamicResource TextPrimaryBrush}"
                                          TextTrimming="CharacterEllipsis"
                                          VerticalAlignment="Center"/>
                             </StackPanel>
                             <TextBlock Text="{Binding IsEnabled,
                                               StringFormat='{}Enabled: {0}'}"
                                        FontSize="{DynamicResource NxFont10}"
-                                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                                       Foreground="{DynamicResource TextTertiaryBrush}"/>
                           </StackPanel>
 
                           <!-- Metric + threshold -->
@@ -256,10 +256,10 @@
                             <StackPanel Orientation="Horizontal" Spacing="4">
                               <TextBlock Text="Threshold:"
                                          FontSize="{DynamicResource NxFont11}"
-                                         Foreground="{StaticResource TextTertiaryBrush}"/>
+                                         Foreground="{DynamicResource TextTertiaryBrush}"/>
                               <TextBlock Text="{Binding Threshold, StringFormat='{}{0:F0}'}"
                                          FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
-                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                         Foreground="{DynamicResource TextSecondaryBrush}"/>
                             </StackPanel>
                           </StackPanel>
 
@@ -270,11 +270,11 @@
                             <TextBlock Text="{Binding SustainSec,
                                               StringFormat='{}Sustain: {0}s'}"
                                        FontSize="{DynamicResource NxFont11}"
-                                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                                       Foreground="{DynamicResource TextTertiaryBrush}"/>
                             <TextBlock Text="{Binding CooldownSec,
                                               StringFormat='{}Cooldown: {0}s'}"
                                        FontSize="{DynamicResource NxFont11}"
-                                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                                       Foreground="{DynamicResource TextTertiaryBrush}"/>
                           </StackPanel>
 
                           <!-- Enable toggle + Edit button -->
@@ -323,12 +323,12 @@
                     <TextBlock DockPanel.Dock="Left"
                                Text="Alert Log"
                                FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <TextBlock DockPanel.Dock="Right"
                                Text="{Binding FilteredEventLog.Count, StringFormat='{}{0} events'}"
                                FontSize="{DynamicResource NxFont11}"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                VerticalAlignment="Center"/>
                   </DockPanel>
                 </Border>
@@ -339,13 +339,13 @@
                                             Converter={x:Static BoolConverters.Not}}">
                   <StackPanel HorizontalAlignment="Center" Spacing="8">
                     <TextBlock Text="🔕" FontSize="28" HorizontalAlignment="Center"
-                               Foreground="{StaticResource TextTertiaryBrush}"/>
+                               Foreground="{DynamicResource TextTertiaryBrush}"/>
                     <TextBlock Text="No alerts fired yet"
                                FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Configure alert rules above — alerts will appear here when thresholds are exceeded."
-                               FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                               FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                                HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="360"/>
                   </StackPanel>
                 </Border>
@@ -372,7 +372,7 @@
                                      Text="{Binding TimeDisplay}"
                                      FontSize="{DynamicResource NxFont11}"
                                      FontFamily="Consolas,Courier New,monospace"
-                                     Foreground="{StaticResource TextTertiaryBrush}"
+                                     Foreground="{DynamicResource TextTertiaryBrush}"
                                      VerticalAlignment="Center"
                                      Margin="6,0"/>
 
@@ -380,7 +380,7 @@
                           <TextBlock Grid.Column="2"
                                      Text="{Binding Description}"
                                      FontSize="{DynamicResource NxFont12}"
-                                     Foreground="{StaticResource TextSecondaryBrush}"
+                                     Foreground="{DynamicResource TextSecondaryBrush}"
                                      VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"/>
 
@@ -425,7 +425,7 @@
               <TextBlock DockPanel.Dock="Left"
                          Text="{Binding EditorTitle}"
                          FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          VerticalAlignment="Center"/>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                 <Button Classes="nx-btn"
@@ -452,12 +452,12 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="12">
                   <TextBlock Text="RULE IDENTITY" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
 
                   <Grid ColumnDefinitions="*,14,Auto">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Rule Name" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditName}" Watermark="My CPU Alert"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Bottom">
@@ -478,19 +478,19 @@
                       CornerRadius="{StaticResource CornerLG}">
                 <StackPanel Spacing="12">
                   <TextBlock Text="METRIC &amp; THRESHOLD" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                             LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
 
                   <Grid ColumnDefinitions="*,14,*">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Metric to monitor" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:AlertsViewModel.MetricOptions}"
                                 SelectedIndex="{Binding EditMetricIndex}"
                                 HorizontalAlignment="Stretch"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="Severity" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:AlertsViewModel.SeverityOptions}"
                                 SelectedIndex="{Binding EditSeverityIndex}"
                                 HorizontalAlignment="Stretch"/>
@@ -503,7 +503,7 @@
                       <TextBlock Grid.Column="0"
                                  Text="Alert threshold"
                                  FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                  VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1"
                                  Text="{Binding EditThreshold, StringFormat='{}{0:F0}'}"
@@ -514,7 +514,7 @@
                     <Slider Minimum="1" Maximum="100" TickFrequency="5"
                             Value="{Binding EditThreshold}"/>
                     <TextBlock FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                Text="For CPU/RAM/Disk/GPU: threshold is a percentage (%). For CPU Temperature: threshold is degrees Celsius (°C)."/>
                   </StackPanel>
 
@@ -530,32 +530,32 @@
                 <StackPanel Spacing="12">
                   <StackPanel Spacing="2">
                     <TextBlock Text="TIMING" FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
-                               LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}"/>
+                               LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     <TextBlock Text="Control how long the metric must stay over threshold before alerting, and how long to wait before repeating."
                                FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                               Foreground="{StaticResource TextTertiaryBrush}"/>
+                               Foreground="{DynamicResource TextTertiaryBrush}"/>
                   </StackPanel>
 
                   <Grid ColumnDefinitions="*,14,*">
                     <StackPanel Grid.Column="0" Spacing="4">
                       <TextBlock Text="Sustain duration (seconds)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <NumericUpDown Value="{Binding EditSustainSec}"
                                      Minimum="0" Maximum="3600" Increment="1"
                                      FormatString="0"/>
                       <TextBlock Text="Metric must stay above threshold for this many seconds before the alert fires."
                                  FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                                 Foreground="{StaticResource TextTertiaryBrush}"/>
+                                 Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4">
                       <TextBlock Text="Cooldown period (seconds)" FontSize="{DynamicResource NxFont12}"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <NumericUpDown Value="{Binding EditCooldownSec}"
                                      Minimum="0" Maximum="86400" Increment="10"
                                      FormatString="0"/>
                       <TextBlock Text="Minimum seconds between repeated alerts for this rule (prevents alert spam)."
                                  FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
-                                 Foreground="{StaticResource TextTertiaryBrush}"/>
+                                 Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </StackPanel>
                   </Grid>
 

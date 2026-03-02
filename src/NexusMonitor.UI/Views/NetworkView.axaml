@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
@@ -18,13 +18,13 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Network Connections"
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -47,7 +47,7 @@
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <DockPanel>
 
@@ -79,7 +79,7 @@
 
         <TextBlock Text="{Binding TotalCount, StringFormat='Connections: {0}'}"
                    FontSize="{DynamicResource NxFont11}"
-                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    VerticalAlignment="Center"/>
 
       </DockPanel>
@@ -139,7 +139,7 @@
       <!-- Splitter -->
       <GridSplitter Grid.Column="1"
                     Width="1"
-                    Background="{StaticResource BorderSubtleBrush}"
+                    Background="{DynamicResource BorderSubtleBrush}"
                     IsVisible="{Binding IsConnectionDetailShown}"/>
 
       <!-- Detail sidebar -->
@@ -155,12 +155,12 @@
             <!-- Header: process name -->
             <TextBlock Text="{Binding ProcessName}"
                        FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,2"/>
-            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,6">
+            <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,6">
               <Run Text="PID "/>
-              <Run Text="{Binding ProcessId}" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="{Binding ProcessId}" FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </TextBlock>
 
             <!-- State badge -->
@@ -171,11 +171,11 @@
                          FontSize="{DynamicResource NxFont11}" Foreground="White" FontWeight="Medium"/>
             </Border>
 
-            <Separator Background="{StaticResource BorderSubtleBrush}" Margin="0,0,0,10"/>
+            <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,0,0,10"/>
 
             <!-- Local endpoint -->
             <TextBlock Text="LOCAL ENDPOINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
@@ -187,7 +187,7 @@
 
             <!-- Remote endpoint -->
             <TextBlock Text="REMOTE ENDPOINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        LetterSpacing="0.8" Margin="0,0,0,6"/>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
@@ -201,7 +201,7 @@
             <StackPanel IsVisible="{Binding DataContext.ShowThroughputColumns,
                         RelativeSource={RelativeSource AncestorType=UserControl}}">
               <TextBlock Text="THROUGHPUT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                         Foreground="{StaticResource TextTertiaryBrush}"
+                         Foreground="{DynamicResource TextTertiaryBrush}"
                          LetterSpacing="0.8" Margin="0,0,0,6"/>
 
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,12">

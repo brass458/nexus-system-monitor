@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
@@ -17,13 +17,13 @@
     <Border DockPanel.Dock="Top"
             Padding="16,10"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
       <DockPanel>
         <TextBlock DockPanel.Dock="Left"
                    Text="Startup Programs"
                    FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,16,0"/>
 
@@ -57,7 +57,7 @@
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"
             Background="{DynamicResource BgSecondaryBrush}"
-            BorderBrush="{StaticResource BorderSubtleBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,1,0,0">
       <DockPanel>
 
@@ -70,11 +70,11 @@
                    VerticalAlignment="Center"/>
 
         <StackPanel Orientation="Horizontal" Spacing="24">
-          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}">
             <Run Text="Total: "/>
-            <Run Text="{Binding TotalCount}"   Foreground="{StaticResource TextPrimaryBrush}"  FontWeight="Medium"/>
+            <Run Text="{Binding TotalCount}"   Foreground="{DynamicResource TextPrimaryBrush}"  FontWeight="Medium"/>
           </TextBlock>
-          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}">
+          <TextBlock FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}">
             <Run Text="Enabled: "/>
             <Run Text="{Binding EnabledCount}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
           </TextBlock>
@@ -135,7 +135,7 @@
 
       <!-- Loading overlay -->
       <Border IsVisible="{Binding IsLoading}"
-              Background="#80000000">
+              Background="{DynamicResource OverlayBgBrush}">
         <TextBlock Text="Loading startup items…"
                    FontSize="{DynamicResource NxFont14}"
                    Foreground="White"

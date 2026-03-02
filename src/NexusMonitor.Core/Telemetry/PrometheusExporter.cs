@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using NexusMonitor.Core.Abstractions;
@@ -45,7 +46,7 @@ public sealed class PrometheusExporter : IDisposable
     public void RecordAnomalyDetected(string eventType)
     {
         Interlocked.Increment(ref _anomalyEventsTotal);
-        _anomalyByType.AddOrUpdate(eventType, 1L, (_, v) => Interlocked.Increment(ref v));
+        _anomalyByType.AddOrUpdate(eventType, 1L, (_, v) => v + 1);
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -160,7 +161,7 @@ public sealed class PrometheusExporter : IDisposable
         {
             Header(sb, "nexus_cpu_core_usage_percent", "gauge", "Per-core CPU utilization (%)");
             for (int i = 0; i < m.Cpu.CorePercents.Count; i++)
-                sb.AppendLine($"nexus_cpu_core_usage_percent{{core=\"{i}\"}} {m.Cpu.CorePercents[i]:F2}");
+                sb.AppendLine($"nexus_cpu_core_usage_percent{{core=\"{i}\"}} {m.Cpu.CorePercents[i].ToString("F2", CultureInfo.InvariantCulture)}");
         }
 
         // ── Memory ───────────────────────────────────────────────────────────
@@ -184,11 +185,11 @@ public sealed class PrometheusExporter : IDisposable
 
             Header(sb, "nexus_disk_active_percent", "gauge", "Disk active time (%)");
             foreach (var d in m.Disks)
-                sb.AppendLine($"nexus_disk_active_percent{{disk=\"{Esc(d.DriveLetter)}\"}} {d.ActivePercent:F2}");
+                sb.AppendLine($"nexus_disk_active_percent{{disk=\"{Esc(d.DriveLetter)}\"}} {d.ActivePercent.ToString("F2", CultureInfo.InvariantCulture)}");
 
             Header(sb, "nexus_disk_used_percent", "gauge", "Disk space used (%)");
             foreach (var d in m.Disks)
-                sb.AppendLine($"nexus_disk_used_percent{{disk=\"{Esc(d.DriveLetter)}\"}} {d.UsedPercent:F2}");
+                sb.AppendLine($"nexus_disk_used_percent{{disk=\"{Esc(d.DriveLetter)}\"}} {d.UsedPercent.ToString("F2", CultureInfo.InvariantCulture)}");
 
             Header(sb, "nexus_disk_free_bytes", "gauge", "Disk space free (bytes)");
             foreach (var d in m.Disks)
@@ -224,7 +225,7 @@ public sealed class PrometheusExporter : IDisposable
         {
             Header(sb, "nexus_gpu_usage_percent", "gauge", "GPU utilization (%)");
             foreach (var g in m.Gpus)
-                sb.AppendLine($"nexus_gpu_usage_percent{{gpu=\"{Esc(g.Name)}\"}} {g.UsagePercent:F2}");
+                sb.AppendLine($"nexus_gpu_usage_percent{{gpu=\"{Esc(g.Name)}\"}} {g.UsagePercent.ToString("F2", CultureInfo.InvariantCulture)}");
 
             Header(sb, "nexus_gpu_memory_used_bytes", "gauge", "GPU dedicated memory used (bytes)");
             foreach (var g in m.Gpus)
@@ -236,7 +237,7 @@ public sealed class PrometheusExporter : IDisposable
 
             Header(sb, "nexus_gpu_temperature_celsius", "gauge", "GPU temperature (°C)");
             foreach (var g in m.Gpus)
-                sb.AppendLine($"nexus_gpu_temperature_celsius{{gpu=\"{Esc(g.Name)}\"}} {g.TemperatureCelsius:F1}");
+                sb.AppendLine($"nexus_gpu_temperature_celsius{{gpu=\"{Esc(g.Name)}\"}} {g.TemperatureCelsius.ToString("F1", CultureInfo.InvariantCulture)}");
         }
 
         // ── Alerts ───────────────────────────────────────────────────────────
@@ -269,7 +270,7 @@ public sealed class PrometheusExporter : IDisposable
     private static void Gauge(StringBuilder sb, string name, string help, double value)
     {
         Header(sb, name, "gauge", help);
-        sb.AppendLine($"{name} {value:F2}");
+        sb.AppendLine($"{name} {value.ToString("F2", CultureInfo.InvariantCulture)}");
     }
 
     private static void Gauge(StringBuilder sb, string name, string help, long value)

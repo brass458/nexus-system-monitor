@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
@@ -17,7 +17,7 @@
       <ProgressBar IsIndeterminate="True" Width="200"/>
       <TextBlock Text="Reading hardware information&#x2026;"
                  FontSize="{DynamicResource NxFont13}"
-                 Foreground="{StaticResource TextSecondaryBrush}"
+                 Foreground="{DynamicResource TextSecondaryBrush}"
                  HorizontalAlignment="Center"/>
     </StackPanel>
 
@@ -36,7 +36,7 @@
         <!-- Page title -->
         <TextBlock Text="System Information"
                    FontSize="22" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    Margin="0,0,0,4"/>
 
         <!-- ═══════════════════════════════════════════════════════════════
@@ -55,28 +55,28 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <TextBlock Text="System" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" Opacity="0.6"/>
 
             <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,2,0,0">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Hostname" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Info.Hostname}" Margin="0,0,0,8"
                          FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                          Foreground="{DynamicResource AccentBlueBrush}"/>
 
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Operating System" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Info.OsName}" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Medium"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium"/>
 
               <TextBlock Grid.Row="2" Grid.Column="0" Text="Build / Arch" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                 <TextBlock Text="{Binding Info.OsBuild}"
-                           FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                           FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <Border Padding="6,2" CornerRadius="4" Background="{DynamicResource AccentBlueDimBrush}">
                   <TextBlock Text="{Binding Info.OsArchitecture}"
                              FontSize="{DynamicResource NxFont10}" FontWeight="Medium"
@@ -85,27 +85,27 @@
               </StackPanel>
 
               <TextBlock Grid.Row="3" Grid.Column="0" Text="Uptime" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,0,0,8"
                          Text="{Binding Info.Uptime, StringFormat='{}{0:d\.hh\:mm\:ss}'}"
                          FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource ColorSuccessBrush}" FontWeight="Medium"/>
 
               <TextBlock Grid.Row="4" Grid.Column="0" Text="BIOS" Margin="0,0,0,8"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                 <TextBlock Text="{Binding Info.BiosVendor}"
-                           FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                           FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Text="{Binding Info.BiosVersion}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               </StackPanel>
 
               <TextBlock Grid.Row="5" Grid.Column="0" Text="Motherboard"
-                         FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextTertiaryBrush}"/>
               <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding Info.MotherboardManufacturer}"
-                           FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Medium"/>
+                           FontSize="{DynamicResource NxFont12}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium"/>
                 <TextBlock Text="{Binding Info.MotherboardModel}"
-                           FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
               </StackPanel>
             </Grid>
           </StackPanel>
@@ -127,7 +127,7 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <TextBlock Text="Processor" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" Opacity="0.6"/>
@@ -143,18 +143,18 @@
                       Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                 <StackPanel HorizontalAlignment="Center">
                   <TextBlock Text="{Binding Info.Cpu.PhysicalCores}" FontSize="22" FontWeight="Bold"
-                             Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                             Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                   <TextBlock Text="Physical Cores" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </Border>
               <Border Grid.Column="1" Padding="12" Margin="3,0,3,0"
                       Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                 <StackPanel HorizontalAlignment="Center">
                   <TextBlock Text="{Binding Info.Cpu.LogicalCores}" FontSize="22" FontWeight="Bold"
-                             Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                             Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                   <TextBlock Text="Logical Cores" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </Border>
               <Border Grid.Column="2" Padding="12" Margin="6,0,0,0"
@@ -163,7 +163,7 @@
                   <TextBlock Text="{Binding Info.Cpu.MaxClockMhz, StringFormat='{}{0:F0}'}" FontSize="22" FontWeight="Bold"
                              Foreground="{StaticResource ColorWarningBrush}" HorizontalAlignment="Center"/>
                   <TextBlock Text="Max MHz" FontSize="{DynamicResource NxFont10}"
-                             Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                             Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </Border>
             </Grid>
@@ -172,31 +172,31 @@
             <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
               <StackPanel Grid.Column="0" Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="L2 Cache" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  <TextBlock Text="L2 Cache" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Info.Cpu.L2CacheKB, StringFormat='{}{0} KB'}"
-                             FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                             FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </Grid>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="L3 Cache" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  <TextBlock Text="L3 Cache" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Info.Cpu.L3CacheKB, StringFormat='{}{0} KB'}"
-                             FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                             FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </Grid>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Architecture" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  <TextBlock Text="Architecture" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Info.Cpu.Architecture}"
-                             FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                             FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </Grid>
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="6" Margin="12,0,0,0">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Socket" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  <TextBlock Text="Socket" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Info.Cpu.Socket}"
-                             FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                             FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </Grid>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Stepping" FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                  <TextBlock Text="Stepping" FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                   <TextBlock Grid.Column="1" Text="{Binding Info.Cpu.Stepping}"
-                             FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                             FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </Grid>
               </StackPanel>
             </Grid>
@@ -220,7 +220,7 @@
               </Border>
               <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <TextBlock Text="Memory" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                            Foreground="{StaticResource ProcDotNetBrush}">
                   <TextBlock.Text>
@@ -237,17 +237,17 @@
             <!-- Slot table header -->
             <Grid ColumnDefinitions="80,70,70,70,110,*" Margin="0,2,0,0">
               <TextBlock Grid.Column="0" Text="Slot" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
               <TextBlock Grid.Column="1" Text="Size" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
               <TextBlock Grid.Column="2" Text="Speed" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
               <TextBlock Grid.Column="3" Text="Type" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
               <TextBlock Grid.Column="4" Text="Manufacturer" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
               <TextBlock Grid.Column="5" Text="Part Number" FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                         Foreground="{StaticResource TextTertiaryBrush}" LetterSpacing="0.5"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" LetterSpacing="0.5"/>
             </Grid>
             <ItemsControl ItemsSource="{Binding Info.RamSlots}">
               <ItemsControl.ItemTemplate>
@@ -256,7 +256,7 @@
                           Background="{DynamicResource BgSecondaryBrush}">
                     <Grid ColumnDefinitions="80,70,70,70,110,*" Margin="4,0">
                       <TextBlock Grid.Column="0" Text="{Binding DeviceLocator}"
-                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
                                  Foreground="{StaticResource ProcDotNetBrush}">
                         <TextBlock.Text>
@@ -266,14 +266,14 @@
                         </TextBlock.Text>
                       </TextBlock>
                       <TextBlock Grid.Column="2" Text="{Binding SpeedMhz, StringFormat='{}{0} MHz'}"
-                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                       <TextBlock Grid.Column="3" Text="{Binding MemoryType}"
                                  FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource ColorInfoBrush}"/>
                       <TextBlock Grid.Column="4" Text="{Binding Manufacturer}"
-                                 FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                                 FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextTrimming="CharacterEllipsis"/>
                       <TextBlock Grid.Column="5" Text="{Binding PartNumber}"
-                                 FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                                 FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextTrimming="CharacterEllipsis"/>
                     </Grid>
                   </Border>
@@ -302,7 +302,7 @@
                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="Graphics" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                   </StackPanel>
 
                   <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" Opacity="0.6"/>
@@ -326,27 +326,27 @@
                           </TextBlock.Text>
                         </TextBlock>
                         <TextBlock Text="VRAM" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Padding="10" Margin="3,0,3,0"
                             Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                       <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="{Binding DriverVersion}" FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="Driver" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                     <Border Grid.Column="2" Padding="10" Margin="6,0,0,0"
                             Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                       <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="{Binding VideoProcessor}" FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="Processor" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                   </Grid>
@@ -375,7 +375,7 @@
                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="Storage" FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                   </StackPanel>
 
                   <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" Opacity="0.6"/>
@@ -391,7 +391,7 @@
                             Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                       <StackPanel HorizontalAlignment="Center">
                         <TextBlock FontSize="18" FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center">
+                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center">
                           <TextBlock.Text>
                             <MultiBinding StringFormat="{}{0:F0} GB">
                               <Binding Path="SizeBytes" Converter="{StaticResource GbConv}"/>
@@ -399,7 +399,7 @@
                           </TextBlock.Text>
                         </TextBlock>
                         <TextBlock Text="Capacity" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Padding="10" Margin="2,0,2,0"
@@ -408,16 +408,16 @@
                         <TextBlock Text="{Binding Interface}" FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
                                    Foreground="{StaticResource ColorInfoBrush}" HorizontalAlignment="Center"/>
                         <TextBlock Text="Interface" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                     <Border Grid.Column="2" Padding="10" Margin="2,0,2,0"
                             Background="{DynamicResource BgSecondaryBrush}" CornerRadius="10">
                       <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="{Binding MediaType}" FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                         <TextBlock Text="Media" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                     <Border Grid.Column="3" Padding="10" Margin="4,0,0,0"
@@ -426,14 +426,14 @@
                         <TextBlock Text="{Binding Status}" FontSize="{DynamicResource NxFont12}" FontWeight="SemiBold"
                                    Foreground="{StaticResource ColorSuccessBrush}" HorizontalAlignment="Center"/>
                         <TextBlock Text="Status" FontSize="{DynamicResource NxFont10}"
-                                   Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center"/>
                       </StackPanel>
                     </Border>
                   </Grid>
 
                   <!-- Serial number -->
                   <TextBlock Text="{Binding SerialNumber, StringFormat='S/N: {0}'}"
-                             FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                             FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                 </StackPanel>
               </Border>
             </DataTemplate>

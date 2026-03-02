@@ -1,42 +1,135 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- ===== NEXUS DARK PALETTE — Glassmorphism + Vibrant ===== -->
+  <ResourceDictionary.ThemeDictionaries>
 
-  <!-- Background layers — deep blue-black with cool undertones -->
-  <Color x:Key="BgBase">#0A0A12</Color>
-  <Color x:Key="BgPrimary">#131318</Color>
-  <Color x:Key="BgSecondary">#1B1B22</Color>
-  <Color x:Key="BgElevated">#24242E</Color>
-  <Color x:Key="BgHover">#2E2E3A</Color>
-  <Color x:Key="BgSelected">#38384A</Color>
+    <!-- ===== DARK PALETTE — Glassmorphism + Vibrant ===== -->
+    <ResourceDictionary x:Key="Dark">
 
-  <!-- Glass surface colors — cool-tinted frosted panels -->
-  <Color x:Key="GlassBg">#A8161622</Color>
-  <Color x:Key="GlassBorder">#38FFFFFF</Color>
-  <Color x:Key="GlassHighlight">#22FFFFFF</Color>
-  <Color x:Key="GlassShadow">#50000000</Color>
+      <!-- Background layers — deep blue-black with cool undertones -->
+      <Color x:Key="BgBase">#0A0A12</Color>
+      <Color x:Key="BgPrimary">#131318</Color>
+      <Color x:Key="BgSecondary">#1B1B22</Color>
+      <Color x:Key="BgElevated">#24242E</Color>
+      <Color x:Key="BgHover">#2E2E3A</Color>
+      <Color x:Key="BgSelected">#38384A</Color>
+
+      <!-- Glass surface colors — cool-tinted frosted panels -->
+      <Color x:Key="GlassBg">#A8161622</Color>
+      <Color x:Key="GlassBorder">#38FFFFFF</Color>
+      <Color x:Key="GlassHighlight">#22FFFFFF</Color>
+      <Color x:Key="GlassShadow">#50000000</Color>
+
+      <!-- Text hierarchy -->
+      <Color x:Key="TextPrimary">#F5F5FA</Color>
+      <Color x:Key="TextSecondary">#EBEBF5</Color>
+      <Color x:Key="TextTertiary">#C0EBEBF5</Color>
+      <Color x:Key="TextDisabled">#60EBEBF5</Color>
+
+      <!-- Borders — refined for glass surfaces -->
+      <Color x:Key="BorderSubtle">#20FFFFFF</Color>
+      <Color x:Key="BorderDefault">#35FFFFFF</Color>
+      <Color x:Key="BorderStrong">#55FFFFFF</Color>
+
+      <!-- ── Brushes ── -->
+      <SolidColorBrush x:Key="BgBaseBrush"      Color="#0A0A12" />
+      <SolidColorBrush x:Key="BgPrimaryBrush"   Color="#131318" />
+      <SolidColorBrush x:Key="BgSecondaryBrush" Color="#1B1B22" />
+      <SolidColorBrush x:Key="BgElevatedBrush"  Color="#24242E" />
+      <SolidColorBrush x:Key="BgHoverBrush"     Color="#2E2E3A" />
+      <SolidColorBrush x:Key="BgSelectedBrush"  Color="#38384A" />
+
+      <SolidColorBrush x:Key="GlassBgBrush"        Color="#A8161622" />
+      <SolidColorBrush x:Key="GlassBorderBrush"    Color="#38FFFFFF" />
+      <SolidColorBrush x:Key="GlassHighlightBrush" Color="#22FFFFFF" />
+
+      <SolidColorBrush x:Key="TextPrimaryBrush"   Color="#F5F5FA"   />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#EBEBF5"   />
+      <SolidColorBrush x:Key="TextTertiaryBrush"  Color="#C0EBEBF5" />
+      <SolidColorBrush x:Key="TextDisabledBrush"  Color="#60EBEBF5" />
+
+      <SolidColorBrush x:Key="BorderSubtleBrush"  Color="#20FFFFFF" />
+      <SolidColorBrush x:Key="BorderDefaultBrush" Color="#35FFFFFF" />
+
+      <SolidColorBrush x:Key="OverlayBgBrush" Color="#CC050508" />
+
+      <LinearGradientBrush x:Key="ContextMenuBgBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F0222230" Offset="0.0"/>
+        <GradientStop Color="#F0121218" Offset="1.0"/>
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45FFFFFF" />
+      <SolidColorBrush x:Key="SeparatorBrush"         Color="#25FFFFFF" />
+
+    </ResourceDictionary>
+
+    <!-- ===== LIGHT PALETTE ===== -->
+    <ResourceDictionary x:Key="Light">
+
+      <!-- Background layers — cool-white with subtle blue tint -->
+      <Color x:Key="BgBase">#F5F5FA</Color>
+      <Color x:Key="BgPrimary">#FFFFFF</Color>
+      <Color x:Key="BgSecondary">#F0F0F5</Color>
+      <Color x:Key="BgElevated">#E8E8F0</Color>
+      <Color x:Key="BgHover">#DDDDE8</Color>
+      <Color x:Key="BgSelected">#D0D0DD</Color>
+
+      <!-- Glass surface colors — frosted light panels -->
+      <Color x:Key="GlassBg">#A8E8E8F0</Color>
+      <Color x:Key="GlassBorder">#35000000</Color>
+      <Color x:Key="GlassHighlight">#15000000</Color>
+      <Color x:Key="GlassShadow">#20000000</Color>
+
+      <!-- Text hierarchy -->
+      <Color x:Key="TextPrimary">#1A1A2E</Color>
+      <Color x:Key="TextSecondary">#2D2D44</Color>
+      <Color x:Key="TextTertiary">#8040405A</Color>
+      <Color x:Key="TextDisabled">#5040405A</Color>
+
+      <!-- Borders -->
+      <Color x:Key="BorderSubtle">#18000000</Color>
+      <Color x:Key="BorderDefault">#28000000</Color>
+      <Color x:Key="BorderStrong">#40000000</Color>
+
+      <!-- ── Brushes ── -->
+      <SolidColorBrush x:Key="BgBaseBrush"      Color="#F5F5FA" />
+      <SolidColorBrush x:Key="BgPrimaryBrush"   Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BgSecondaryBrush" Color="#F0F0F5" />
+      <SolidColorBrush x:Key="BgElevatedBrush"  Color="#E8E8F0" />
+      <SolidColorBrush x:Key="BgHoverBrush"     Color="#DDDDE8" />
+      <SolidColorBrush x:Key="BgSelectedBrush"  Color="#D0D0DD" />
+
+      <SolidColorBrush x:Key="GlassBgBrush"        Color="#A8E8E8F0" />
+      <SolidColorBrush x:Key="GlassBorderBrush"    Color="#35000000" />
+      <SolidColorBrush x:Key="GlassHighlightBrush" Color="#15000000" />
+
+      <SolidColorBrush x:Key="TextPrimaryBrush"   Color="#1A1A2E"   />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#2D2D44"   />
+      <SolidColorBrush x:Key="TextTertiaryBrush"  Color="#8040405A" />
+      <SolidColorBrush x:Key="TextDisabledBrush"  Color="#5040405A" />
+
+      <SolidColorBrush x:Key="BorderSubtleBrush"  Color="#18000000" />
+      <SolidColorBrush x:Key="BorderDefaultBrush" Color="#28000000" />
+
+      <SolidColorBrush x:Key="OverlayBgBrush" Color="#CCF0F0F5" />
+
+      <LinearGradientBrush x:Key="ContextMenuBgBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F0F4F4F9" Offset="0.0"/>
+        <GradientStop Color="#F0EBEBF3" Offset="1.0"/>
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45000000" />
+      <SolidColorBrush x:Key="SeparatorBrush"         Color="#25000000" />
+
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- ===== SHARED — theme-independent ===== -->
 
   <!-- Liquid Glass runtime token (0 = invisible, 1 = full intensity) — written from code -->
   <x:Double x:Key="GlassSpecularOpacity">0.35</x:Double>
 
-  <!-- Overlay widget background — always semi-transparent (tracks main glass opacity with a floor) -->
-  <SolidColorBrush x:Key="OverlayBgBrush" Color="#CC050508" />
-
   <!-- Text accent — written from code; defaults to AccentBlue -->
   <SolidColorBrush x:Key="TextAccentBrush" Color="{StaticResource AccentBlue}" />
-
-  <!-- Text hierarchy — full-opacity so text stays legible on any glass/wallpaper background.
-       Alpha was reduced for "softness" but caused invisible text on bright wallpapers. -->
-  <Color x:Key="TextPrimary">#F5F5FA</Color>
-  <Color x:Key="TextSecondary">#EBEBF5</Color>
-  <Color x:Key="TextTertiary">#C0EBEBF5</Color>
-  <Color x:Key="TextDisabled">#60EBEBF5</Color>
-
-  <!-- Borders — refined for glass surfaces -->
-  <Color x:Key="BorderSubtle">#20FFFFFF</Color>
-  <Color x:Key="BorderDefault">#35FFFFFF</Color>
-  <Color x:Key="BorderStrong">#55FFFFFF</Color>
 
   <!-- Accent — macOS Blue -->
   <Color x:Key="AccentBlue">#0A84FF</Color>
@@ -72,50 +165,32 @@
   <Color x:Key="ProcCurrent">#FFD60A</Color>
   <Color x:Key="ProcCurrentBg">#1AFFD60A</Color>
 
-  <!-- ===== SOLID BRUSHES ===== -->
-  <SolidColorBrush x:Key="BgBaseBrush" Color="{StaticResource BgBase}" />
-  <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimary}" />
-  <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondary}" />
-  <SolidColorBrush x:Key="BgElevatedBrush" Color="{StaticResource BgElevated}" />
-  <SolidColorBrush x:Key="BgHoverBrush" Color="{StaticResource BgHover}" />
-  <SolidColorBrush x:Key="BgSelectedBrush" Color="{StaticResource BgSelected}" />
-
-  <SolidColorBrush x:Key="GlassBgBrush" Color="{StaticResource GlassBg}" />
-  <SolidColorBrush x:Key="GlassBorderBrush" Color="{StaticResource GlassBorder}" />
-  <SolidColorBrush x:Key="GlassHighlightBrush" Color="{StaticResource GlassHighlight}" />
-
-  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
-  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
-  <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiary}" />
-  <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabled}" />
-
-  <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtle}" />
-  <SolidColorBrush x:Key="BorderDefaultBrush" Color="{StaticResource BorderDefault}" />
-
-  <SolidColorBrush x:Key="AccentBlueBrush" Color="{StaticResource AccentBlue}" />
-  <SolidColorBrush x:Key="AccentBlueDimBrush" Color="{StaticResource AccentBlueDim}" />
+  <!-- ===== SHARED BRUSHES (non-theme) ===== -->
+  <SolidColorBrush x:Key="AccentBlueBrush"      Color="{StaticResource AccentBlue}" />
+  <SolidColorBrush x:Key="AccentBlueDimBrush"   Color="{StaticResource AccentBlueDim}" />
+  <SolidColorBrush x:Key="AccentBlueHoverBrush" Color="{StaticResource AccentBlueHover}" />
 
   <SolidColorBrush x:Key="ColorSuccessBrush" Color="{StaticResource ColorSuccess}" />
   <SolidColorBrush x:Key="ColorWarningBrush" Color="{StaticResource ColorWarning}" />
-  <SolidColorBrush x:Key="ColorDangerBrush" Color="{StaticResource ColorDanger}" />
-  <SolidColorBrush x:Key="ColorInfoBrush" Color="{StaticResource ColorInfo}" />
+  <SolidColorBrush x:Key="ColorDangerBrush"  Color="{StaticResource ColorDanger}" />
+  <SolidColorBrush x:Key="ColorInfoBrush"    Color="{StaticResource ColorInfo}" />
 
   <!-- Process brushes -->
-  <SolidColorBrush x:Key="ProcSystemBrush" Color="{StaticResource ProcSystem}" />
-  <SolidColorBrush x:Key="ProcSystemBgBrush" Color="{StaticResource ProcSystemBg}" />
-  <SolidColorBrush x:Key="ProcServiceBrush" Color="{StaticResource ProcService}" />
-  <SolidColorBrush x:Key="ProcServiceBgBrush" Color="{StaticResource ProcServiceBg}" />
-  <SolidColorBrush x:Key="ProcUserBrush" Color="{StaticResource ProcUser}" />
-  <SolidColorBrush x:Key="ProcUserBgBrush" Color="{StaticResource ProcUserBg}" />
-  <SolidColorBrush x:Key="ProcDotNetBrush" Color="{StaticResource ProcDotNet}" />
-  <SolidColorBrush x:Key="ProcDotNetBgBrush" Color="{StaticResource ProcDotNetBg}" />
-  <SolidColorBrush x:Key="ProcSuspiciousBrush" Color="{StaticResource ProcSuspicious}" />
+  <SolidColorBrush x:Key="ProcSystemBrush"      Color="{StaticResource ProcSystem}" />
+  <SolidColorBrush x:Key="ProcSystemBgBrush"    Color="{StaticResource ProcSystemBg}" />
+  <SolidColorBrush x:Key="ProcServiceBrush"     Color="{StaticResource ProcService}" />
+  <SolidColorBrush x:Key="ProcServiceBgBrush"   Color="{StaticResource ProcServiceBg}" />
+  <SolidColorBrush x:Key="ProcUserBrush"        Color="{StaticResource ProcUser}" />
+  <SolidColorBrush x:Key="ProcUserBgBrush"      Color="{StaticResource ProcUserBg}" />
+  <SolidColorBrush x:Key="ProcDotNetBrush"      Color="{StaticResource ProcDotNet}" />
+  <SolidColorBrush x:Key="ProcDotNetBgBrush"    Color="{StaticResource ProcDotNetBg}" />
+  <SolidColorBrush x:Key="ProcSuspiciousBrush"  Color="{StaticResource ProcSuspicious}" />
   <SolidColorBrush x:Key="ProcSuspiciousBgBrush" Color="{StaticResource ProcSuspiciousBg}" />
-  <SolidColorBrush x:Key="ProcSuspendedBrush" Color="{StaticResource ProcSuspended}" />
+  <SolidColorBrush x:Key="ProcSuspendedBrush"   Color="{StaticResource ProcSuspended}" />
   <SolidColorBrush x:Key="ProcSuspendedBgBrush" Color="{StaticResource ProcSuspendedBg}" />
-  <SolidColorBrush x:Key="ProcGpuBrush" Color="{StaticResource ProcGpu}" />
-  <SolidColorBrush x:Key="ProcGpuBgBrush" Color="{StaticResource ProcGpuBg}" />
-  <SolidColorBrush x:Key="ProcCurrentBrush" Color="{StaticResource ProcCurrent}" />
-  <SolidColorBrush x:Key="ProcCurrentBgBrush" Color="{StaticResource ProcCurrentBg}" />
+  <SolidColorBrush x:Key="ProcGpuBrush"         Color="{StaticResource ProcGpu}" />
+  <SolidColorBrush x:Key="ProcGpuBgBrush"       Color="{StaticResource ProcGpuBg}" />
+  <SolidColorBrush x:Key="ProcCurrentBrush"     Color="{StaticResource ProcCurrent}" />
+  <SolidColorBrush x:Key="ProcCurrentBgBrush"   Color="{StaticResource ProcCurrentBg}" />
 
 </ResourceDictionary>

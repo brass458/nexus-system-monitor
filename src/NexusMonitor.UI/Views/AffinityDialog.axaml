@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="NexusMonitor.UI.Views.AffinityDialog"
         x:CompileBindings="False"
@@ -14,9 +14,9 @@
 
       <!-- Header -->
       <TextBlock Text="{Binding ProcessName}" FontSize="14" FontWeight="SemiBold"
-                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                 Foreground="{DynamicResource TextPrimaryBrush}"/>
       <TextBlock Text="Select which CPUs this process is allowed to use:"
-                 FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                 FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                  TextWrapping="Wrap"/>
 
       <!-- Select All / None -->
@@ -39,7 +39,7 @@
                       Margin="0,2,12,2"
                       MinWidth="70"
                       FontSize="12"
-                      Foreground="{StaticResource TextPrimaryBrush}"/>
+                      Foreground="{DynamicResource TextPrimaryBrush}"/>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

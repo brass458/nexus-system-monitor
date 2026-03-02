@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              x:Class="NexusMonitor.UI.Views.SettingsView"
@@ -37,7 +37,7 @@
   <StackPanel Margin="24" Spacing="16">
     <TextBlock Text="Settings"
                FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
-               Foreground="{StaticResource TextPrimaryBrush}"/>
+               Foreground="{DynamicResource TextPrimaryBrush}"/>
 
     <!-- ===== APPEARANCE ===== -->
     <Border Padding="16"
@@ -47,16 +47,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Appearance" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Dark / Light theme toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Theme" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Affects window chrome, text, and card backgrounds"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <ToggleButton Classes="nx-toggle"
@@ -73,9 +73,9 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Metrics Update Interval" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Polling rate for all views and the overlay widget"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
           <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.UpdateIntervalLabels}"
@@ -93,16 +93,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Typography" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Font family picker -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Font Family" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Applied to all windows and the overlay widget"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
           <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
                     MaxDropDownHeight="260"
@@ -117,7 +117,7 @@
           <TextBlock Text="The quick brown fox jumps over the lazy dog  0123456789"
                      FontSize="{DynamicResource NxFont12}"
                      FontFamily="{Binding FontFamily}"
-                     Foreground="{StaticResource TextSecondaryBrush}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
                      TextTrimming="CharacterEllipsis"/>
         </Border>
 
@@ -132,14 +132,14 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Accent Colors" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Primary accent palette -->
         <TextBlock Text="PRIMARY ACCENT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4"/>
         <TextBlock Text="Affects: buttons, chart lines, active nav item, toggle state, selections"
-                   FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,4"/>
+                   FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4"/>
 
         <!-- Row of accent swatches with live accent-color mini-preview beside each -->
         <WrapPanel Orientation="Horizontal">
@@ -187,7 +187,7 @@
                       Background="{DynamicResource AccentBlueBrush}"
                       VerticalAlignment="Center"/>
               <TextBlock Text="Buttons" FontSize="{DynamicResource NxFont10}"
-                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
               <Border Width="10" Height="10" CornerRadius="2"
@@ -196,36 +196,36 @@
                       BorderThickness="1"
                       VerticalAlignment="Center"/>
               <TextBlock Text="Selections" FontSize="{DynamicResource NxFont10}"
-                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,16,0">
               <Border Width="28" Height="10" CornerRadius="5"
                       Background="{DynamicResource AccentBlueBrush}"
                       VerticalAlignment="Center"/>
               <TextBlock Text="Nav" FontSize="{DynamicResource NxFont10}"
-                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="4">
               <TextBlock Text="Aa" FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
                          Foreground="{DynamicResource AccentBlueBrush}"
                          VerticalAlignment="Center"/>
               <TextBlock Text="Links" FontSize="{DynamicResource NxFont10}"
-                         Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                         Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
             </StackPanel>
           </WrapPanel>
         </Border>
 
         <!-- Text accent sub-theme -->
         <TextBlock Text="TEXT ACCENT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,4"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,8,0,4"/>
         <TextBlock Text="Separate color for highlighted text, links, and active labels. Leave empty to derive from primary accent."
-                   FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,4"/>
         <WrapPanel Orientation="Horizontal">
           <!-- Same swatches as primary, setting text accent instead -->
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="Transparent"
-                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}"
                   ToolTip.Tip="Derive from Primary (default)">
             <Button.Styles>
               <Style Selector="Button">
@@ -257,7 +257,7 @@
         </WrapPanel>
         <!-- Text accent preview -->
         <TextBlock FontSize="{DynamicResource NxFont11}" Margin="0,2,0,0">
-          <Run Text="Sample text — " Foreground="{StaticResource TextSecondaryBrush}"/>
+          <Run Text="Sample text — " Foreground="{DynamicResource TextSecondaryBrush}"/>
           <Run Text="highlighted text uses TextAccent"
                Foreground="{DynamicResource TextAccentBrush}"
                FontWeight="SemiBold"/>
@@ -265,7 +265,7 @@
 
         <!-- ── Custom Color Picker (opens isolated popup window) ──────── -->
         <TextBlock Text="CUSTOM COLOR PICKER" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,12,0,6"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,12,0,6"/>
         <Grid ColumnDefinitions="*,10,Auto">
           <!-- Current-accent swatch + hex label -->
           <Border Grid.Column="0" Height="34" CornerRadius="8"
@@ -299,28 +299,28 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Background &amp; Surface Colors" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <TextBlock Text="Override each UI surface independently. Leave a surface empty to use the built-in theme default."
-                   FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap"/>
 
         <!-- WINDOW CHROME row -->
         <Grid ColumnDefinitions="28,10,*,8,Auto,6,Auto" Margin="0,4,0,0">
           <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6"
                   Background="{DynamicResource BgBaseBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"/>
+                  BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"/>
           <StackPanel Grid.Column="2" VerticalAlignment="Center">
             <TextBlock Text="Window Chrome" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        Text="{Binding CustomWindowBgHex}"
                        IsVisible="{Binding CustomWindowBgHex, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <TextBlock Text="using theme default"
                        FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        IsVisible="{Binding CustomWindowBgHex, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
           </StackPanel>
           <Button Grid.Column="4" Classes="nx-btn" Click="OnPickWindowBgClick" Padding="10,5">
@@ -341,17 +341,17 @@
         <Grid ColumnDefinitions="28,10,*,8,Auto,6,Auto">
           <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6"
                   Background="{DynamicResource BgPrimaryBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"/>
+                  BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"/>
           <StackPanel Grid.Column="2" VerticalAlignment="Center">
             <TextBlock Text="Cards &amp; Content Panels" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        Text="{Binding CustomSurfaceBgHex}"
                        IsVisible="{Binding CustomSurfaceBgHex, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <TextBlock Text="using theme default"
                        FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        IsVisible="{Binding CustomSurfaceBgHex, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
           </StackPanel>
           <Button Grid.Column="4" Classes="nx-btn" Click="OnPickSurfaceBgClick" Padding="10,5">
@@ -372,17 +372,17 @@
         <Grid ColumnDefinitions="28,10,*,8,Auto,6,Auto">
           <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6"
                   Background="{DynamicResource GlassBgBrush}"
-                  BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"/>
+                  BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"/>
           <StackPanel Grid.Column="2" VerticalAlignment="Center">
             <TextBlock Text="Sidebar &amp; Navigation" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        Text="{Binding CustomSidebarBgHex}"
                        IsVisible="{Binding CustomSidebarBgHex, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <TextBlock Text="using theme default"
                        FontSize="{DynamicResource NxFont10}"
-                       Foreground="{StaticResource TextTertiaryBrush}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
                        IsVisible="{Binding CustomSidebarBgHex, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
           </StackPanel>
           <Button Grid.Column="4" Classes="nx-btn" Click="OnPickSidebarBgClick" Padding="10,5">
@@ -410,16 +410,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Liquid Glass" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Main glass toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Liquid Glass Effect" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Full-window refraction with specular rim lights and OS backdrop blur"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsGlassEnabled}"
@@ -430,15 +430,15 @@
         <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="2">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Text="Glass Opacity" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Grid.Column="1" Text="{Binding GlassOpacity, StringFormat='{}{0:P0}'}"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
           </Grid>
           <Slider Minimum="0.0" Maximum="1.0" Value="{Binding GlassOpacity}"
                   TickFrequency="0.05" IsSnapToTickEnabled="True"
                   Margin="0,2,0,0"/>
           <TextBlock Text="0% = fully see-through  ·  100% = solid"
-                     FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                     FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                      Margin="0,0,0,4"/>
         </StackPanel>
 
@@ -446,9 +446,9 @@
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGlassEnabled}">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Backdrop Blur Mode" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="Acrylic: Win 10/11  ·  Mica: Win 11+  ·  Blur: legacy"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
           <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
@@ -458,14 +458,14 @@
 
         <!-- Specular highlights sub-section -->
         <TextBlock Text="SPECULAR HIGHLIGHTS" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,4"/>
         <StackPanel IsEnabled="{Binding IsGlassEnabled}" Spacing="8">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0">
               <TextBlock Text="Specular Rim Lights" FontSize="{DynamicResource NxFont13}"
-                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                         Foreground="{DynamicResource TextPrimaryBrush}"/>
               <TextBlock Text="3-layer white edge glow (wash + sharp rim + prismatic shimmer)"
-                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                         FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                          TextWrapping="Wrap" Margin="0,2,0,0"/>
             </StackPanel>
             <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding IsSpecularEnabled}"
@@ -474,9 +474,9 @@
           <StackPanel IsEnabled="{Binding IsSpecularEnabled}" Spacing="2">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="Intensity" FontSize="{DynamicResource NxFont12}"
-                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                         Foreground="{DynamicResource TextSecondaryBrush}"/>
               <TextBlock Grid.Column="1" Text="{Binding SpecularIntensity, StringFormat='{}{0:P0}'}"
-                         FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                         FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
             </Grid>
             <Slider Minimum="0.0" Maximum="1.0" Value="{Binding SpecularIntensity}"
                     TickFrequency="0.05" IsSnapToTickEnabled="True"
@@ -486,13 +486,13 @@
 
         <!-- Smart wallpaper tint -->
         <TextBlock Text="SMART TINT" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,4"/>
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGlassEnabled}">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Smart Wallpaper Tint" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Automatically adjusts glass opacity based on wallpaper brightness"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding SmartTintEnabled}"
@@ -510,14 +510,14 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Desktop Overlay" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Floating Monitor Widget" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Always-on-top overlay — CPU, RAM, network, GPU. Mirrors main glass settings."
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle" IsChecked="{Binding ShowOverlayWidget}"
@@ -534,14 +534,14 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Notifications" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Desktop Alert Notifications" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Show a Windows toast when an alert rule threshold is triggered"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle"
@@ -559,16 +559,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="System Tray" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Close behaviour -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="When Pressing the Close Button" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Default action when you click the × button on the main window"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
           <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.CloseActionLabels}"
@@ -579,9 +579,9 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Hide Widget When Minimizing to Tray" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Hides the desktop overlay widget when the app goes to tray"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle"
                         IsChecked="{Binding HideWidgetOnMinimize}"
@@ -589,7 +589,7 @@
         </Grid>
 
         <TextBlock Text="Tip: Right-click the tray icon for quick access to Show / Widget / Exit"
-                   FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                   FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap"/>
 
       </StackPanel>
@@ -603,16 +603,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Anomaly Detection" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Enable toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Automatic Anomaly Detection" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Detects CPU/memory/GPU spikes, network anomalies, and new connections via statistical analysis"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle"
@@ -624,9 +624,9 @@
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
           <StackPanel Grid.Column="0">
             <TextBlock Text="In-App Notifications" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="Show pill notifications inside the app when anomalies are detected"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle"
@@ -638,9 +638,9 @@
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Sensitivity" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="Low = fewer alerts  ·  High = more alerts (may include false positives)"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
           <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
@@ -652,9 +652,9 @@
         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AnomalyDetectionEnabled}">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Cooldown (seconds)" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="Minimum time between repeated events for the same metric"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
           <NumericUpDown Grid.Column="1" Width="110" VerticalAlignment="Center"
@@ -667,9 +667,9 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Events Retention (days)" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="How long to keep detected events in the database"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
           <NumericUpDown Grid.Column="1" Width="110" VerticalAlignment="Center"
@@ -678,11 +678,11 @@
                          FormatString="0"/>
         </Grid>
 
-        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap">
           <Run Text="Note: "/>
           <Run Text="All changes take effect immediately. View detected anomalies in the History tab."
-               Foreground="{StaticResource TextTertiaryBrush}"/>
+               Foreground="{DynamicResource TextTertiaryBrush}"/>
         </TextBlock>
 
       </StackPanel>
@@ -696,16 +696,16 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
         <TextBlock Text="Telemetry" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Prometheus endpoint toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
             <TextBlock Text="Prometheus Endpoint" FontSize="{DynamicResource NxFont13}"
-                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Exposes system metrics at /metrics for Telegraf, Grafana, or any Prometheus scraper"
-                       FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
                        TextWrapping="Wrap" Margin="0,2,0,0"/>
           </StackPanel>
           <ToggleButton Grid.Column="1" Classes="nx-toggle"
@@ -717,9 +717,9 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Port" FontSize="{DynamicResource NxFont12}"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <TextBlock Text="Default: 9182  ·  Range: 1024–65535"
-                       FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
           <NumericUpDown Grid.Column="1"
@@ -736,7 +736,7 @@
                 CornerRadius="8">
           <TextBlock Text="{Binding PrometheusStatusText}"
                      FontSize="{DynamicResource NxFont11}"
-                     Foreground="{StaticResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
                      FontFamily="Consolas,Menlo,monospace"/>
         </Border>
 
@@ -746,25 +746,25 @@
         </Button>
 
         <!-- Metric list hint -->
-        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap">
           <Run Text="Exported metrics: "/>
           <Run Text="nexus_cpu_*  nexus_memory_*  nexus_disk_*  nexus_network_*  nexus_gpu_*  nexus_alert_events_total"
-               FontFamily="Consolas,Menlo,monospace" Foreground="{StaticResource TextSecondaryBrush}"/>
+               FontFamily="Consolas,Menlo,monospace" Foreground="{DynamicResource TextSecondaryBrush}"/>
         </TextBlock>
 
         <!-- ── Telegraf Integration ──────────────────────────────────────── -->
         <Separator Margin="0,6,0,0"/>
 
         <TextBlock Text="TELEGRAF INTEGRATION" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                   LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+                   LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,4"/>
 
-        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,6">
           Paste the snippet below into your <Run Text="telegraf.conf" FontFamily="Consolas,Menlo,monospace"
-               Foreground="{StaticResource TextSecondaryBrush}"/> or save it as a file
+               Foreground="{DynamicResource TextSecondaryBrush}"/> or save it as a file
           in Telegraf's <Run Text="conf.d" FontFamily="Consolas,Menlo,monospace"
-               Foreground="{StaticResource TextSecondaryBrush}"/> directory.
+               Foreground="{DynamicResource TextSecondaryBrush}"/> directory.
           The port updates automatically if you change it above.
         </TextBlock>
 
@@ -779,7 +779,7 @@
                    Text="{Binding TelegrafConfig}"
                    FontFamily="Consolas,Menlo,monospace"
                    FontSize="{DynamicResource NxFont10}"
-                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    Background="Transparent"
                    BorderThickness="0"
                    MaxHeight="210"
@@ -803,14 +803,14 @@
         <Separator Margin="0,6,0,0"/>
 
         <TextBlock Text="GRAFANA DASHBOARD" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                   LetterSpacing="0.6" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,4"/>
+                   LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,4"/>
 
-        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+        <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,8">
           A pre-built dashboard covering CPU, memory, disk, network, GPU, and alerts.
           Save the JSON file, then import it in Grafana via
           <Run Text="Dashboards → Import → Upload JSON file" FontWeight="Medium"
-               Foreground="{StaticResource TextSecondaryBrush}"/>.
+               Foreground="{DynamicResource TextSecondaryBrush}"/>.
           When prompted, select your Prometheus datasource pointed at the endpoint above.
         </TextBlock>
 
@@ -820,23 +820,23 @@
                 CornerRadius="8"
                 Margin="0,0,0,8">
           <StackPanel Spacing="5">
-            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
-              <Run Text="1." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}">
+              <Run Text="1." FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
               <Run Text=" Enable the Prometheus endpoint above and note the port."/>
             </TextBlock>
-            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
-              <Run Text="2." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}">
+              <Run Text="2." FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
               <Run Text=" In Grafana, add a Prometheus datasource pointed at "/>
               <Run Text="http://localhost:{port}/metrics" FontFamily="Consolas,Menlo,monospace"
-                   Foreground="{StaticResource TextSecondaryBrush}"/><Run Text="."/>
+                   Foreground="{DynamicResource TextSecondaryBrush}"/><Run Text="."/>
             </TextBlock>
-            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}">
-              <Run Text="3." FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}">
+              <Run Text="3." FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
               <Run Text=" Save the dashboard JSON below and import it into Grafana."/>
             </TextBlock>
-            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{StaticResource TextTertiaryBrush}"
+            <TextBlock FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0">
-              <Run Text="Panels: " FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}"/>
+              <Run Text="Panels: " FontWeight="Medium" Foreground="{DynamicResource TextSecondaryBrush}"/>
               <Run Text="CPU total + per core · Memory bytes + gauge · Disk I/O + activity + space · Network throughput · GPU usage + memory · Alert events + process/thread/temp stats"/>
             </TextBlock>
           </StackPanel>
@@ -863,11 +863,11 @@
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="4">
         <TextBlock Text="Nexus Monitor" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
         <TextBlock Text="Version 0.7.0 — System Info · Handle Viewer · Toast Alerts"
-                   FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}"/>
+                   FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"/>
         <TextBlock Text="MIT License · Open Source · Cross-Platform"
-                   FontSize="{DynamicResource NxFont11}" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,4,0,0"/>
+                   FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,4,0,0"/>
       </StackPanel>
     </Border>
 

@@ -50,8 +50,10 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _volumeUsedPercent;
 
     // ── File View ────────────────────────────────────────────────────────────
-    // Flat sorted list of all files (top 50k, built once after scan)
-    private readonly List<DiskNode> _allFilesSorted = new(1024);
+    // Flat sorted list of all files (top 50k, built once after scan).
+    // 3C: Written atomically by BuildAllFiles on a background thread (reference swap);
+    //     read only on the UI thread in FilterFiles after the Post() arrives.
+    private volatile List<DiskNode> _allFilesSorted = new(0);
     [ObservableProperty] private ObservableCollection<DiskNode> _filteredFiles = [];
     [ObservableProperty] private string _fileSearchText  = string.Empty;
     [ObservableProperty] private string _fileViewSummary = string.Empty;
@@ -91,9 +93,12 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     private async Task StartScan()
     {
         if (string.IsNullOrWhiteSpace(SelectedPath)) return;
-        _cts.Cancel();
-        _cts.Dispose();
+        // 3D: Create new CTS before cancelling the old one so the old task's
+        //     OperationCanceledException observe the new token, not a disposed one.
+        var oldCts = _cts;
         _cts = new CancellationTokenSource();
+        oldCts.Cancel();
+        oldCts.Dispose();
 
         IsScanning        = true;
         HasScanResult     = false;
@@ -305,11 +310,15 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     /// </summary>
     private void BuildAllFiles(DiskNode root)
     {
-        _allFilesSorted.Clear();
-        CollectFiles(root, _allFilesSorted);
-        _allFilesSorted.Sort((a, b) => b.Size.CompareTo(a.Size));
-        if (_allFilesSorted.Count > 50_000)
-            _allFilesSorted.RemoveRange(50_000, _allFilesSorted.Count - 50_000);
+        // 3C: Build into a local list on the background thread, then assign atomically
+        //     before posting to UI. This prevents the UI thread seeing a partially-built list.
+        var localList = new List<DiskNode>(1024);
+        CollectFiles(root, localList);
+        localList.Sort((a, b) => b.Size.CompareTo(a.Size));
+        if (localList.Count > 50_000)
+            localList.RemoveRange(50_000, localList.Count - 50_000);
+
+        _allFilesSorted = localList;  // atomic reference swap
 
         // FilterFiles must update ObservableCollection → run on UI thread
         Avalonia.Threading.Dispatcher.UIThread.Post(FilterFiles);
