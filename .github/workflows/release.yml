@@ -163,15 +163,16 @@ jobs:
       - name: Install create-dmg
         run: brew install create-dmg
 
-      - name: Build .app bundles and .dmg packages
+      - name: List macOS publish output (debug)
+        run: |
+          echo "=== osx-arm64 ===" && find src/NexusMonitor.UI/publish/osx-arm64 -maxdepth 3 2>/dev/null | head -30 || echo "(not found)"
+          echo "=== osx-x64 ===" && find src/NexusMonitor.UI/publish/osx-x64 -maxdepth 3 2>/dev/null | head -30 || echo "(not found)"
+
+      - name: Build .dmg and .tar.gz packages
         run: |
           mkdir -p dist
           bash installer/macos/create-app-bundle.sh osx-arm64 ${{ steps.ver.outputs.VERSION }} dist
-          # Move the arm64 .app out of the way before building x64
-          mv dist/NexusMonitor.app dist/NexusMonitor-arm64.app
           bash installer/macos/create-app-bundle.sh osx-x64 ${{ steps.ver.outputs.VERSION }} dist
-          mv dist/NexusMonitor.app dist/NexusMonitor-x64.app
-          rm -rf dist/NexusMonitor-arm64.app dist/NexusMonitor-x64.app
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
