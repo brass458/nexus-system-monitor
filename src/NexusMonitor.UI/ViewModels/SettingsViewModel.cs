@@ -519,8 +519,12 @@ public partial class SettingsViewModel : ViewModelBase
         SetBrush("BgElevatedBrush",  bgElevated,  contentAlpha);
         SetBrush("BgHoverBrush",     bgHover,     contentAlpha);
 
-        // Sidebar / nav glass layer
-        byte glassAlpha = enabled ? (byte)Math.Round(opacity * 0xB2) : (byte)0xB2;
+        // Sidebar / nav glass layer.
+        // Floor at 0xA0 (63%) so the sidebar is never so transparent that white text
+        // becomes unreadable over bright wallpapers (e.g. pure white desktop).
+        byte glassAlpha = enabled
+            ? (byte)Math.Max(0xA0, (int)Math.Round(opacity * 0xB2))
+            : (byte)0xB2;
         SetBrush("GlassBgBrush", bgSidebar, glassAlpha);
 
         // Glass border — derive from sidebar base with low alpha
@@ -543,7 +547,7 @@ public partial class SettingsViewModel : ViewModelBase
         Application.Current.Resources["GlassTextEffect"] = enabled
             ? (object)new DropShadowDirectionEffect
               {
-                  BlurRadius  = 2,
+                  BlurRadius  = 6,
                   Color       = Colors.Black,
                   ShadowDepth = 0,   // centred → expands in all directions = outline
                   Direction   = 315,
