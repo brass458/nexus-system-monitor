@@ -242,11 +242,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download platform artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: release-assets
+          pattern: "*-artifacts"
 
       - name: List release assets
         run: ls -lh release-assets/
@@ -258,4 +259,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "Nexus System Monitor $GITHUB_REF_NAME" \
             --generate-notes \
-            release-assets/*
+            $(find release-assets -maxdepth 1 -type f | sort | tr '\n' ' ')

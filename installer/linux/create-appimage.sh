@@ -74,3 +74,7 @@ rm -f "${APPIMAGE_OUT}"
 chmod +x "${APPIMAGE_OUT}"
 
 echo "  ✓ AppImage: ${APPIMAGE_OUT}"
+
+# ── Clean up build intermediates ──────────────────────────────────────────────
+rm -rf "${APPDIR}"
+rm -f "${APPIMAGETOOL}"
