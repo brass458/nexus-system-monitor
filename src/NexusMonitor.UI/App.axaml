@@ -1,14 +1,14 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NexusMonitor.UI.App"
-             RequestedThemeVariant="Dark">
+             RequestedThemeVariant="Default">
 
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     <StyleInclude Source="avares://NexusMonitor/Themes/NexusTheme.axaml" />
 
-    <!-- Liquid Glass text readability: tight black glow on TextBlocks inside glass-surface
+    <!-- Crystal Glass text readability: tight black glow on TextBlocks inside glass-surface
          panels (sidebar, titlebar). Scoped selector avoids allocating offscreen bitmaps for
          every TextBlock in the app (global style + large blur radius caused ~25 GB RAM use).
          GlassTextEffect = DropShadowEffect(BlurRadius=2, ShadowDepth=0) when glass is enabled

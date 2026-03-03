@@ -58,15 +58,9 @@
             <TextBlock Text="Affects window chrome, text, and card backgrounds"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-            <ToggleButton Classes="nx-toggle"
-                          Content="Dark"
-                          IsChecked="{Binding IsDarkTheme}"/>
-            <ToggleButton Classes="nx-toggle"
-                          Content="Light"
-                          IsChecked="{Binding IsDarkTheme, Converter={x:Static BoolConverters.Not}, Mode=OneWay}"
-                          Command="{Binding SetLightThemeCommand}"/>
-          </StackPanel>
+          <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+                    SelectedIndex="{Binding ThemeModeIndex}"
+                    ItemsSource="{x:Static vm:SettingsViewModel.ThemeModeLabels}"/>
         </Grid>
 
         <!-- Update Interval -->
@@ -402,21 +396,21 @@
       </StackPanel>
     </Border>
 
-    <!-- ===== LIQUID GLASS ===== -->
+    <!-- ===== CRYSTAL GLASS ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
-        <TextBlock Text="Liquid Glass" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+        <TextBlock Text="Crystal Glass" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"/>
         <Separator/>
 
         <!-- Main glass toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0">
-            <TextBlock Text="Liquid Glass Effect" FontSize="{DynamicResource NxFont13}"
+            <TextBlock Text="Crystal Glass Effect" FontSize="{DynamicResource NxFont13}"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock Text="Full-window refraction with specular rim lights and OS backdrop blur"
                        FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"

@@ -25,6 +25,11 @@ public class SettingsService : IDisposable
             if (!File.Exists(_path)) return;
             var json = File.ReadAllText(_path);
             Current = JsonSerializer.Deserialize<AppSettings>(json) ?? new();
+
+            // Migrate old settings: if "ThemeMode" was absent, derive from IsDarkTheme
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("ThemeMode", out _))
+                Current.ThemeMode = Current.IsDarkTheme ? "Dark" : "Light";
         }
         catch { Current = new(); }
     }

@@ -5,9 +5,11 @@ namespace NexusMonitor.Core.Models;
 
 public class AppSettings
 {
-    public bool   IsDarkTheme        { get; set; } = true;
+    public bool   IsDarkTheme        { get; set; } = true;   // kept for migration only
+    /// <summary>"System" | "Dark" | "Light"</summary>
+    public string ThemeMode          { get; set; } = "System";
 
-    // Liquid Glass
+    // Crystal Glass
     public bool   IsGlassEnabled     { get; set; } = true;
     public double GlassOpacity       { get; set; } = 0.80;   // 0 = fully transparent, 1 = fully opaque
     public string BackdropBlurMode   { get; set; } = "Acrylic"; // None | Blur | Acrylic | Mica

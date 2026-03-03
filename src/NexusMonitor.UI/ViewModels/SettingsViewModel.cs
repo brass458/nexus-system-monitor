@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -27,9 +28,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private byte? _luminanceMinAlpha;
 
     // ── Appearance ────────────────────────────────────────────────────────────
-    [ObservableProperty] private bool   _isDarkTheme;
+    [ObservableProperty] private int    _themeModeIndex; // 0=System, 1=Dark, 2=Light
 
-    // ── Liquid Glass ──────────────────────────────────────────────────────────
+    private static readonly string[] _themeModeValues = ["System", "Dark", "Light"];
+    public static IReadOnlyList<string> ThemeModeLabels => _themeModeValues;
+
+    private Action? _osThemeCleanup;
+
+    // ── Crystal Glass ──────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isGlassEnabled;
     [ObservableProperty] private double _glassOpacity    = 0.80;
     [ObservableProperty] private string _backdropBlurMode = "Acrylic";
@@ -163,7 +169,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _glassAdaptive.LuminanceChanged += OnLuminanceChanged;
 
         // Load saved values via backing fields so partial callbacks don't fire during init
-        _isDarkTheme        = settings.Current.IsDarkTheme;
+        _themeModeIndex     = Array.IndexOf(_themeModeValues, settings.Current.ThemeMode);
+        if (_themeModeIndex < 0) _themeModeIndex = 0;
         _isGlassEnabled     = settings.Current.IsGlassEnabled;
         _glassOpacity       = settings.Current.GlassOpacity;
         _backdropBlurMode   = settings.Current.BackdropBlurMode;
@@ -217,15 +224,42 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
 
-    partial void OnIsDarkThemeChanged(bool value)
+    partial void OnThemeModeIndexChanged(int value)
     {
-        if (Application.Current is not null)
-            Application.Current.RequestedThemeVariant =
-                value ? ThemeVariant.Dark : ThemeVariant.Light;
-        _settings.Current.IsDarkTheme = value;
+        // Cancel any existing OS theme subscription
+        _osThemeCleanup?.Invoke();
+        _osThemeCleanup = null;
+
+        var mode = _themeModeValues[Math.Clamp(value, 0, _themeModeValues.Length - 1)];
+        _settings.Current.ThemeMode = mode;
         _settings.Save();
-        // Re-apply glass so background brushes (written over ThemeDictionary defaults
-        // by ApplyGlass) are recalculated with the correct theme-aware fallback colours.
+
+        ThemeVariant variant;
+        if (mode == "System")
+        {
+            variant = NexusMonitor.UI.App.DetectSystemTheme();
+            // Re-follow OS theme changes while in System mode
+            if (Application.Current?.PlatformSettings is { } ps)
+            {
+                void Handler(object? s, PlatformColorValues e)
+                {
+                    if (Application.Current is not null)
+                        Application.Current.RequestedThemeVariant = NexusMonitor.UI.App.DetectSystemTheme();
+                    ApplyGlass(IsGlassEnabled, GlassOpacity,
+                        CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+                }
+                ps.ColorValuesChanged += Handler;
+                _osThemeCleanup = () => ps.ColorValuesChanged -= Handler;
+            }
+        }
+        else
+        {
+            variant = mode == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
+
+        if (Application.Current is not null)
+            Application.Current.RequestedThemeVariant = variant;
+        // Re-apply glass so background brushes recalculate with the new theme.
         ApplyGlass(IsGlassEnabled, GlassOpacity,
             CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
     }
@@ -457,7 +491,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
-    [RelayCommand] private void SetLightTheme()            => IsDarkTheme = false;
     [RelayCommand] private void SetAccentColor(string h)  => AccentColorHex = h;
     [RelayCommand] private void ResetWindowBg()           => CustomWindowBgHex  = "";
     [RelayCommand] private void ResetSurfaceBg()          => CustomSurfaceBgHex = "";
@@ -554,8 +587,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
                 (byte)Math.Max(0, bgSidebar.B - 0x20)));
 
         // Overlay widget: always semi-transparent; use theme-appropriate base colour.
+        // Floor is higher in light mode so labels remain legible over bright wallpapers.
+        byte overlayFloor = luminanceMinAlpha ?? (isDark ? (byte)0x80 : (byte)0xA0);
         byte overlayAlpha = enabled
-            ? (byte)Math.Max(0x80, (int)Math.Round(opacity * 0xCC))
+            ? (byte)Math.Max(overlayFloor, (int)Math.Round(opacity * 0xCC))
             : (byte)0xCC;
         (byte oR, byte oG, byte oB) = isDark ? ((byte)0x05, (byte)0x05, (byte)0x08)
                                               : ((byte)0xF0, (byte)0xF0, (byte)0xF5);
@@ -721,6 +756,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        _osThemeCleanup?.Invoke();
         _glassAdaptive.LuminanceChanged -= OnLuminanceChanged;
     }
 }

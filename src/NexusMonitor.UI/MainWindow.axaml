@@ -118,7 +118,7 @@
 
         </Grid>
 
-        <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
+        <!-- ── Crystal Glass specular stack (pointer-transparent, 3 layers) ── -->
 
         <!-- Layer 1: Broad soft wash — pointer-tracked specular highlight -->
         <Border x:Name="TitleSpecularWash"
@@ -218,7 +218,7 @@
             </ItemsControl>
           </ScrollViewer>
 
-          <!-- ── Liquid Glass specular stack (pointer-transparent, 3 layers) ── -->
+          <!-- ── Crystal Glass specular stack (pointer-transparent, 3 layers) ── -->
 
           <!-- Layer 1: Broad diagonal wash — pointer-tracked specular highlight -->
           <Border x:Name="SideSpecularWash"
@@ -319,7 +319,7 @@
           </TransitioningContentControl.DataTemplates>
           </TransitioningContentControl>
 
-          <!-- ── Liquid Glass specular layers for content area (pointer-transparent) ── -->
+          <!-- ── Crystal Glass specular layers for content area (pointer-transparent) ── -->
 
           <!-- Layer 1: Content specular wash — pointer-tracked light source -->
           <Border x:Name="ContentSpecularWash"

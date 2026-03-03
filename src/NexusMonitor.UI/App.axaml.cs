@@ -60,7 +60,12 @@ public class App : Application
         Services = BuildServices();
 
         var saved = Services.GetRequiredService<SettingsService>();
-        RequestedThemeVariant = saved.Current.IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+        RequestedThemeVariant = saved.Current.ThemeMode switch
+        {
+            "Dark"  => ThemeVariant.Dark,
+            "Light" => ThemeVariant.Light,
+            _       => DetectSystemTheme(),
+        };
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -258,6 +263,21 @@ public class App : Application
     {
         using var stream = AssetLoader.Open(new Uri("avares://NexusMonitor/Assets/nexus-icon-256.png"));
         return new WindowIcon(stream);
+    }
+
+    // ── System theme detection ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the OS dark/light preference. Falls back to Dark on any failure.
+    /// </summary>
+    public static ThemeVariant DetectSystemTheme()
+    {
+        try
+        {
+            var v = Current?.PlatformSettings?.GetColorValues().ThemeVariant;
+            return v == PlatformThemeVariant.Light ? ThemeVariant.Light : ThemeVariant.Dark;
+        }
+        catch { return ThemeVariant.Dark; }
     }
 
     // -- DI --

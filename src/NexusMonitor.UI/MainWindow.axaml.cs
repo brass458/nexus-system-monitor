@@ -26,7 +26,7 @@ public partial class MainWindow : Window
     // Grip zone: the leftmost 18px of each nav item (the grip column)
     private const double GripWidth = 18.0;
 
-    // ── Liquid Glass specular tracking ──────────────────────────────────────
+    // ── Crystal Glass specular tracking ──────────────────────────────────────
     private double _specNx;  // smoothed normalised cursor x (0‥1)
     private double _specNy;  // smoothed normalised cursor y (0‥1)
     private DispatcherTimer? _shimmerTimer;
@@ -42,7 +42,7 @@ public partial class MainWindow : Window
         // has previously enabled glass. Changing this from AcrylicBlur to None prevents
         // wallpaper bleed-through on light desktops before settings are applied.
         //
-        // TODO(liquid-glass): Re-evaluate before public release. The Liquid Glass specular
+        // TODO(crystal-glass): Re-evaluate before public release. The Crystal Glass specular
         // shimmer + prismatic layers are intentional and should stay. The problem is that
         // AcrylicBlur as a window-wide backdrop makes content unreadable over bright
         // wallpapers. Options to revisit: per-panel acrylic (sidebar/titlebar only),
@@ -169,12 +169,12 @@ public partial class MainWindow : Window
         return null;
     }
 
-    // ── Liquid Glass: pointer-tracked specular + prismatic shimmer ─────────
+    // ── Crystal Glass: pointer-tracked specular + prismatic shimmer ─────────
 
     /// <summary>
     /// Moves the specular "bright spot" gradient direction toward the cursor,
     /// simulating a real-time light source that follows the user's pointer —
-    /// the hallmark of Apple's iOS 26 Liquid Glass material.
+    /// a Crystal Glass material (specular rim highlights + refraction).
     /// </summary>
     private void OnGlobalPointerMoved(object? sender, PointerEventArgs e)
     {
@@ -201,18 +201,24 @@ public partial class MainWindow : Window
         if (horizontal)
         {
             // Titlebar / content: light slides left–right following cursor
-            double sx = nx * 0.6;            // start x shifts 0‥0.6
-            double sy = Math.Max(0, ny * 0.2); // slight vertical tilt
+            double sx = nx * 0.85;                        // bright spot reaches right side
+            double sy = ny * 0.5;                         // moves vertically more
             brush.StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative);
-            brush.EndPoint   = new RelativePoint(sx + 0.6, 1.0, RelativeUnit.Relative);
+            brush.EndPoint   = new RelativePoint(
+                Math.Min(1.0, sx + 0.35),                 // tighter cone
+                Math.Min(1.0, sy + 0.7),
+                RelativeUnit.Relative);
         }
         else
         {
             // Sidebar: light slides top-to-bottom following cursor
-            double sy = ny * 0.4;
-            double sx = nx * 0.3;
+            double sy = ny * 0.7;
+            double sx = nx * 0.5;
             brush.StartPoint = new RelativePoint(sx, sy, RelativeUnit.Relative);
-            brush.EndPoint   = new RelativePoint(0.7, sy + 0.7, RelativeUnit.Relative);
+            brush.EndPoint   = new RelativePoint(
+                Math.Min(1.0, sx + 0.45),
+                Math.Min(1.0, sy + 0.5),
+                RelativeUnit.Relative);
         }
     }
 

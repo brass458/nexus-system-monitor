@@ -31,7 +31,7 @@
           <TextBlock Grid.Column="0"
                      Text="CPU"
                      FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
                      VerticalAlignment="Center"/>
           <lvc:CartesianChart Grid.Column="1"
                               Series="{Binding CpuSeries}"
@@ -76,7 +76,7 @@
           <TextBlock Grid.Column="0"
                      Text="NET"
                      FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
                      VerticalAlignment="Top"/>
           <StackPanel Grid.Column="1" Spacing="2">
             <TextBlock Text="{Binding NetRecvDisplay}"
@@ -94,7 +94,7 @@
           <TextBlock Grid.Column="0"
                      Text="GPU"
                      FontSize="{DynamicResource NxFont10}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
                      VerticalAlignment="Center"/>
           <TextBlock Grid.Column="2"
                      Text="{Binding GpuDisplay}"
@@ -107,7 +107,7 @@
       </StackPanel>
     </Border>
 
-    <!-- ── Liquid Glass specular stack (pointer-transparent) ── -->
+    <!-- ── Crystal Glass specular stack (pointer-transparent) ── -->
 
     <!-- Layer 1: Broad soft wash -->
     <Border IsHitTestVisible="False"

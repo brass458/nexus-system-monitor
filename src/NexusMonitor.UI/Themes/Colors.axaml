@@ -37,7 +37,8 @@
       <SolidColorBrush x:Key="BgSecondaryBrush" Color="#1B1B22" />
       <SolidColorBrush x:Key="BgElevatedBrush"  Color="#24242E" />
       <SolidColorBrush x:Key="BgHoverBrush"     Color="#2E2E3A" />
-      <SolidColorBrush x:Key="BgSelectedBrush"  Color="#38384A" />
+      <SolidColorBrush x:Key="BgSelectedBrush"     Color="#38384A" />
+      <SolidColorBrush x:Key="BgBaseOpaqueBrush"   Color="#0A0A12" />
 
       <SolidColorBrush x:Key="GlassBgBrush"        Color="#A8161622" />
       <SolidColorBrush x:Key="GlassBorderBrush"    Color="#38FFFFFF" />
@@ -82,7 +83,7 @@
       <!-- Text hierarchy -->
       <Color x:Key="TextPrimary">#1A1A2E</Color>
       <Color x:Key="TextSecondary">#2D2D44</Color>
-      <Color x:Key="TextTertiary">#8040405A</Color>
+      <Color x:Key="TextTertiary">#B840405A</Color>
       <Color x:Key="TextDisabled">#5040405A</Color>
 
       <!-- Borders -->
@@ -96,7 +97,8 @@
       <SolidColorBrush x:Key="BgSecondaryBrush" Color="#F0F0F5" />
       <SolidColorBrush x:Key="BgElevatedBrush"  Color="#E8E8F0" />
       <SolidColorBrush x:Key="BgHoverBrush"     Color="#DDDDE8" />
-      <SolidColorBrush x:Key="BgSelectedBrush"  Color="#D0D0DD" />
+      <SolidColorBrush x:Key="BgSelectedBrush"     Color="#D0D0DD" />
+      <SolidColorBrush x:Key="BgBaseOpaqueBrush"   Color="#F5F5FA" />
 
       <SolidColorBrush x:Key="GlassBgBrush"        Color="#A8E8E8F0" />
       <SolidColorBrush x:Key="GlassBorderBrush"    Color="#35000000" />
@@ -104,7 +106,7 @@
 
       <SolidColorBrush x:Key="TextPrimaryBrush"   Color="#1A1A2E"   />
       <SolidColorBrush x:Key="TextSecondaryBrush" Color="#2D2D44"   />
-      <SolidColorBrush x:Key="TextTertiaryBrush"  Color="#8040405A" />
+      <SolidColorBrush x:Key="TextTertiaryBrush"  Color="#B840405A" />
       <SolidColorBrush x:Key="TextDisabledBrush"  Color="#5040405A" />
 
       <SolidColorBrush x:Key="BorderSubtleBrush"  Color="#18000000" />
@@ -125,7 +127,7 @@
 
   <!-- ===== SHARED — theme-independent ===== -->
 
-  <!-- Liquid Glass runtime token (0 = invisible, 1 = full intensity) — written from code -->
+  <!-- Crystal Glass runtime token (0 = invisible, 1 = full intensity) — written from code -->
   <x:Double x:Key="GlassSpecularOpacity">0.35</x:Double>
 
   <!-- Text accent — written from code; defaults to AccentBlue -->

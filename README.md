@@ -100,7 +100,7 @@ This isn't a lowest-common-denominator approach. Nexus aims for the **union** of
 - Toggle on/off from settings
 
 ### Appearance & Theming
-- Dark glass theme inspired by iOS 26 Liquid Glass
+- Dark glass theme inspired by iOS 26 Crystal Glass
 - 8 accent color presets with runtime switching
 - Aero Glass toggle with adjustable opacity
 - All theme changes apply instantly across the entire UI

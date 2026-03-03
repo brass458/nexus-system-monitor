@@ -2,12 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="NexusMonitor.UI.Views.TrayPromptDialog"
         Title="Nexus Monitor"
-        Width="400"
+        Width="480"
         SizeToContent="Height"
         CanResize="False"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource BgBaseBrush}">
+        TransparencyLevelHint="None"
+        Background="{DynamicResource BgBaseOpaqueBrush}">
 
   <Border Padding="28,24"
           Background="{DynamicResource BgPrimaryBrush}"
@@ -27,7 +28,8 @@
         <StackPanel VerticalAlignment="Center" Spacing="3">
           <TextBlock Text="What should happen when you close?"
                      FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}"/>
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextWrapping="Wrap"/>
           <TextBlock Text="You can change this later in Settings → System Tray"
                      FontSize="{DynamicResource NxFont11}"
                      Foreground="{DynamicResource TextTertiaryBrush}"/>
@@ -71,7 +73,7 @@
                 Click="OnCloseApp">
           <StackPanel Spacing="4">
             <TextBlock Text="✕  Close Application" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                       Foreground="White"/>
+                       Foreground="White" TextWrapping="Wrap"/>
             <TextBlock Text="Stops monitoring and exits completely. Widgets also close."
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"/>

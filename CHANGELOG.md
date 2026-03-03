@@ -5,6 +5,24 @@ All notable changes to Nexus System Monitor will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-03-03
+
+### Added
+- **System theme detection:** New "System" option in Settings → Theme follows OS dark/light preference automatically at runtime; OS changes apply without restart
+- `BgBaseOpaqueBrush` resource in both theme dictionaries for dialogs that must be fully opaque
+
+### Changed
+- **Theme selector:** Dark/Light toggle replaced with a three-option ComboBox (System / Dark / Light)
+- **Crystal Glass:** renamed from "Liquid Glass" across all UI, code, and documentation
+- **Specular rim lights:** wider mouse-tracking range — bright spot now reaches all four corners of the window (horizontal: 0–85%, vertical: 0–50%); tighter cone makes the highlight more focused
+- **Desktop overlay widget** category labels (CPU / RAM / NET / GPU) now use `TextSecondaryBrush` instead of `TextTertiary` for legibility on bright wallpapers
+- **Overlay background alpha floor** is theme-aware: 50% in dark mode, 63% in light mode; Smart Tint's `luminanceMinAlpha` also feeds into the overlay
+
+### Fixed
+- **Light mode text readability:** `TextTertiary` alpha raised from 50% (`#80`) to 72% (`#B8`) — description text in Settings is now clearly readable in light mode
+- **Close dialog:** fully opaque (no wallpaper bleed-through), widened to 480 px so button text no longer truncates
+- **Startup theme:** app previously always launched in Dark mode regardless of OS preference; now defaults to OS theme on first run
+
 ## [0.1.1] - 2026-03-03
 
 ### Added
@@ -65,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### UI & Experience
 - Avalonia UI 11.2.3 cross-platform desktop application
-- Liquid Glass theme with configurable backdrop blur modes
+- Crystal Glass theme with configurable backdrop blur modes
 - 8 accent color presets
 - Custom title bar with window controls
 - System tray icon with quick-access menu
