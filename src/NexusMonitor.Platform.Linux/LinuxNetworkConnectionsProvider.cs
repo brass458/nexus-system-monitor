@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reactive.Linq;
+using System.Runtime.InteropServices;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Helpers;
 using NexusMonitor.Core.Models;
@@ -8,11 +9,17 @@ namespace NexusMonitor.Platform.Linux;
 
 public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvider
 {
+    [DllImport("libc.so.6", SetLastError = true)]
+    private static extern int readlink(string path, byte[] buf, int bufsiz);
+
     private readonly AdapterThroughputTracker _adapterTracker = new();
 
-    // inode→(pid, name) cache; rebuilt every ~2 seconds
-    private Dictionary<long, (int pid, string name)> _inodeMap = new();
+    // inode→(pid, name) cache; rebuilt every 10 s (was 2 s)
+    private readonly Dictionary<long, (int pid, string name)> _inodeMap = new();
     private DateTime _inodeMapTime = DateTime.MinValue;
+
+    // Shared readlink buffer — "socket:[1234567890]" is at most ~22 bytes
+    private readonly byte[] _readlinkBuf = new byte[128];
 
     private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
     private readonly object _sharedLock = new();
@@ -25,7 +32,9 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
                                     .Publish()
                                     .RefCount();
@@ -57,18 +66,19 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
     private void RefreshInodeMapIfStale()
     {
         var now = DateTime.UtcNow;
-        if ((now - _inodeMapTime).TotalSeconds < 2.0) return;
+        if ((now - _inodeMapTime).TotalSeconds < 10.0) return;
 
-        _inodeMap     = BuildInodeMap();
+        RebuildInodeMap();
         _inodeMapTime = now;
     }
 
-    private static Dictionary<long, (int pid, string name)> BuildInodeMap()
+    private void RebuildInodeMap()
     {
-        var map = new Dictionary<long, (int, string)>();
+        _inodeMap.Clear();
+
         string[] pidDirs;
         try { pidDirs = Directory.GetDirectories("/proc"); }
-        catch { return map; }
+        catch { return; }
 
         foreach (var dir in pidDirs)
         {
@@ -88,28 +98,29 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
             }
             catch { }
 
-            // Scan fd symlinks for socket:[inode]
+            // Scan fd symlinks for socket:[inode] — use P/Invoke readlink to avoid FileInfo alloc
             try
             {
                 foreach (var fd in Directory.GetFiles(fdDir))
                 {
                     try
                     {
-                        var target = new FileInfo(fd).LinkTarget;
-                        if (target == null) continue;
+                        Array.Clear(_readlinkBuf, 0, _readlinkBuf.Length);
+                        int len = readlink(fd, _readlinkBuf, _readlinkBuf.Length);
+                        if (len <= 0) continue;
                         // Target looks like "socket:[12345678]"
+                        if (len < 9 || _readlinkBuf[0] != 's') continue; // fast pre-check
+                        var target = System.Text.Encoding.UTF8.GetString(_readlinkBuf, 0, len);
                         if (!target.StartsWith("socket:[", StringComparison.Ordinal)) continue;
                         var inodeStr = target[8..^1]; // strip "socket:[" and "]"
-                        if (long.TryParse(inodeStr, out var inode) && !map.ContainsKey(inode))
-                            map[inode] = (pid, procName);
+                        if (long.TryParse(inodeStr, out var inode) && !_inodeMap.ContainsKey(inode))
+                            _inodeMap[inode] = (pid, procName);
                     }
                     catch { }
                 }
             }
             catch { }
         }
-
-        return map;
     }
 
     // ── Parse /proc/net/{tcp,udp} ──────────────────────────────────────────────
@@ -120,7 +131,7 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
         try
         {
             bool first = true;
-            foreach (var line in File.ReadAllLines(path))
+            foreach (var line in File.ReadLines(path))
             {
                 if (first) { first = false; continue; } // skip header
                 if (string.IsNullOrWhiteSpace(line)) continue;

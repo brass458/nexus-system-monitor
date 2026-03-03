@@ -32,7 +32,21 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     // username cache (uid → name)
     private readonly Dictionary<int, string> _uidCache = new();
 
+    // Stable-field cache: exe, cmdline, username, category rarely change — refresh every 30 s
+    private struct CachedProcessStatic
+    {
+        public string          ImagePath;
+        public string          CommandLine;
+        public string          UserName;
+        public ProcessCategory Category;
+        public DateTime        LastRefresh;
+        public int             Uid;
+    }
+    private readonly Dictionary<int, CachedProcessStatic> _staticCache = new();
+    private static readonly TimeSpan StaticCacheDuration = TimeSpan.FromSeconds(30);
+
     private bool _disposed;
+    private int _lastProcessCount = 200;
 
     private static long GetClockTicksPerSecond()
     {
@@ -78,7 +92,9 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
                                     .Publish()
                                     .RefCount();
@@ -94,7 +110,20 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
         var now    = DateTime.UtcNow;
-        var result = new List<ProcessInfo>();
+        var result = new List<ProcessInfo>(_lastProcessCount);
+
+        // Read /proc/uptime once per snapshot — not once per process
+        var bootTime = DateTime.MinValue;
+        try
+        {
+            var uptimeText = File.ReadAllText("/proc/uptime");
+            if (double.TryParse(uptimeText.Split(' ')[0],
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out var uptimeSec))
+                bootTime = now - TimeSpan.FromSeconds(uptimeSec);
+        }
+        catch { }
 
         string[] pidDirs;
         try
@@ -110,21 +139,24 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 
             try
             {
-                var info = ReadProcessInfo(pid, dir, now);
+                var info = ReadProcessInfo(pid, dir, now, bootTime);
                 if (info != null) result.Add(info);
             }
             catch { }
         }
 
-        // Evict stale CPU samples
+        // Evict stale CPU and static-field samples for dead PIDs
         var activePids = new HashSet<int>(result.Select(p => p.Pid));
         foreach (var key in _cpuSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
             _cpuSamples.Remove(key);
+        foreach (var key in _staticCache.Keys.Where(k => !activePids.Contains(k)).ToList())
+            _staticCache.Remove(key);
 
+        _lastProcessCount = Math.Max(result.Count, 64);
         return result;
     }
 
-    private ProcessInfo? ReadProcessInfo(int pid, string procDir, DateTime now)
+    private ProcessInfo? ReadProcessInfo(int pid, string procDir, DateTime now, DateTime bootTime)
     {
         var statPath   = Path.Combine(procDir, "stat");
         var statusPath = Path.Combine(procDir, "status");
@@ -175,38 +207,55 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         int    threads   = (int)ParseStatusLong(statusText, "Threads:");
         int    uid       = (int)ParseStatusLong(statusText, "Uid:");
 
-        var userName = LookupUsername(uid);
-
-        // Start time (seconds since boot)
+        // Start time (seconds since boot) — bootTime was computed once per Snapshot()
         DateTime startDt = DateTime.MinValue;
-        try
+        if (bootTime != DateTime.MinValue)
         {
-            var uptimeText = File.ReadAllText("/proc/uptime");
-            if (double.TryParse(uptimeText.Split(' ')[0],
-                                System.Globalization.NumberStyles.Float,
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                out var uptimeSec))
+            var procStartSec = starttime / (double)s_clockTick;
+            startDt = bootTime + TimeSpan.FromSeconds(procStartSec);
+        }
+
+        // Stable fields (exe, cmdline, username, category) — cached for 30 s
+        string imagePath, cmdLine, userName;
+        ProcessCategory category;
+        if (_staticCache.TryGetValue(pid, out var cached)
+            && (now - cached.LastRefresh) < StaticCacheDuration
+            && cached.Uid == uid)
+        {
+            imagePath = cached.ImagePath;
+            cmdLine   = cached.CommandLine;
+            userName  = cached.UserName;
+            category  = cached.Category;
+        }
+        else
+        {
+            imagePath = string.Empty;
+            try { imagePath = new FileInfo(Path.Combine(procDir, "exe")).LinkTarget ?? string.Empty; }
+            catch { }
+
+            cmdLine = string.Empty;
+            try
             {
-                var bootTime    = DateTime.UtcNow - TimeSpan.FromSeconds(uptimeSec);
-                var procStartSec = starttime / (double)s_clockTick;
-                startDt = bootTime + TimeSpan.FromSeconds(procStartSec);
+                var rawCmd = File.ReadAllText(Path.Combine(procDir, "cmdline"));
+                cmdLine = rawCmd.Replace('\0', ' ').Trim();
             }
-        }
-        catch { }
+            catch { }
 
-        // Image path via /proc/[pid]/exe symlink
-        var imagePath = string.Empty;
-        try { imagePath = new FileInfo(Path.Combine(procDir, "exe")).LinkTarget ?? string.Empty; }
-        catch { }
+            userName = LookupUsername(uid);
+            category = pid == s_currentPid
+                ? ProcessCategory.CurrentProcess
+                : ClassifyLinuxProcess(uid, imagePath);
 
-        // Command line
-        var cmdLine = string.Empty;
-        try
-        {
-            var rawCmd = File.ReadAllText(Path.Combine(procDir, "cmdline"));
-            cmdLine = rawCmd.Replace('\0', ' ').Trim();
+            _staticCache[pid] = new CachedProcessStatic
+            {
+                ImagePath   = imagePath,
+                CommandLine = cmdLine,
+                UserName    = userName,
+                Category    = category,
+                LastRefresh = now,
+                Uid         = uid,
+            };
         }
-        catch { }
 
         // Process state
         var procState = stateChar switch
@@ -216,11 +265,6 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             'Z'        => ProcessState.Zombie,
             _          => ProcessState.Unknown,
         };
-
-        // Category
-        var category = pid == s_currentPid
-            ? ProcessCategory.CurrentProcess
-            : ClassifyLinuxProcess(uid, imagePath);
 
         return new ProcessInfo
         {
@@ -476,5 +520,6 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         _disposed = true;
         _cpuSamples.Clear();
         _uidCache.Clear();
+        _staticCache.Clear();
     }
 }

@@ -30,6 +30,27 @@ internal static partial class LibSystem
 
     [DllImport("libSystem.B.dylib")]
     public static extern int vm_deallocate(int task, nint address, nint size);
+
+    [DllImport("libSystem.B.dylib", SetLastError = true)]
+    public static extern int statvfs(string path, out Statvfs buf);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Statvfs
+    {
+        public ulong f_bsize;
+        public ulong f_frsize;
+        public ulong f_blocks;
+        public ulong f_bfree;
+        public ulong f_bavail;
+        public ulong f_files;
+        public ulong f_ffree;
+        public ulong f_favail;
+        public ulong f_fsid;
+        public ulong f_flag;
+        public ulong f_namemax;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+        public int[] Spare;
+    }
 }
 
 public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
@@ -112,6 +133,11 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
     private readonly Dictionary<string, (long readBytes, long writeBytes)> _prevDiskBytes = new();
     private DateTime _prevDiskTime = DateTime.MinValue;
 
+    // ioreg disk stats cache — ioreg is expensive; refresh every 10 seconds
+    private Dictionary<string, (long readBytes, long writeBytes)> _cachedIoregStats = new();
+    private DateTime _ioregCacheTime = DateTime.MinValue;
+    private static readonly TimeSpan IoregCacheDuration = TimeSpan.FromSeconds(10);
+
     public MacOSSystemMetricsProvider()
     {
         _cpuModel      = SysctlString("machdep.cpu.brand_string");
@@ -135,7 +161,9 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => BuildMetrics())
                                     .Publish()
                                     .RefCount();
@@ -166,27 +194,17 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         };
     }
 
-    // ── Memory via vm_stat ─────────────────────────────────────────────────────
+    // ── Memory via sysctl (no subprocess) ─────────────────────────────────────
     private MemoryMetrics ReadMemory()
     {
+        // All page counts available directly via sysctl — no vm_stat subprocess needed
         var freePages      = (long)(uint)SysctlInt("vm.page_free_count");
-        var availableBytes = freePages * _pageSize;
+        var specPages      = (long)(uint)SysctlInt("vm.page_speculative_count");
+        var inactPages     = (long)(uint)SysctlInt("vm.page_inactive_count");
 
-        long cachedBytes = 0;
-        var vmOut = RunCommand("vm_stat", string.Empty);
-        if (!string.IsNullOrEmpty(vmOut))
-        {
-            long specPages  = ParseVmStatLine(vmOut, "Pages speculative:");
-            long inactPages = ParseVmStatLine(vmOut, "Pages inactive:");
-            long freeVm     = ParseVmStatLine(vmOut, "Pages free:");
-
-            if (freePages == 0 && freeVm > 0)
-            {
-                freePages      = freeVm + specPages;
-                availableBytes = freePages * _pageSize;
-            }
-            cachedBytes = inactPages * _pageSize;
-        }
+        // Available = free + speculative (pages that can be reclaimed instantly)
+        var availableBytes = (freePages + specPages) * _pageSize;
+        var cachedBytes    = inactPages * _pageSize;
 
         var usedBytes = _totalMemBytes > 0
             ? Math.Max(0L, _totalMemBytes - availableBytes)
@@ -203,16 +221,6 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             CommitTotalBytes    = 0,
             CommitLimitBytes    = 0,
         };
-    }
-
-    private static long ParseVmStatLine(string text, string key)
-    {
-        var idx = text.IndexOf(key, StringComparison.Ordinal);
-        if (idx < 0) return 0;
-        var rest = text[(idx + key.Length)..].TrimStart();
-        var end  = rest.IndexOfAny(['.', '\n', '\r', ' ']);
-        var num  = end >= 0 ? rest[..end] : rest;
-        return long.TryParse(num.Trim(), out var v) ? v : 0;
     }
 
     // ── CPU via host_processor_info (per-core) + top for total ────────────────
@@ -358,7 +366,7 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             value = v;
     }
 
-    // ── Disks via df -k + ioreg (I/O rates) ───────────────────────────────────
+    // ── Disks via DriveInfo + statvfs (no df subprocess) + cached ioreg ─────────
     private IReadOnlyList<DiskMetrics> ReadDisks()
     {
         var result  = new List<DiskMetrics>();
@@ -367,60 +375,65 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             ? 1.0
             : Math.Max(0.1, (now - _prevDiskTime).TotalSeconds);
 
-        // Build per-disk I/O map via ioreg
-        var ioMap = ReadIoregDiskStats();
-
-        var dfOut = RunCommand("df", "-k");
-        if (string.IsNullOrEmpty(dfOut))
+        // ioreg subprocess is expensive — cache it for 10 seconds
+        if (now - _ioregCacheTime > IoregCacheDuration)
         {
-            _prevDiskTime = now;
-            return result;
+            _cachedIoregStats = ReadIoregDiskStats();
+            _ioregCacheTime   = now;
         }
 
-        int index = 0;
-        foreach (var line in dfOut.Split('\n'))
+        // DriveInfo.GetDrives() uses getmntinfo() internally on macOS — no subprocess needed
+        try
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 6) continue;
-            if (parts[0] == "Filesystem") continue;
-            if (!parts[0].StartsWith("/dev/", StringComparison.Ordinal)) continue;
-
-            if (!long.TryParse(parts[1], out var totalKb)) continue;
-            if (!long.TryParse(parts[3], out var availKb)) continue;
-
-            var mountPoint = parts[^1];
-            var devName    = parts[0]; // e.g. /dev/disk3s5
-
-            // Look up I/O rates from ioreg — try exact match or parent disk
-            long readRate  = 0;
-            long writeRate = 0;
-
-            var baseDisk = ExtractBaseDiskName(devName); // "disk3s5" -> "disk3"
-            if (!string.IsNullOrEmpty(baseDisk) && ioMap.TryGetValue(baseDisk, out var ioCur))
+            int index = 0;
+            foreach (var drive in DriveInfo.GetDrives())
             {
-                if (_prevDiskBytes.TryGetValue(baseDisk, out var ioPrev))
+                if (drive.DriveType is DriveType.Network or DriveType.NoRootDirectory or DriveType.CDRom)
+                    continue;
+                if (!drive.IsReady) continue;
+
+                var mountPoint = drive.RootDirectory.FullName;
+                long totalBytes, freeBytes;
+                if (LibSystem.statvfs(mountPoint, out var sv) == 0)
                 {
-                    readRate  = (long)Math.Max(0, (ioCur.readBytes  - ioPrev.readBytes)  / elapsed);
-                    writeRate = (long)Math.Max(0, (ioCur.writeBytes - ioPrev.writeBytes) / elapsed);
+                    totalBytes = (long)(sv.f_blocks * sv.f_frsize);
+                    freeBytes  = (long)(sv.f_bavail * sv.f_frsize);
                 }
-                _prevDiskBytes[baseDisk] = ioCur;
-            }
+                else
+                {
+                    totalBytes = drive.TotalSize;
+                    freeBytes  = drive.TotalFreeSpace;
+                }
 
-            result.Add(new DiskMetrics
-            {
-                DiskIndex        = index++,
-                DriveLetter      = mountPoint,
-                Label            = parts[0],
-                PhysicalName     = parts[0],
-                AllDriveLetters  = mountPoint,
-                TotalBytes       = totalKb  * 1024L,
-                FreeBytes        = availKb  * 1024L,
-                ReadBytesPerSec  = readRate,
-                WriteBytesPerSec = writeRate,
-                ActivePercent    = 0,
-            });
+                // Match ioreg entry for I/O rates (disk0, disk1, ...)
+                long readRate = 0, writeRate = 0;
+                var  ioKey   = $"disk{index}";
+                if (_cachedIoregStats.TryGetValue(ioKey, out var ioCur))
+                {
+                    if (_prevDiskBytes.TryGetValue(ioKey, out var ioPrev))
+                    {
+                        readRate  = (long)Math.Max(0, (ioCur.readBytes  - ioPrev.readBytes)  / elapsed);
+                        writeRate = (long)Math.Max(0, (ioCur.writeBytes - ioPrev.writeBytes) / elapsed);
+                    }
+                    _prevDiskBytes[ioKey] = ioCur;
+                }
+
+                result.Add(new DiskMetrics
+                {
+                    DiskIndex        = index++,
+                    DriveLetter      = mountPoint,
+                    Label            = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : mountPoint,
+                    PhysicalName     = mountPoint,
+                    AllDriveLetters  = mountPoint,
+                    TotalBytes       = totalBytes,
+                    FreeBytes        = freeBytes,
+                    ReadBytesPerSec  = readRate,
+                    WriteBytesPerSec = writeRate,
+                    ActivePercent    = 0,
+                });
+            }
         }
+        catch { }
 
         _prevDiskTime = now;
         return result;

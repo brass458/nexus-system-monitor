@@ -47,6 +47,11 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     private readonly Dictionary<string, (long rxBytes, long txBytes)> _prevNet = new();
     private DateTime _prevNetTime = DateTime.MinValue;
 
+    // /proc/mounts cache — mount topology changes rarely; refresh every 30 s
+    private Dictionary<string, string?> _mountsCache = new(); // devName → mountPoint
+    private DateTime _mountsCacheTime = DateTime.MinValue;
+    private static readonly TimeSpan MountsCacheDuration = TimeSpan.FromSeconds(30);
+
     public LinuxSystemMetricsProvider()
     {
         _cpuModel      = ReadCpuModel();
@@ -66,7 +71,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => BuildMetrics())
                                     .Publish()
                                     .RefCount();
@@ -342,42 +349,66 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         return false;
     }
 
-    private static string? FindMountPoint(string devName)
+    private string? FindMountPoint(string devName)
     {
-        // Whole disks (e.g. "sda") are rarely mounted directly — their partitions are.
-        // Search /proc/mounts for an exact match first, then any partition of this disk.
+        // Refresh cache if stale (mounts change very rarely — e.g. USB attach/detach)
+        var now = DateTime.UtcNow;
+        if ((now - _mountsCacheTime) >= MountsCacheDuration)
+        {
+            _mountsCache     = BuildMountsCache();
+            _mountsCacheTime = now;
+        }
+        return _mountsCache.TryGetValue(devName, out var mp) ? mp : null;
+    }
+
+    private static Dictionary<string, string?> BuildMountsCache()
+    {
+        // Build devName → first-found-mountPoint map from /proc/mounts.
+        // For whole disks whose partitions (not the disk itself) are mounted,
+        // store the partition mount under the whole-disk name.
+        var cache = new Dictionary<string, string?>(StringComparer.Ordinal);
         try
         {
-            var lines = File.ReadAllLines("/proc/mounts");
-            string? partitionMount = null;
-            foreach (var line in lines)
+            foreach (var line in File.ReadLines("/proc/mounts"))
             {
                 var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2) continue;
-                var dev = parts[0];
-                // Exact match (e.g. /dev/sda or sda)
-                if (dev.EndsWith("/" + devName, StringComparison.Ordinal) ||
-                    dev.Equals(devName, StringComparison.Ordinal))
-                    return parts[1];
-                // Partition match: device starts with devName followed by a digit (e.g. sda1, sda2)
-                if (partitionMount is null)
-                {
-                    var devBase = dev.Length > devName.Length
-                        ? dev[^(devName.Length + 1)..] // last (devName.Length+1) chars
-                        : string.Empty;
-                    // Check if last segment of dev path is devName + digits
-                    var lastSlash = dev.LastIndexOf('/');
-                    var devLeaf   = lastSlash >= 0 ? dev[(lastSlash + 1)..] : dev;
-                    if (devLeaf.StartsWith(devName, StringComparison.Ordinal) &&
-                        devLeaf.Length > devName.Length &&
-                        char.IsDigit(devLeaf[devName.Length]))
-                        partitionMount = parts[1];
-                }
+                var dev  = parts[0];
+                var mp   = parts[1];
+
+                var lastSlash = dev.LastIndexOf('/');
+                var devLeaf   = lastSlash >= 0 ? dev[(lastSlash + 1)..] : dev;
+                if (string.IsNullOrEmpty(devLeaf)) continue;
+
+                // Exact match: store devLeaf → mp
+                if (!cache.ContainsKey(devLeaf))
+                    cache[devLeaf] = mp;
+
+                // Partition match: for "sda1" also store "sda" → mp (if not already set)
+                // Find the whole-disk name by stripping trailing digits or 'p'+digits (nvme)
+                var wholeDisk = StripPartitionSuffix(devLeaf);
+                if (wholeDisk != devLeaf && !cache.ContainsKey(wholeDisk))
+                    cache[wholeDisk] = mp;
             }
-            return partitionMount;
         }
         catch { }
-        return null;
+        return cache;
+    }
+
+    private static string StripPartitionSuffix(string devLeaf)
+    {
+        if (string.IsNullOrEmpty(devLeaf)) return devLeaf;
+        // nvme: "nvme0n1p2" → "nvme0n1"
+        if (devLeaf.StartsWith("nvme", StringComparison.Ordinal))
+        {
+            var pIdx = devLeaf.LastIndexOf('p');
+            if (pIdx > 4 && pIdx < devLeaf.Length - 1 && char.IsDigit(devLeaf[pIdx + 1]))
+                return devLeaf[..pIdx];
+        }
+        // sd*, vd*, hd*: strip trailing digits
+        int end = devLeaf.Length;
+        while (end > 0 && char.IsDigit(devLeaf[end - 1])) end--;
+        return end < devLeaf.Length ? devLeaf[..end] : devLeaf;
     }
 
     // ── Network (/proc/net/dev) ────────────────────────────────────────────────

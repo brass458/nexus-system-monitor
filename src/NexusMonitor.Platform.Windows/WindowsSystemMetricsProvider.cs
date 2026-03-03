@@ -106,7 +106,9 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => Sample())
                                     .Publish()
                                     .RefCount();

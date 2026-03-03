@@ -53,8 +53,12 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
         {
             if (_shared is null)
             {
+                // Enforce 2-second minimum — ProBalance/GamingMode request 1s but sample
+                // downstream; we should not double the syscall rate for all subscribers.
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
                 // One timer + one Snapshot() per tick, shared across all subscribers
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
                                     .Publish()
                                     .RefCount();

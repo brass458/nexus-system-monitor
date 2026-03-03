@@ -59,7 +59,9 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<NetworkConnection>)Snapshot())
                                     .Publish()
                                     .RefCount();

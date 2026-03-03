@@ -29,6 +29,11 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
 
     private bool _throughputChecked;
 
+    // Reusable collections for SyncCollection — cleared and repopulated each tick instead of allocated anew
+    private readonly HashSet<ConnKey>                        _wantedSet  = new();
+    private readonly Dictionary<ConnKey, NetworkConnection>  _wantedMap  = new();
+    private readonly Dictionary<ConnKey, int>                _currentMap = new();
+
     /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
     public bool IsConnectionDetailShown => SelectedConnection is not null && IsDetailPanelVisible;
 
@@ -89,29 +94,30 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
         // Build the wanted set/map using [key] = value so duplicate keys don't
         // throw — the last entry for a given key wins (matching OS behaviour
         // where the most-recently-reported binding is most relevant).
-        var wantedSet = new HashSet<ConnKey>(wanted.Count);
-        var wantedMap = new Dictionary<ConnKey, NetworkConnection>(wanted.Count);
+        // Reuse field collections (clear + repopulate) to avoid per-tick allocation.
+        _wantedSet.Clear();
+        _wantedMap.Clear();
         foreach (var conn in wanted)
         {
             var key = MakeKey(conn);
-            wantedSet.Add(key);
-            wantedMap[key] = conn;   // overwrite on duplicate — no exception
+            _wantedSet.Add(key);
+            _wantedMap[key] = conn;   // overwrite on duplicate — no exception
         }
 
         // ── 1. Remove connections no longer present ───────────────────────────
         for (int i = Connections.Count - 1; i >= 0; i--)
-            if (!wantedSet.Contains(MakeKey(Connections[i])))
+            if (!_wantedSet.Contains(MakeKey(Connections[i])))
                 Connections.RemoveAt(i);
 
         // ── 2. Rebuild current index map after removals ───────────────────────
-        var currentMap = new Dictionary<ConnKey, int>(Connections.Count);
+        _currentMap.Clear();
         for (int i = 0; i < Connections.Count; i++)
-            currentMap[MakeKey(Connections[i])] = i;
+            _currentMap[MakeKey(Connections[i])] = i;
 
         // ── 3. Add new connections; update state of existing ones ─────────────
-        foreach (var (key, conn) in wantedMap)
+        foreach (var (key, conn) in _wantedMap)
         {
-            if (!currentMap.TryGetValue(key, out int idx))
+            if (!_currentMap.TryGetValue(key, out int idx))
             {
                 // New — append; the DataGrid will sort it into place
                 Connections.Add(conn);

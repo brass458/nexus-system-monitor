@@ -12,7 +12,19 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     private static readonly int s_processorCount = Math.Max(1, Environment.ProcessorCount);
     private static readonly int s_currentPid = Environment.ProcessId;
 
+    // Reusable buffers — allocated once, shared across all processes per tick
+    private readonly byte[]  _nameBuffer    = new byte[256];
+    private readonly IntPtr  _taskInfoPtr;
+    private readonly int     _taskInfoSize;
+    private int _lastProcessCount = 200;
+
     private bool _disposed;
+
+    public MacOSProcessProvider()
+    {
+        _taskInfoSize = Marshal.SizeOf<proc_taskinfo>();
+        _taskInfoPtr  = Marshal.AllocHGlobal(_taskInfoSize);
+    }
 
     // ── P/Invoke declarations ──────────────────────────────────────────────────
     [DllImport("libSystem.dylib", SetLastError = true)]
@@ -70,7 +82,9 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
                                     .Publish()
                                     .RefCount();
@@ -86,7 +100,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
         var now    = DateTime.UtcNow;
-        var result = new List<ProcessInfo>();
+        var result = new List<ProcessInfo>(_lastProcessCount);
 
         // Get all PIDs using proc_listallpids
         int pidCount = proc_listallpids(IntPtr.Zero, 0);
@@ -108,8 +122,6 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         if (actualCount <= 0)
             return SnapshotFallback(now);
 
-        var taskInfoSize = Marshal.SizeOf<proc_taskinfo>();
-
         for (int i = 0; i < actualCount && i < pidArray.Length; i++)
         {
             int pid = pidArray[i];
@@ -117,38 +129,30 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
             try
             {
-                // Get process name
-                var nameBuf = new byte[256];
-                proc_name(pid, nameBuf, (uint)nameBuf.Length);
-                var name = System.Text.Encoding.UTF8.GetString(nameBuf)
+                // Get process name — reuse shared buffer (zero-fill first to clear previous result)
+                Array.Clear(_nameBuffer, 0, _nameBuffer.Length);
+                proc_name(pid, _nameBuffer, (uint)_nameBuffer.Length);
+                var name = System.Text.Encoding.UTF8.GetString(_nameBuffer)
                                   .TrimEnd('\0').Trim();
                 if (string.IsNullOrEmpty(name))
                     name = $"pid{pid}";
 
-                // Get task info (CPU + memory)
-                var infoPtr = Marshal.AllocHGlobal(taskInfoSize);
+                // Get task info (CPU + memory) — reuse shared native buffer
                 ulong workingSet     = 0;
                 ulong virtualSize    = 0;
                 ulong totalUserNs    = 0;
                 ulong totalSystemNs  = 0;
                 int   threadCount    = 0;
 
-                try
+                int ret = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, _taskInfoPtr, _taskInfoSize);
+                if (ret == _taskInfoSize)
                 {
-                    int ret = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, infoPtr, taskInfoSize);
-                    if (ret == taskInfoSize)
-                    {
-                        var info     = Marshal.PtrToStructure<proc_taskinfo>(infoPtr);
-                        workingSet   = info.pti_resident_size;
-                        virtualSize  = info.pti_virtual_size;
-                        totalUserNs  = info.pti_total_user;
-                        totalSystemNs = info.pti_total_system;
-                        threadCount  = info.pti_threadnum;
-                    }
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(infoPtr);
+                    var info      = Marshal.PtrToStructure<proc_taskinfo>(_taskInfoPtr);
+                    workingSet    = info.pti_resident_size;
+                    virtualSize   = info.pti_virtual_size;
+                    totalUserNs   = info.pti_total_user;
+                    totalSystemNs = info.pti_total_system;
+                    threadCount   = info.pti_threadnum;
                 }
 
                 // CPU% delta — macOS reports times in nanoseconds
@@ -214,6 +218,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         foreach (var key in _cpuSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
             _cpuSamples.Remove(key);
 
+        _lastProcessCount = Math.Max(result.Count, 64);
         return result;
     }
 
@@ -389,5 +394,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
         if (_disposed) return;
         _disposed = true;
         _cpuSamples.Clear();
+        if (_taskInfoPtr != IntPtr.Zero)
+            Marshal.FreeHGlobal(_taskInfoPtr);
     }
 }

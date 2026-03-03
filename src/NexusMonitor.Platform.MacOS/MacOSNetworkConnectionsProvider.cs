@@ -10,6 +10,12 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
 {
     private readonly AdapterThroughputTracker _adapterTracker = new();
 
+    // Connection result cache — netstat subprocesses are expensive (fork/exec × 4).
+    // Connections don't churn every 2 s, so cache for 5 s.
+    private static readonly TimeSpan ConnectionsCacheDuration = TimeSpan.FromSeconds(5);
+    private IReadOnlyList<NetworkConnection> _cachedConnections = Array.Empty<NetworkConnection>();
+    private DateTime _connectionsCacheTime = DateTime.MinValue;
+
     private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
     private readonly object _sharedLock = new();
 
@@ -21,7 +27,9 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
         {
             if (_shared is null)
             {
-                _shared = Observable.Timer(TimeSpan.Zero, interval)
+                var sharedInterval = interval < TimeSpan.FromSeconds(2)
+                    ? TimeSpan.FromSeconds(2) : interval;
+                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
                                     .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
                                     .Publish()
                                     .RefCount();
@@ -37,12 +45,16 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
         Observable.Timer(TimeSpan.Zero, interval)
                   .Select(_ => _adapterTracker.Sample());
 
-    private static IReadOnlyList<NetworkConnection> GetConnections()
+    private IReadOnlyList<NetworkConnection> GetConnections()
     {
+        var now = DateTime.UtcNow;
+        if ((now - _connectionsCacheTime) < ConnectionsCacheDuration)
+            return _cachedConnections;
+
         var result = new List<NetworkConnection>();
         try
         {
-            // netstat -anvp tcp  (TCP connections with PID)
+            // netstat -anvp tcp  (TCP connections with PID) — 4 subprocesses, cache result for 5 s
             ParseNetstat("tcp",  ConnectionProtocol.Tcp4, result);
             ParseNetstat("tcp6", ConnectionProtocol.Tcp6, result);
             ParseNetstat("udp",  ConnectionProtocol.Udp4, result);
@@ -50,6 +62,8 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
         }
         catch { }
 
+        _cachedConnections   = result;
+        _connectionsCacheTime = now;
         return result;
     }
 

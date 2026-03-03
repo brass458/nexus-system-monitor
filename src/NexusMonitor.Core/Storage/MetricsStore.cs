@@ -97,10 +97,25 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     private void OnProcessTick(IReadOnlyList<ProcessInfo> procs)
     {
         // Pre-filter to top-N at ingest time: avoids holding ~300 ProcessInfo × 30 ticks in memory.
-        // FlushProcesses() performs the same top-N logic, so results are equivalent.
-        var topCpu = procs.OrderByDescending(p => p.CpuPercent).Take(_config.TopNProcesses);
-        var topMem = procs.OrderByDescending(p => p.WorkingSetBytes).Take(_config.TopNProcesses);
-        IReadOnlyList<ProcessInfo> topN = topCpu.Union(topMem).ToList();
+        // Single-pass partial sort using min-heaps: O(N log n) instead of O(N log N) × 2 + Union.
+        var n = _config.TopNProcesses;
+        var cpuHeap = new PriorityQueue<ProcessInfo, double>(n + 1);
+        var memHeap = new PriorityQueue<ProcessInfo, long>(n + 1);
+
+        foreach (var p in procs)
+        {
+            cpuHeap.Enqueue(p, p.CpuPercent);
+            if (cpuHeap.Count > n) cpuHeap.Dequeue(); // drop lowest-CPU entry
+
+            memHeap.Enqueue(p, p.WorkingSetBytes);
+            if (memHeap.Count > n) memHeap.Dequeue(); // drop lowest-memory entry
+        }
+
+        var seen = new HashSet<int>(n * 2);
+        var topN = new List<ProcessInfo>(n * 2);
+        while (cpuHeap.Count > 0) { var p = cpuHeap.Dequeue(); if (seen.Add(p.Pid)) topN.Add(p); }
+        while (memHeap.Count > 0) { var p = memHeap.Dequeue(); if (seen.Add(p.Pid)) topN.Add(p); }
+
         var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         lock (_lock)
             _processBuffer.Add((ts, topN));

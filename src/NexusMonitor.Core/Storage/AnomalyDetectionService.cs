@@ -149,7 +149,19 @@ public sealed class AnomalyDetectionService : IDisposable
             if (!_procStats.TryGetValue(p.Name, out var entry))
                 entry = new ProcStatsEntry { Stats = new SlidingStats(_config.WindowSize) };
 
-            double cpu      = p.CpuPercent;
+            double cpu = p.CpuPercent;
+
+            // Skip anomaly detection for idle processes (CPU < 0.5%) — they can't spike
+            // from below this threshold by enough to exceed ProcessSpikeMinDeltaCpu anyway.
+            // Still push the value to keep the sliding window populated.
+            if (cpu < 0.5)
+            {
+                entry.Stats.Push(cpu);
+                entry.LastUpdated = DateTime.UtcNow;
+                _procStats[p.Name] = entry;
+                continue;
+            }
+
             bool isAnomaly  = entry.Stats.IsAnomaly(cpu, _config.SigmaProcess);
             double baseline = entry.Stats.Mean();
 

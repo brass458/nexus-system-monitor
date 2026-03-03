@@ -17,6 +17,10 @@ public sealed class RulesEngine : IDisposable
     private readonly Dictionary<(int pid, Guid ruleId), DateTime> _conditionFirstSeen = new();
     private IDisposable? _subscription;
 
+    // Cached enabled-rules list — rebuilt only when _settings.Rules reference changes
+    private List<ProcessRule>? _cachedRules;
+    private IReadOnlyList<ProcessRule>? _cachedRulesSource;
+
     public RulesEngine(IProcessProvider processProvider, AppSettings settings)
     {
         _processProvider = processProvider;
@@ -34,7 +38,15 @@ public sealed class RulesEngine : IDisposable
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
-        var rules = _settings.Rules?.Where(r => r.IsEnabled).ToList();
+        // Rebuild cached enabled-rules list only when the source collection reference changes.
+        // Avoids allocating a new List every tick when rules are unchanged.
+        var srcRules = _settings.Rules;
+        if (!ReferenceEquals(srcRules, _cachedRulesSource))
+        {
+            _cachedRules       = srcRules?.Where(r => r.IsEnabled).ToList();
+            _cachedRulesSource = srcRules;
+        }
+        var rules = _cachedRules;
         if (rules is null || rules.Count == 0) return;
 
         var alive = new HashSet<int>(processes.Select(p => p.Pid));

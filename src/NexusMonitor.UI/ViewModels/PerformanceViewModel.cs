@@ -85,6 +85,14 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     private CpuDeviceViewModel?    _cpuDevice;
     private MemoryDeviceViewModel? _memDevice;
 
+    // Dictionary-backed device maps — replace per-tick O(N) .OfType<T>().Any() scans
+    private readonly Dictionary<int,    DiskDeviceViewModel>    _diskDeviceMap = new();
+    private readonly Dictionary<string, NetworkDeviceViewModel> _netDeviceMap  = new();
+    private readonly Dictionary<string, GpuDeviceViewModel>    _gpuDeviceMap  = new();
+
+    // Disk fingerprint — skip DriveRows rebuild when free space hasn't changed
+    private long _lastDiskFingerprint;
+
     public PerformanceViewModel(ISystemMetricsProvider metricsProvider, SettingsService settings)
     {
         _metricsProvider = metricsProvider;
@@ -233,26 +241,43 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
             Push(_diskWriteValues, _ringIdx, m.Disks[0].WriteBytesPerSec / 1e6);
         }
 
-        // Per-drive summary — always update so stale rows are cleared when Disks is empty
-        DriveRows = m.Disks
-            .Where(d => d.TotalBytes > 0)
-            .Select(d =>
+        // Per-drive summary — skip rebuild when disk free space hasn't changed
+        {
+            long fp = 0;
+            foreach (var d in m.Disks)
+                fp = fp * 31 + (d.DriveLetter.Length > 0 ? d.DriveLetter[0] : 0) + (d.FreeBytes >> 20);
+            if (fp != _lastDiskFingerprint)
             {
-                double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
-                double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
-                double usedGb  = Math.Round(totalGb - freeGb, 1);
-                double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
-                return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
-            })
-            .ToList();
+                _lastDiskFingerprint = fp;
+                DriveRows = m.Disks
+                    .Where(d => d.TotalBytes > 0)
+                    .Select(d =>
+                    {
+                        double totalGb = Math.Round(d.TotalBytes / 1e9, 1);
+                        double freeGb  = Math.Round(d.FreeBytes  / 1e9, 1);
+                        double usedGb  = Math.Round(totalGb - freeGb, 1);
+                        double pct     = totalGb > 0 ? Math.Round((usedGb / totalGb) * 100, 0) : 0;
+                        return new DriveRowViewModel(d.DriveLetter, d.Label, totalGb, usedGb, freeGb, pct);
+                    })
+                    .ToList();
+            }
+        }
 
-        // Network — prefer the adapter with the most activity (active NIC)
+        // Network — prefer the adapter with the most activity (linear scan, no sort/alloc)
         if (m.NetworkAdapters.Count > 0)
         {
-            var activeNic = m.NetworkAdapters
-                .OrderByDescending(a => a.SendBytesPerSec + a.RecvBytesPerSec)
-                .ThenByDescending(a => a.IsConnected ? 1 : 0)
-                .First();
+            var activeNic = m.NetworkAdapters[0];
+            long maxThroughput = activeNic.SendBytesPerSec + activeNic.RecvBytesPerSec;
+            for (int ai = 1; ai < m.NetworkAdapters.Count; ai++)
+            {
+                var a = m.NetworkAdapters[ai];
+                long t = a.SendBytesPerSec + a.RecvBytesPerSec;
+                if (t > maxThroughput || (t == maxThroughput && a.IsConnected && !activeNic.IsConnected))
+                {
+                    activeNic      = a;
+                    maxThroughput  = t;
+                }
+            }
             NetSendMbps = Math.Round(activeNic.SendBytesPerSec / 1e6, 2);
             NetRecvMbps = Math.Round(activeNic.RecvBytesPerSec / 1e6, 2);
             Push(_netSendValues, _ringIdx, activeNic.SendBytesPerSec / 1e6);
@@ -289,47 +314,78 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
 
     private void SyncDiskDevices(IReadOnlyList<DiskMetrics> disks)
     {
-        var activeIndexes = new HashSet<int>(disks.Select(d => d.DiskIndex));
-        // Add new
+        // Add new disks
         foreach (var d in disks)
-            if (!Devices.OfType<DiskDeviceViewModel>().Any(x => x.DiskIndex == d.DiskIndex))
-                Devices.Add(new DiskDeviceViewModel(d));
+        {
+            if (!_diskDeviceMap.ContainsKey(d.DiskIndex))
+            {
+                var vm = new DiskDeviceViewModel(d);
+                _diskDeviceMap[d.DiskIndex] = vm;
+                Devices.Add(vm);
+            }
+        }
         // Remove stale
-        foreach (var dev in Devices.OfType<DiskDeviceViewModel>()
-                                    .Where(x => !activeIndexes.Contains(x.DiskIndex))
-                                    .ToList())
-            Devices.Remove(dev);
+        if (_diskDeviceMap.Count != disks.Count)
+        {
+            var activeSet = new HashSet<int>(disks.Select(d => d.DiskIndex));
+            var stale = _diskDeviceMap.Keys.Where(k => !activeSet.Contains(k)).ToList();
+            foreach (var k in stale)
+            {
+                Devices.Remove(_diskDeviceMap[k]);
+                _diskDeviceMap.Remove(k);
+            }
+        }
     }
 
     private void SyncNetworkDevices(IReadOnlyList<NetworkAdapterMetrics> adapters)
     {
-        var activeKeys = new HashSet<string>(adapters.Select(n => n.Name.Length > 0 ? n.Name : n.Description));
-        // Sort: connected / highest-throughput adapters first in the sidebar
-        var sorted = adapters
-            .OrderByDescending(a => a.IsConnected ? 1 : 0)
-            .ThenByDescending(a => a.SendBytesPerSec + a.RecvBytesPerSec);
-        foreach (var n in sorted)
+        // Add new adapters
+        foreach (var n in adapters)
         {
             string key = n.Name.Length > 0 ? n.Name : n.Description;
-            if (!Devices.OfType<NetworkDeviceViewModel>().Any(x => x.AdapterName == key))
-                Devices.Add(new NetworkDeviceViewModel(n));
+            if (!_netDeviceMap.ContainsKey(key))
+            {
+                var vm = new NetworkDeviceViewModel(n);
+                _netDeviceMap[key] = vm;
+                Devices.Add(vm);
+            }
         }
-        foreach (var dev in Devices.OfType<NetworkDeviceViewModel>()
-                                    .Where(x => !activeKeys.Contains(x.AdapterName))
-                                    .ToList())
-            Devices.Remove(dev);
+        // Remove stale
+        if (_netDeviceMap.Count != adapters.Count)
+        {
+            var activeSet = new HashSet<string>(adapters.Select(n => n.Name.Length > 0 ? n.Name : n.Description));
+            var stale = _netDeviceMap.Keys.Where(k => !activeSet.Contains(k)).ToList();
+            foreach (var k in stale)
+            {
+                Devices.Remove(_netDeviceMap[k]);
+                _netDeviceMap.Remove(k);
+            }
+        }
     }
 
     private void SyncGpuDevices(IReadOnlyList<GpuMetrics> gpus)
     {
-        var activeNames = new HashSet<string>(gpus.Select(g => g.Name));
+        // Add new GPUs
         foreach (var g in gpus)
-            if (!Devices.OfType<GpuDeviceViewModel>().Any(x => x.DeviceName == g.Name))
-                Devices.Add(new GpuDeviceViewModel(g));
-        foreach (var dev in Devices.OfType<GpuDeviceViewModel>()
-                                    .Where(x => !activeNames.Contains(x.DeviceName))
-                                    .ToList())
-            Devices.Remove(dev);
+        {
+            if (!_gpuDeviceMap.ContainsKey(g.Name))
+            {
+                var vm = new GpuDeviceViewModel(g);
+                _gpuDeviceMap[g.Name] = vm;
+                Devices.Add(vm);
+            }
+        }
+        // Remove stale
+        if (_gpuDeviceMap.Count != gpus.Count)
+        {
+            var activeSet = new HashSet<string>(gpus.Select(g => g.Name));
+            var stale = _gpuDeviceMap.Keys.Where(k => !activeSet.Contains(k)).ToList();
+            foreach (var k in stale)
+            {
+                Devices.Remove(_gpuDeviceMap[k]);
+                _gpuDeviceMap.Remove(k);
+            }
+        }
     }
 
     private void StartMetricsStream(TimeSpan interval)

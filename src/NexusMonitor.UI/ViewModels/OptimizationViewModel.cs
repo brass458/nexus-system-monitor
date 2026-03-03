@@ -72,27 +72,34 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
+    private record struct UpdateResult(
+        string TotalCpuDisplay, string TopRamProcess,
+        List<RecommendationRow> Recs,
+        int CriticalCount, int HighCount, int MediumCount,
+        string SummaryLine);
+
     public OptimizationViewModel(IProcessProvider processProvider)
     {
         Title             = "Optimization";
         _processProvider  = processProvider;
+        // ComputeUpdate runs on the timer/background thread; ApplyUpdate on the UI thread.
+        // This keeps the classification LINQ + sort off the UI thread.
         _subscription     = processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
+            .Select(ComputeUpdate)
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(Update);
+            .Subscribe(ApplyUpdate);
     }
 
-    // ── Update ────────────────────────────────────────────────────────────────
+    // ── Update (split into compute + apply) ───────────────────────────────────
 
-    private void Update(IReadOnlyList<ProcessInfo> processes)
+    private static UpdateResult ComputeUpdate(IReadOnlyList<ProcessInfo> processes)
     {
-        // Total CPU (capped at 100 % for display — individual threads can push sum above)
         double totalCpu = Math.Min(processes.Sum(p => p.CpuPercent), 100.0);
-        TotalCpuDisplay = $"{totalCpu:F0}%";
+        string totalCpuDisplay = $"{totalCpu:F0}%";
 
-        // Top RAM consumer
         var topRam = processes.OrderByDescending(p => p.WorkingSetBytes).FirstOrDefault();
-        TopRamProcess = topRam is not null
+        string topRamProcess = topRam is not null
             ? $"{topRam.Name} ({ProcessRowViewModel.FormatBytes(topRam.WorkingSetBytes)})"
             : "—";
 
@@ -108,15 +115,26 @@ public partial class OptimizationViewModel : ViewModelBase, IDisposable
             .Take(15)
             .ToList();
 
-        CriticalCount = recs.Count(r => r.Impact == ImpactLevel.Critical);
-        HighCount     = recs.Count(r => r.Impact == ImpactLevel.High);
-        MediumCount   = recs.Count(r => r.Impact == ImpactLevel.Medium);
-
-        SummaryLine = recs.Count == 0
+        int criticalCount = recs.Count(r => r.Impact == ImpactLevel.Critical);
+        int highCount     = recs.Count(r => r.Impact == ImpactLevel.High);
+        int mediumCount   = recs.Count(r => r.Impact == ImpactLevel.Medium);
+        string summaryLine = recs.Count == 0
             ? "✅  System is running efficiently — no high-impact processes detected"
             : $"Found {recs.Count} process{(recs.Count == 1 ? "" : "es")} using significant resources";
 
-        SyncCollection(Recommendations, recs);
+        return new UpdateResult(totalCpuDisplay, topRamProcess, recs,
+            criticalCount, highCount, mediumCount, summaryLine);
+    }
+
+    private void ApplyUpdate(UpdateResult r)
+    {
+        TotalCpuDisplay = r.TotalCpuDisplay;
+        TopRamProcess   = r.TopRamProcess;
+        CriticalCount   = r.CriticalCount;
+        HighCount       = r.HighCount;
+        MediumCount     = r.MediumCount;
+        SummaryLine     = r.SummaryLine;
+        SyncCollection(Recommendations, r.Recs);
     }
 
     /// <summary>
