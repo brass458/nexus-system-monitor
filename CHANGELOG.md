@@ -5,6 +5,31 @@ All notable changes to Nexus System Monitor will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-03-03
+
+### Added
+- About dialog with version, build info, and links
+- GC tuning via `runtimeconfig.template.json` for lower steady-state memory footprint
+
+### Changed
+- macOS metrics collection (disk I/O, mounts) uses sysctl/statvfs P/Invoke instead of spawning subprocesses — eliminates per-tick process overhead
+- Linux process and network providers cache stable `/proc` data (30-second TTL) to eliminate redundant kernel reads
+- Linux disk mount table cached (30-second TTL) to avoid re-parsing `/proc/mounts` every tick
+- Linux network inode map refresh extended to 10-second cache with P/Invoke `readlink` replacing subprocess-based lookup
+
+### Fixed
+- **Performance:** CPU usage reduced from ~25% to ~3–8% on Linux; RAM reduced from ~300 MB to ~100–150 MB
+- **Performance:** Eliminated stream-interval race across all 9 data providers that caused simultaneous tick bursts
+- **Performance:** Fixed per-process `/proc/uptime` read on Linux (was reading the full file once per process per tick)
+- **Performance:** Reduced per-tick allocations in AnomalyDetectionService, MetricsStore, and RulesEngine
+- **Performance:** Reduced UI-thread ViewModel work in Network, Optimization, and Performance view models
+- **Memory leak:** `SettingsViewModel` — `LuminanceChanged` event not unsubscribed on dispose
+- **Memory leak:** `SettingsService` — debounce timer not stopped on dispose
+- **Memory leak:** `FindWindowOverlay` — Process handle opened at 60 Hz without disposal
+- **Memory leak:** `AnomalyDetectionService` — `_lastFired` dictionary grew without bound; now pruned on write
+- **Theme switching:** 382 `{StaticResource}` → `{DynamicResource}` replacements across all AXAML files; Dark↔Light toggle now applies instantly without restart
+- `.deb` package now includes correct 64 × 64 px icon
+
 ## [0.1.0] - 2026-03-01
 
 ### Added
@@ -60,4 +85,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **macOS 12+ (Intel + Apple Silicon):** Full support. Unsigned — see README for Gatekeeper bypass.
 - **Linux (x64, ARM64):** Full support. Best tested on Ubuntu 22.04+.
 
+[0.1.1]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/brass458/nexus-system-monitor/releases/tag/v0.1.0
