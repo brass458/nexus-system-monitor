@@ -22,7 +22,7 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int    _totalCount;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private NetworkConnection? _selectedConnection;
-    [ObservableProperty] private bool   _isDetailPanelVisible = true;
+    [ObservableProperty] private bool   _isDetailPanelVisible = false;
     [ObservableProperty] private string _adapterSendDisplay = "—";
     [ObservableProperty] private string _adapterRecvDisplay = "—";
     [ObservableProperty] private bool   _showThroughputColumns = true;

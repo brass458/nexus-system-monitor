@@ -313,6 +313,9 @@
             <DataTemplate DataType="vm:HistoryViewModel">
               <views:HistoryView />
             </DataTemplate>
+            <DataTemplate DataType="vm:LanScannerViewModel">
+              <views:LanScannerView />
+            </DataTemplate>
             <DataTemplate DataType="vm:SettingsViewModel">
               <views:SettingsView />
             </DataTemplate>

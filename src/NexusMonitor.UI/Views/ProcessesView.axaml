@@ -109,7 +109,7 @@
                       Margin="0"
                       IsChecked="{Binding IsDetailPanelVisible}"
                       ToolTip.Tip="Show/hide process details panel">
-          <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
+          <TextBlock Text="Info Panel" FontSize="{DynamicResource NxFont11}"/>
         </ToggleButton>
 
       </Grid>

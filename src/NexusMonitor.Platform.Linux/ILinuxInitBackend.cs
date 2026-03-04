@@ -2,7 +2,7 @@ using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.Linux;
 
-internal enum InitSystem { Systemd, SysVinit, OpenRC, Unknown }
+internal enum InitSystem { Systemd, SysVinit, OpenRC, Dinit, Runit, S6, Unknown }
 
 internal interface ILinuxInitBackend
 {

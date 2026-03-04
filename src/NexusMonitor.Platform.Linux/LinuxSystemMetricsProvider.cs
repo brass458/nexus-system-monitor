@@ -171,15 +171,10 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         }
         catch { }
 
-        // Temperature
+        // Temperature — scan hwmon for CPU sensor (coretemp/k10temp/zenpower), fall back to thermal_zone*
         try
         {
-            var tempPath = "/sys/class/thermal/thermal_zone0/temp";
-            if (File.Exists(tempPath))
-            {
-                var txt = File.ReadAllText(tempPath).Trim();
-                if (long.TryParse(txt, out var mC)) tempC = mC / 1000.0;
-            }
+            tempC = ReadHwmonTemperature();
         }
         catch { }
 
@@ -563,6 +558,65 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
             }
         }
         catch { }
+        return 0;
+    }
+
+    private static double ReadHwmonTemperature()
+    {
+        // Prefer named hwmon drivers: coretemp (Intel), k10temp / zenpower (AMD)
+        var preferred = new HashSet<string>(["coretemp", "k10temp", "zenpower"], StringComparer.OrdinalIgnoreCase);
+        var hwmonBase = "/sys/class/hwmon";
+
+        if (Directory.Exists(hwmonBase))
+        {
+            // First pass: preferred drivers
+            foreach (var hwmon in Directory.GetDirectories(hwmonBase))
+            {
+                var namePath = Path.Combine(hwmon, "name");
+                if (!File.Exists(namePath)) continue;
+                var driverName = File.ReadAllText(namePath).Trim();
+                if (!preferred.Contains(driverName)) continue;
+
+                var temp = ReadFirstTempInput(hwmon);
+                if (temp > 0) return temp;
+            }
+
+            // Second pass: any hwmon with temp input
+            foreach (var hwmon in Directory.GetDirectories(hwmonBase))
+            {
+                var temp = ReadFirstTempInput(hwmon);
+                if (temp > 0) return temp;
+            }
+        }
+
+        // Fallback: scan all thermal_zone* entries
+        var thermalBase = "/sys/class/thermal";
+        if (Directory.Exists(thermalBase))
+        {
+            foreach (var zone in Directory.GetDirectories(thermalBase, "thermal_zone*"))
+            {
+                var tempPath = Path.Combine(zone, "temp");
+                if (!File.Exists(tempPath)) continue;
+                var txt = File.ReadAllText(tempPath).Trim();
+                if (long.TryParse(txt, out var mC) && mC > 0)
+                    return mC / 1000.0;
+            }
+        }
+
+        return 0;
+    }
+
+    private static double ReadFirstTempInput(string hwmonDir)
+    {
+        // Try temp1_input, temp2_input, ...
+        for (int i = 1; i <= 16; i++)
+        {
+            var path = Path.Combine(hwmonDir, $"temp{i}_input");
+            if (!File.Exists(path)) continue;
+            var txt = File.ReadAllText(path).Trim();
+            if (long.TryParse(txt, out var mC) && mC > 0)
+                return mC / 1000.0;
+        }
         return 0;
     }
 }

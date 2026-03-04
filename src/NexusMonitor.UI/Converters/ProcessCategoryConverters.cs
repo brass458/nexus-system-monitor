@@ -28,7 +28,8 @@ public class ProcessCategoryToBrushConverter : IValueConverter
     {
         if (value is ProcessCategory cat && _brushKeys.TryGetValue(cat, out var key))
         {
-            if (Application.Current?.Resources.TryGetResource(key, null, out var res) == true)
+            var theme = Application.Current?.ActualThemeVariant;
+            if (Application.Current?.Resources.TryGetResource(key, theme, out var res) == true)
                 return res;
         }
         return Brushes.White;
@@ -59,7 +60,8 @@ public class ProcessCategoryToBgBrushConverter : IValueConverter
     {
         if (value is ProcessCategory cat && _brushKeys.TryGetValue(cat, out var key))
         {
-            if (Application.Current?.Resources.TryGetResource(key, null, out var res) == true)
+            var theme = Application.Current?.ActualThemeVariant;
+            if (Application.Current?.Resources.TryGetResource(key, theme, out var res) == true)
                 return res;
         }
         return Brushes.Transparent;

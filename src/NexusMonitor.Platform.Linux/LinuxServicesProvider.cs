@@ -18,6 +18,12 @@ public sealed class LinuxServicesProvider : IServicesProvider
                 var comm = File.ReadAllText("/proc/1/comm").Trim();
                 if (comm.Equals("systemd", StringComparison.OrdinalIgnoreCase))
                     return new SystemdBackend();
+                if (comm.Equals("dinit", StringComparison.OrdinalIgnoreCase))
+                    return new DinitBackend();
+                if (comm.Equals("runit", StringComparison.OrdinalIgnoreCase))
+                    return new RunitBackend();
+                if (comm.StartsWith("s6-", StringComparison.OrdinalIgnoreCase))
+                    return new S6Backend();
                 if (comm.Contains("openrc", StringComparison.OrdinalIgnoreCase))
                     return new OpenRcBackend();
             }
@@ -26,13 +32,25 @@ public sealed class LinuxServicesProvider : IServicesProvider
             if (Directory.Exists("/run/systemd/system"))
                 return new SystemdBackend();
 
-            // 3. Check for OpenRC softlevel file
+            // 3. Check for dinit socket
+            if (Directory.Exists("/run/dinitctl") || File.Exists("/run/dinit/dinit.sock"))
+                return new DinitBackend();
+
+            // 4. Check for runit service directory
+            if (Directory.Exists("/etc/sv") && Directory.Exists("/var/service"))
+                return new RunitBackend();
+
+            // 5. Check for s6 service directory
+            if (Directory.Exists("/run/s6") || Directory.Exists("/etc/s6"))
+                return new S6Backend();
+
+            // 6. Check for OpenRC softlevel file
             if (File.Exists("/run/openrc/softlevel"))
                 return new OpenRcBackend();
         }
         catch { }
 
-        // 4. Fall back to SysVinit if /etc/init.d exists, otherwise systemd
+        // 7. Fall back to SysVinit if /etc/init.d exists, otherwise systemd
         return Directory.Exists("/etc/init.d")
             ? new SysVinitBackend()
             : new SystemdBackend();

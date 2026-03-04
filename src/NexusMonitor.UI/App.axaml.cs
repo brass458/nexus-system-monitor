@@ -20,6 +20,7 @@ using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.Controls;
 using NexusMonitor.UI.Services;
+using NexusMonitor.Core.Network;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 #if WINDOWS
@@ -162,6 +163,9 @@ public class App : Application
 
             _subscriptions.Add(anomalyService.AnomalyDetected.Subscribe(evt =>
             {
+                // Re-check enabled state at fire time (user may have toggled it off)
+                if (!saved.Current.AnomalyDetectionEnabled) return;
+
                 // Prometheus counters: total + per-type
                 prometheusExporter.RecordAnomalyDetected(evt.EventType);
 
@@ -244,7 +248,11 @@ public class App : Application
         };
 
         var exitItem = new NativeMenuItem("Exit Nexus Monitor");
-        exitItem.Click += (_, _) => desktop.Shutdown();
+        exitItem.Click += (_, _) =>
+        {
+            MainWindow.ForceQuitFromTray = true;
+            desktop.Shutdown();
+        };
 
         _trayIcon.Menu = new NativeMenu();
         _trayIcon.Menu.Add(showItem);
@@ -318,6 +326,7 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
         services.AddSingleton<INotificationService,         LinuxNotificationService>();
         services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
+        services.AddSingleton<LinuxHardwareInfoProvider>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
@@ -341,7 +350,7 @@ public class App : Application
         var dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "NexusMonitor", "metrics.db");
-        services.AddSingleton(new MetricsDatabase(dbPath));
+        services.AddSingleton<MetricsDatabase>(_ => new MetricsDatabase(dbPath));
         services.AddSingleton<MetricsStoreConfig>(sp =>
         {
             var s = sp.GetRequiredService<AppSettings>();
@@ -396,6 +405,9 @@ public class App : Application
         services.AddSingleton<GamingModeService>();
         services.AddSingleton<AlertsService>();
 
+        // -- Network tools --
+        services.AddSingleton<NmapScannerService>();
+
         // -- ViewModels --
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<ProcessesViewModel>();
@@ -413,6 +425,7 @@ public class App : Application
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<HistoryViewModel>();
         services.AddSingleton<OverlayViewModel>();
+        services.AddSingleton<LanScannerViewModel>();
 
         return services.BuildServiceProvider();
     }

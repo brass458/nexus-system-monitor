@@ -62,7 +62,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private string _lastError = string.Empty;
 
     [ObservableProperty]
-    private bool _isDetailPanelVisible = true;
+    private bool _isDetailPanelVisible = false;
 
     [ObservableProperty]
     private bool _isTreeViewActive;

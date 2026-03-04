@@ -46,6 +46,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("Gaming Mode",  "\ue995", () => services.GetRequiredService<GamingModeViewModel>(),   eager: false),
             new NavItem("Alerts",       "\ue997", () => services.GetRequiredService<AlertsViewModel>(),       eager: false),
             new NavItem("History",      "\ue9da", () => services.GetRequiredService<HistoryViewModel>(),      eager: false),
+            new NavItem("LAN Scanner",  "\ue9c9", () => services.GetRequiredService<LanScannerViewModel>(),   eager: false),
             new NavItem("Settings",     "\ue992", () => services.GetRequiredService<SettingsViewModel>(),     eager: false),
         };
 

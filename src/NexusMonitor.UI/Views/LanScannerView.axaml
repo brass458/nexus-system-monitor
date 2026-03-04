@@ -1,0 +1,187 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:models="using:NexusMonitor.Core.Network"
+             x:Class="NexusMonitor.UI.Views.LanScannerView"
+             x:DataType="vm:LanScannerViewModel"
+             x:CompileBindings="False">
+
+  <DockPanel>
+
+    <!-- ===== TOOLBAR ===== -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{DynamicResource BgSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <WrapPanel Orientation="Horizontal">
+
+        <!-- Target -->
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,12,0">
+          <TextBlock Text="Target:" FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+          <TextBox Classes="nx-input" Width="200" Text="{Binding Target}"
+                   Watermark="e.g. 192.168.1.0/24" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Scan type -->
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,12,0">
+          <TextBlock Text="Type:" FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+          <ComboBox Width="160" VerticalAlignment="Center"
+                    ItemsSource="{x:Static vm:LanScannerViewModel.ScanTypeLabels}"
+                    SelectedIndex="{Binding ScanTypeIndex}"/>
+        </StackPanel>
+
+        <!-- Options -->
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="0,0,12,0">
+          <CheckBox Content="OS Detection" IsChecked="{Binding OsDetection}"
+                    FontSize="{DynamicResource NxFont12}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"/>
+          <CheckBox Content="Service Version" IsChecked="{Binding ServiceVersion}"
+                    FontSize="{DynamicResource NxFont12}"
+                    Foreground="{DynamicResource TextPrimaryBrush}"/>
+        </StackPanel>
+
+        <!-- Scan / Cancel buttons -->
+        <Button Classes="nx-btn-accent" Margin="0,0,6,0"
+                Command="{Binding ScanCommand}"
+                IsEnabled="{Binding IsScanning, Converter={x:Static BoolConverters.Not}}">
+          <TextBlock Text="&#x1F50D;  Scan" FontSize="{DynamicResource NxFont12}"/>
+        </Button>
+        <Button Classes="nx-btn"
+                Command="{Binding CancelCommand}"
+                IsEnabled="{Binding IsScanning}">
+          <TextBlock Text="Cancel" FontSize="{DynamicResource NxFont12}"/>
+        </Button>
+
+      </WrapPanel>
+    </Border>
+
+    <!-- ===== STATUS BAR ===== -->
+    <Border DockPanel.Dock="Bottom"
+            Padding="16,6"
+            Background="{DynamicResource BgSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
+            BorderThickness="0,1,0,0">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right"
+                   Text="{Binding HostsUp, StringFormat='Hosts up: {0}'}"
+                   FontSize="{DynamicResource NxFont11}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding StatusText}"
+                   FontSize="{DynamicResource NxFont11}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+
+    <!-- ===== nmap unavailable notice ===== -->
+    <Border IsVisible="{Binding NmapAvailable, Converter={x:Static BoolConverters.Not}}"
+            DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="#2CFF9F0A"
+            BorderBrush="{StaticResource ColorWarningBrush}"
+            BorderThickness="0,0,0,1">
+      <TextBlock Text="nmap is not installed. Install nmap via your package manager to use LAN scanning."
+                 FontSize="{DynamicResource NxFont12}"
+                 Foreground="{StaticResource ColorWarningBrush}"
+                 TextWrapping="Wrap"/>
+    </Border>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <Grid ColumnDefinitions="*,Auto,320">
+
+      <!-- Host list -->
+      <DataGrid Grid.Column="0"
+                ItemsSource="{Binding Hosts}"
+                SelectedItem="{Binding SelectedHost}"
+                IsReadOnly="True"
+                CanUserReorderColumns="True"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="True"
+                GridLinesVisibility="Horizontal"
+                FontSize="{DynamicResource NxFont12}">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="IP Address"  Binding="{Binding IpAddress}"  Width="140"/>
+          <DataGridTextColumn Header="Hostname"    Binding="{Binding Hostname}"   Width="200"/>
+          <DataGridTextColumn Header="MAC"         Binding="{Binding MacAddress}" Width="160"/>
+          <DataGridTextColumn Header="OS"          Binding="{Binding OsGuess}"    Width="*"/>
+          <DataGridTextColumn Header="Latency (ms)" Binding="{Binding Latency, StringFormat='{}{0:F1}'}" Width="90"/>
+          <DataGridTextColumn Header="Open Ports"
+                              Binding="{Binding Ports.Count}"
+                              Width="80"/>
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <!-- Splitter -->
+      <GridSplitter Grid.Column="1" Width="4" ResizeBehavior="PreviousAndNext"/>
+
+      <!-- Detail panel -->
+      <Border Grid.Column="2"
+              IsVisible="{Binding SelectedHost, Converter={x:Static ObjectConverters.IsNotNull}}"
+              Padding="16"
+              Background="{DynamicResource BgPrimaryBrush}"
+              BorderBrush="{DynamicResource BorderSubtleBrush}"
+              BorderThickness="1,0,0,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="12" DataContext="{Binding SelectedHost}">
+
+            <TextBlock Text="{Binding IpAddress}" FontSize="{DynamicResource NxFont16}"
+                       FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="{Binding Hostname}" FontSize="{DynamicResource NxFont12}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+            <Separator/>
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="MAC:" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,8,4"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MacAddress}" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="OS:" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,8,4"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OsGuess}" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Latency:" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,8,4"/>
+              <TextBlock Grid.Row="2" Grid.Column="1"
+                         Text="{Binding Latency, StringFormat='{}{0:F1} ms'}"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Ports:" FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,8,0"/>
+              <TextBlock Grid.Row="3" Grid.Column="1"
+                         Text="{Binding Ports.Count, StringFormat='{}{0} open'}"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </Grid>
+
+            <Separator/>
+
+            <!-- Ports table -->
+            <TextBlock Text="OPEN PORTS" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                       LetterSpacing="0.6" Foreground="{DynamicResource TextTertiaryBrush}"/>
+            <DataGrid ItemsSource="{Binding Ports}"
+                      IsReadOnly="True"
+                      CanUserSortColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      MaxHeight="300"
+                      FontSize="{DynamicResource NxFont11}">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Port"    Binding="{Binding Number}"   Width="60"/>
+                <DataGridTextColumn Header="Proto"   Binding="{Binding Protocol}" Width="55"/>
+                <DataGridTextColumn Header="Service" Binding="{Binding Service}"  Width="90"/>
+                <DataGridTextColumn Header="Version" Binding="{Binding Version}"  Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+    </Grid>
+
+  </DockPanel>
+</UserControl>

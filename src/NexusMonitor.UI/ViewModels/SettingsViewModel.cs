@@ -60,7 +60,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private bool _suppressColorSync;
 
     // ── Typography ────────────────────────────────────────────────────────────
-    [ObservableProperty] private string _fontFamily  = "";
+    [ObservableProperty] private string _fontFamily          = "";
+    [ObservableProperty] private double _fontSizeMultiplier  = 1.0;
 
     // ── Performance ───────────────────────────────────────────────────────────
     [ObservableProperty] private int _updateIntervalIndex = 1; // 0=500ms 1=1s 2=2s 3=5s
@@ -187,7 +188,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _customWindowBgHex  = settings.Current.CustomWindowBgHex;
         _customSurfaceBgHex = settings.Current.CustomSurfaceBgHex;
         _customSidebarBgHex = settings.Current.CustomSidebarBgHex;
-        _fontFamily         = settings.Current.FontFamily;
+        _fontFamily              = settings.Current.FontFamily;
+        _fontSizeMultiplier      = settings.Current.FontSizeMultiplier;
         _showOverlayWidget             = settings.Current.ShowOverlayWidget;
         _desktopNotificationsEnabled   = settings.Current.DesktopNotificationsEnabled;
         _anomalyNotificationsEnabled   = settings.Current.AnomalyNotificationsEnabled;
@@ -219,7 +221,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ApplyBackdropMode(_isGlassEnabled, _backdropBlurMode);
         ApplyAccentColor(_accentColorHex);
         ApplyTextAccent(_accentColorHex, _textAccentColorHex);
-        ApplyFont(_fontFamily);
+        ApplyFont(_fontFamily, _fontSizeMultiplier);
     }
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
@@ -353,7 +355,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.FontFamily = value;
         _settings.Save();
-        ApplyFont(value);
+        ApplyFont(value, FontSizeMultiplier);
+    }
+
+    partial void OnFontSizeMultiplierChanged(double value)
+    {
+        _settings.Current.FontSizeMultiplier = value;
+        _settings.Save();
+        ApplyFont(FontFamily, value);
     }
 
     partial void OnCloseActionIndexChanged(int value)
@@ -392,7 +401,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             if (value is not null)
             {
                 ApplyBackdropMode(IsGlassEnabled, BackdropBlurMode);
-                ApplyFont(FontFamily);
+                ApplyFont(FontFamily, FontSizeMultiplier);
             }
         }
     }
@@ -491,8 +500,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
-    [RelayCommand] private void SetAccentColor(string h)  => AccentColorHex = h;
-    [RelayCommand] private void ResetWindowBg()           => CustomWindowBgHex  = "";
+    [RelayCommand] private void SetAccentColor(string h)       => AccentColorHex = h;
+    [RelayCommand] private void SetTextAccentColor(string? h) => TextAccentColorHex = h ?? "";
+    [RelayCommand] private void ResetWindowBg()               => CustomWindowBgHex  = "";
     [RelayCommand] private void ResetSurfaceBg()          => CustomSurfaceBgHex = "";
     [RelayCommand] private void ResetSidebarBg()          => CustomSidebarBgHex = "";
 
@@ -732,8 +742,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Applies <paramref name="family"/> as the <c>FontFamily</c> on every open
     /// window.  An empty string or "(System Default)" restores the system default.
+    /// <paramref name="multiplier"/> scales the base font size (1.0 = default).
     /// </summary>
-    private void ApplyFont(string family)
+    private void ApplyFont(string family, double multiplier = 1.0)
     {
         if (Application.Current?.ApplicationLifetime
                 is not IClassicDesktopStyleApplicationLifetime desktop) return;
@@ -743,8 +754,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             : new Avalonia.Media.FontFamily(family);
 
         const double BaseFontSize = 15.0; // matches NxFont13 token (bumped from 14→15)
-        if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = BaseFontSize; }
-        if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = BaseFontSize; }
+        double fontSize = BaseFontSize * Math.Clamp(multiplier, 0.5, 3.0);
+        if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = fontSize; }
+        if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = fontSize; }
     }
 
     private static void SetBrush(string key, Color baseColor, byte alpha)

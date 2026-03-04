@@ -61,6 +61,24 @@
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45FFFFFF" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25FFFFFF" />
 
+      <!-- ── Process category brushes — Dark ── -->
+      <SolidColorBrush x:Key="ProcSystemBrush"       Color="#5E5CE6" />
+      <SolidColorBrush x:Key="ProcSystemBgBrush"     Color="#1A5E5CE6" />
+      <SolidColorBrush x:Key="ProcServiceBrush"      Color="#32ADE6" />
+      <SolidColorBrush x:Key="ProcServiceBgBrush"    Color="#1A32ADE6" />
+      <SolidColorBrush x:Key="ProcUserBrush"         Color="#34C759" />
+      <SolidColorBrush x:Key="ProcUserBgBrush"       Color="#1434C759" />
+      <SolidColorBrush x:Key="ProcDotNetBrush"       Color="#BF5AF2" />
+      <SolidColorBrush x:Key="ProcDotNetBgBrush"     Color="#1ABF5AF2" />
+      <SolidColorBrush x:Key="ProcSuspiciousBrush"   Color="#FF453A" />
+      <SolidColorBrush x:Key="ProcSuspiciousBgBrush" Color="#1AFF453A" />
+      <SolidColorBrush x:Key="ProcSuspendedBrush"    Color="#8E8E93" />
+      <SolidColorBrush x:Key="ProcSuspendedBgBrush"  Color="#148E8E93" />
+      <SolidColorBrush x:Key="ProcGpuBrush"          Color="#64D2FF" />
+      <SolidColorBrush x:Key="ProcGpuBgBrush"        Color="#1A64D2FF" />
+      <SolidColorBrush x:Key="ProcCurrentBrush"      Color="#FFD60A" />
+      <SolidColorBrush x:Key="ProcCurrentBgBrush"    Color="#1AFFD60A" />
+
     </ResourceDictionary>
 
     <!-- ===== LIGHT PALETTE ===== -->
@@ -121,6 +139,24 @@
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45000000" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25000000" />
 
+      <!-- ── Process category brushes — Light (darker/higher-contrast variants) ── -->
+      <SolidColorBrush x:Key="ProcSystemBrush"       Color="#3F3DBF" />
+      <SolidColorBrush x:Key="ProcSystemBgBrush"     Color="#203F3DBF" />
+      <SolidColorBrush x:Key="ProcServiceBrush"      Color="#0078C8" />
+      <SolidColorBrush x:Key="ProcServiceBgBrush"    Color="#200078C8" />
+      <SolidColorBrush x:Key="ProcUserBrush"         Color="#1A7A35" />
+      <SolidColorBrush x:Key="ProcUserBgBrush"       Color="#201A7A35" />
+      <SolidColorBrush x:Key="ProcDotNetBrush"       Color="#7B2FBE" />
+      <SolidColorBrush x:Key="ProcDotNetBgBrush"     Color="#207B2FBE" />
+      <SolidColorBrush x:Key="ProcSuspiciousBrush"   Color="#C0392B" />
+      <SolidColorBrush x:Key="ProcSuspiciousBgBrush" Color="#20C0392B" />
+      <SolidColorBrush x:Key="ProcSuspendedBrush"    Color="#636366" />
+      <SolidColorBrush x:Key="ProcSuspendedBgBrush"  Color="#14636366" />
+      <SolidColorBrush x:Key="ProcGpuBrush"          Color="#007AB8" />
+      <SolidColorBrush x:Key="ProcGpuBgBrush"        Color="#20007AB8" />
+      <SolidColorBrush x:Key="ProcCurrentBrush"      Color="#B87A00" />
+      <SolidColorBrush x:Key="ProcCurrentBgBrush"    Color="#20B87A00" />
+
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>
@@ -149,24 +185,6 @@
   <Color x:Key="HeatMid">#FF9F0A</Color>
   <Color x:Key="HeatHigh">#FF453A</Color>
 
-  <!-- ===== PROCESS CATEGORY COLORS ===== -->
-  <Color x:Key="ProcSystem">#5E5CE6</Color>
-  <Color x:Key="ProcSystemBg">#1A5E5CE6</Color>
-  <Color x:Key="ProcService">#32ADE6</Color>
-  <Color x:Key="ProcServiceBg">#1A32ADE6</Color>
-  <Color x:Key="ProcUser">#34C759</Color>
-  <Color x:Key="ProcUserBg">#1434C759</Color>
-  <Color x:Key="ProcDotNet">#BF5AF2</Color>
-  <Color x:Key="ProcDotNetBg">#1ABF5AF2</Color>
-  <Color x:Key="ProcSuspicious">#FF453A</Color>
-  <Color x:Key="ProcSuspiciousBg">#1AFF453A</Color>
-  <Color x:Key="ProcSuspended">#636366</Color>
-  <Color x:Key="ProcSuspendedBg">#14636366</Color>
-  <Color x:Key="ProcGpu">#64D2FF</Color>
-  <Color x:Key="ProcGpuBg">#1A64D2FF</Color>
-  <Color x:Key="ProcCurrent">#FFD60A</Color>
-  <Color x:Key="ProcCurrentBg">#1AFFD60A</Color>
-
   <!-- ===== SHARED BRUSHES (non-theme) ===== -->
   <SolidColorBrush x:Key="AccentBlueBrush"      Color="{StaticResource AccentBlue}" />
   <SolidColorBrush x:Key="AccentBlueDimBrush"   Color="{StaticResource AccentBlueDim}" />
@@ -176,23 +194,5 @@
   <SolidColorBrush x:Key="ColorWarningBrush" Color="{StaticResource ColorWarning}" />
   <SolidColorBrush x:Key="ColorDangerBrush"  Color="{StaticResource ColorDanger}" />
   <SolidColorBrush x:Key="ColorInfoBrush"    Color="{StaticResource ColorInfo}" />
-
-  <!-- Process brushes -->
-  <SolidColorBrush x:Key="ProcSystemBrush"      Color="{StaticResource ProcSystem}" />
-  <SolidColorBrush x:Key="ProcSystemBgBrush"    Color="{StaticResource ProcSystemBg}" />
-  <SolidColorBrush x:Key="ProcServiceBrush"     Color="{StaticResource ProcService}" />
-  <SolidColorBrush x:Key="ProcServiceBgBrush"   Color="{StaticResource ProcServiceBg}" />
-  <SolidColorBrush x:Key="ProcUserBrush"        Color="{StaticResource ProcUser}" />
-  <SolidColorBrush x:Key="ProcUserBgBrush"      Color="{StaticResource ProcUserBg}" />
-  <SolidColorBrush x:Key="ProcDotNetBrush"      Color="{StaticResource ProcDotNet}" />
-  <SolidColorBrush x:Key="ProcDotNetBgBrush"    Color="{StaticResource ProcDotNetBg}" />
-  <SolidColorBrush x:Key="ProcSuspiciousBrush"  Color="{StaticResource ProcSuspicious}" />
-  <SolidColorBrush x:Key="ProcSuspiciousBgBrush" Color="{StaticResource ProcSuspiciousBg}" />
-  <SolidColorBrush x:Key="ProcSuspendedBrush"   Color="{StaticResource ProcSuspended}" />
-  <SolidColorBrush x:Key="ProcSuspendedBgBrush" Color="{StaticResource ProcSuspendedBg}" />
-  <SolidColorBrush x:Key="ProcGpuBrush"         Color="{StaticResource ProcGpu}" />
-  <SolidColorBrush x:Key="ProcGpuBgBrush"       Color="{StaticResource ProcGpuBg}" />
-  <SolidColorBrush x:Key="ProcCurrentBrush"     Color="{StaticResource ProcCurrent}" />
-  <SolidColorBrush x:Key="ProcCurrentBgBrush"   Color="{StaticResource ProcCurrentBg}" />
 
 </ResourceDictionary>

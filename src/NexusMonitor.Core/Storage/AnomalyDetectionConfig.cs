@@ -6,7 +6,7 @@ namespace NexusMonitor.Core.Storage;
 /// </summary>
 public sealed class AnomalyDetectionConfig
 {
-    public bool Enabled    { get; set; } = true;
+    public bool Enabled    { get; set; } = false;
 
     /// <summary>Sliding-window size in ticks (~2 min at 2 s interval = 60 samples).</summary>
     public int  WindowSize { get; set; } = 60;

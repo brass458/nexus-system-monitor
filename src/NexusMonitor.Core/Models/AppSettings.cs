@@ -27,6 +27,7 @@ public class AppSettings
 
     // Typography
     public string FontFamily         { get; set; } = "";     // "" = system default
+    public double FontSizeMultiplier { get; set; } = 1.0;   // 1.0 = default size
 
     // Performance
     public int    UpdateIntervalMs   { get; set; } = 2000;   // 500 | 1000 | 2000 | 5000
@@ -40,8 +41,8 @@ public class AppSettings
     public bool   ShowOverlayWidget  { get; set; } = false;
 
     // Notifications
-    public bool   DesktopNotificationsEnabled  { get; set; } = true;
-    public bool   AnomalyNotificationsEnabled  { get; set; } = true;
+    public bool   DesktopNotificationsEnabled  { get; set; } = false;
+    public bool   AnomalyNotificationsEnabled  { get; set; } = false;
 
     // ProBalance
     public bool          ProBalanceEnabled      { get; set; } = false;
@@ -63,7 +64,7 @@ public class AppSettings
     public List<string> NavOrder { get; set; } = new();
 
     // Metrics persistence (Phase 11)
-    public bool MetricsEnabled           { get; set; } = true;
+    public bool MetricsEnabled           { get; set; } = false;
     public int  MetricsTopNProcesses     { get; set; } = 15;
     public bool MetricsRecordNetwork     { get; set; } = true;
     public int  MetricsRawRetentionHours { get; set; } = 1;
@@ -79,9 +80,9 @@ public class AppSettings
     public bool SmartTintEnabled { get; set; } = false;
 
     // Anomaly Detection (Phase 13)
-    public bool   AnomalyDetectionEnabled     { get; set; } = true;
+    public bool   AnomalyDetectionEnabled     { get; set; } = false;
     /// <summary>"Low", "Medium", or "High" — maps to sigma preset in AnomalyDetectionConfig.</summary>
-    public string AnomalySensitivity          { get; set; } = "Medium";
+    public string AnomalySensitivity          { get; set; } = "Low";
     public int    AnomalyCooldownSeconds      { get; set; } = 60;
     public int    AnomalyNewConnGracePeriodSec{ get; set; } = 120;
     public int    MetricsEventsRetentionDays  { get; set; } = 90;

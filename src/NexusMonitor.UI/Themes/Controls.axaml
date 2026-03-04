@@ -257,4 +257,12 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
+  <!-- ===== DATAGRID — column sizing ===== -->
+  <Style Selector="DataGrid">
+    <Setter Property="UseLayoutRounding" Value="True"/>
+  </Style>
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="MinWidth" Value="40"/>
+  </Style>
+
 </Styles>

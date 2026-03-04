@@ -31,7 +31,7 @@
           <ToggleButton Classes="nx-toggle"
                         IsChecked="{Binding IsDetailPanelVisible}"
                         ToolTip.Tip="Show/hide connection details panel">
-            <TextBlock Text="Details" FontSize="{DynamicResource NxFont11}"/>
+            <TextBlock Text="Info Panel" FontSize="{DynamicResource NxFont11}"/>
           </ToggleButton>
           <TextBox Name="SearchBox"
                    Classes="nx-input"

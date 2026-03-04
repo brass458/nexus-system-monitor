@@ -115,6 +115,29 @@
                      TextTrimming="CharacterEllipsis"/>
         </Border>
 
+        <!-- Font size multiplier -->
+        <Grid ColumnDefinitions="*,Auto,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="Font Size" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Scale all text relative to the default size"
+                       FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
+          </StackPanel>
+          <TextBlock Grid.Column="1"
+                     Text="{Binding FontSizeMultiplier, StringFormat='{}{0:P0}'}"
+                     FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,8,0"/>
+          <Slider Grid.Column="2"
+                  Width="140"
+                  Minimum="0.8" Maximum="1.5"
+                  TickFrequency="0.05"
+                  IsSnapToTickEnabled="True"
+                  Value="{Binding FontSizeMultiplier}"
+                  VerticalAlignment="Center"/>
+        </Grid>
+
       </StackPanel>
     </Border>
 
@@ -220,6 +243,7 @@
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="Transparent"
                   BorderBrush="{DynamicResource BorderSubtleBrush}"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter=""
                   ToolTip.Tip="Derive from Primary (default)">
             <Button.Styles>
               <Style Selector="Button">
@@ -229,25 +253,25 @@
           </Button>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#0A84FF"
-                  CommandParameter="#0A84FF" ToolTip.Tip="Blue"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#0A84FF" ToolTip.Tip="Blue"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#BF5AF2"
-                  CommandParameter="#BF5AF2" ToolTip.Tip="Purple"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#BF5AF2" ToolTip.Tip="Purple"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#FF375F"
-                  CommandParameter="#FF375F" ToolTip.Tip="Pink"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FF375F" ToolTip.Tip="Pink"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#FF9F0A"
-                  CommandParameter="#FF9F0A" ToolTip.Tip="Orange"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FF9F0A" ToolTip.Tip="Orange"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#34C759"
-                  CommandParameter="#34C759" ToolTip.Tip="Green"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#34C759" ToolTip.Tip="Green"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#5AC8FA"
-                  CommandParameter="#5AC8FA" ToolTip.Tip="Teal"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#5AC8FA" ToolTip.Tip="Teal"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#FF453A"
-                  CommandParameter="#FF453A" ToolTip.Tip="Red"/>
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FF453A" ToolTip.Tip="Red"/>
         </WrapPanel>
         <!-- Text accent preview -->
         <TextBlock FontSize="{DynamicResource NxFont11}" Margin="0,2,0,0">
