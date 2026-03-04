@@ -80,14 +80,85 @@
     <!-- ===== nmap unavailable notice ===== -->
     <Border IsVisible="{Binding NmapAvailable, Converter={x:Static BoolConverters.Not}}"
             DockPanel.Dock="Top"
-            Padding="16,10"
+            Padding="16,12"
             Background="#2CFF9F0A"
             BorderBrush="{StaticResource ColorWarningBrush}"
             BorderThickness="0,0,0,1">
-      <TextBlock Text="nmap is not installed. Install nmap via your package manager to use LAN scanning."
-                 FontSize="{DynamicResource NxFont12}"
-                 Foreground="{StaticResource ColorWarningBrush}"
-                 TextWrapping="Wrap"/>
+      <StackPanel Spacing="8">
+
+        <!-- Warning message -->
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Text="&#x26A0;" FontSize="{DynamicResource NxFont14}"
+                     Foreground="{StaticResource ColorWarningBrush}" VerticalAlignment="Center"/>
+          <TextBlock Text="nmap is not installed on this system."
+                     FontSize="{DynamicResource NxFont12}"
+                     Foreground="{StaticResource ColorWarningBrush}"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Package manager available: Install + Re-check buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8"
+                    IsVisible="{Binding HasPackageManager}">
+          <Button Classes="nx-btn"
+                  Command="{Binding InstallNmapCommand}"
+                  IsEnabled="{Binding IsInstalling, Converter={x:Static BoolConverters.Not}}">
+            <TextBlock Text="{Binding PackageManagerName, StringFormat='Install via {0}'}"
+                       FontSize="{DynamicResource NxFont12}"/>
+          </Button>
+          <Button Classes="nx-btn"
+                  Command="{Binding RecheckNmapCommand}"
+                  IsEnabled="{Binding IsInstalling, Converter={x:Static BoolConverters.Not}}">
+            <TextBlock Text="Re-check" FontSize="{DynamicResource NxFont12}"/>
+          </Button>
+        </StackPanel>
+
+        <!-- No package manager: manual instructions + Re-check -->
+        <StackPanel Orientation="Horizontal" Spacing="8"
+                    IsVisible="{Binding HasPackageManager, Converter={x:Static BoolConverters.Not}}">
+          <TextBlock Text="Download and install nmap from nmap.org, then click Re-check."
+                     FontSize="{DynamicResource NxFont12}"
+                     Foreground="{StaticResource ColorWarningBrush}"
+                     VerticalAlignment="Center"/>
+          <Button Classes="nx-btn" Command="{Binding RecheckNmapCommand}">
+            <TextBlock Text="Re-check" FontSize="{DynamicResource NxFont12}"/>
+          </Button>
+        </StackPanel>
+
+        <!-- Install progress bar (visible only while installing) -->
+        <ProgressBar IsVisible="{Binding IsInstalling}"
+                     IsIndeterminate="True" Height="3"/>
+
+        <!-- Success notice -->
+        <TextBlock IsVisible="{Binding InstallSucceeded}"
+                   Text="✓ nmap installed successfully — ready to scan"
+                   FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                   Foreground="#34C759"/>
+
+        <!-- Show/Hide Details toggle (only when output exists and not currently installing) -->
+        <Button Classes="nx-btn"
+                IsVisible="{Binding ShowInstallOutput}"
+                Command="{Binding ToggleInstallDetailsCommand}"
+                Padding="8,4">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="▼ Show Details" FontSize="{DynamicResource NxFont11}"
+                       IsVisible="{Binding ShowInstallDetails, Converter={x:Static BoolConverters.Not}}"/>
+            <TextBlock Text="▲ Hide Details" FontSize="{DynamicResource NxFont11}"
+                       IsVisible="{Binding ShowInstallDetails}"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Raw install output (user-controlled) -->
+        <ScrollViewer IsVisible="{Binding ShowInstallDetails}"
+                      MaxHeight="150" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <TextBlock Text="{Binding InstallOutput}"
+                     FontFamily="Cascadia Code,Courier New,monospace"
+                     FontSize="{DynamicResource NxFont11}"
+                     TextWrapping="Wrap"
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
+        </ScrollViewer>
+
+      </StackPanel>
     </Border>
 
     <!-- ===== MAIN CONTENT ===== -->

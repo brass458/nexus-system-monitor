@@ -56,6 +56,48 @@
     <ScrollViewer Padding="16">
       <StackPanel Spacing="14">
 
+        <!-- ── Priority guide card ───────────────────────────────────────── -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Priority Level Guide" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <StackPanel Spacing="6">
+              <Grid ColumnDefinitions="130,*">
+                <TextBlock Grid.Column="0" Text="Real-Time / High" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Column="1"
+                           Text="Reserved for system-critical tasks like audio drivers and input handling. Setting user apps here can cause system instability — avoid unless you know exactly what you're doing."
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
+              </Grid>
+              <Grid ColumnDefinitions="130,*">
+                <TextBlock Grid.Column="0" Text="Normal" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Column="1"
+                           Text="The default priority for most applications. Processes share CPU time equally. This is the right choice for everyday apps like browsers, editors, and games."
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
+              </Grid>
+              <Grid ColumnDefinitions="130,*">
+                <TextBlock Grid.Column="0" Text="Below Normal" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                           Foreground="{DynamicResource AccentBlueBrush}"/>
+                <TextBlock Grid.Column="1"
+                           Text="Ideal for background tasks that shouldn't compete with active work — software updaters, file indexers, backup utilities, and download managers."
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
+              </Grid>
+              <Grid ColumnDefinitions="130,*">
+                <TextBlock Grid.Column="0" Text="Idle" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                           Foreground="{DynamicResource TextAccentBrush}"/>
+                <TextBlock Grid.Column="1"
+                           Text="The lowest priority level. The process only runs when no other process needs CPU time. Best for long-running batch jobs, maintenance tasks, or anything that can wait."
+                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- ── Overview stat cards ──────────────────────────────────────── -->
         <Grid ColumnDefinitions="*,8,*,8,*">
 
@@ -319,49 +361,6 @@
           </StackPanel>
         </Border>
 
-        <!-- ── Priority guide card ───────────────────────────────────────── -->
-        <Border Padding="16"
-                Margin="0,0,0,16"
-                Background="{DynamicResource BgElevatedBrush}"
-                BorderBrush="{DynamicResource GlassBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="{StaticResource CornerLG}">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Priority Level Guide" FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <!-- Use StackPanel rows instead of Grid RowSpacing (not available in Avalonia 11 Grid) -->
-            <StackPanel Spacing="6">
-              <Grid ColumnDefinitions="130,*">
-                <TextBlock Grid.Column="0" Text="Real-Time / High" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <TextBlock Grid.Column="1"
-                           Text="Reserved for time-critical system tasks. Avoid setting user apps here — can starve other processes."
-                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
-              </Grid>
-              <Grid ColumnDefinitions="130,*">
-                <TextBlock Grid.Column="0" Text="Normal" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <TextBlock Grid.Column="1"
-                           Text="Default for most apps. Even share of CPU time. Use Normalize All to reset everything here."
-                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
-              </Grid>
-              <Grid ColumnDefinitions="130,*">
-                <TextBlock Grid.Column="0" Text="Below Normal" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                           Foreground="{DynamicResource AccentBlueBrush}"/>
-                <TextBlock Grid.Column="1"
-                           Text="Good choice for background apps like updaters, indexers, or large downloads. Slight reduction in CPU scheduling."
-                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
-              </Grid>
-              <Grid ColumnDefinitions="130,*">
-                <TextBlock Grid.Column="0" Text="Idle" FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                           Foreground="{DynamicResource TextAccentBrush}"/>
-                <TextBlock Grid.Column="1"
-                           Text="Lowest priority — process only gets CPU when nothing else needs it. Useful for stubborn background tasks."
-                           FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}" TextWrapping="Wrap"/>
-              </Grid>
-            </StackPanel>
-          </StackPanel>
-        </Border>
 
       </StackPanel>
     </ScrollViewer>

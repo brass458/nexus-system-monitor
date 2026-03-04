@@ -8,10 +8,6 @@ namespace NexusMonitor.UI.Views;
 
 public partial class ProcessesView : UserControl
 {
-    // Saved sort state — restored after tab switches and tree-mode rebuilds.
-    private string? _sortMemberPath;
-    private ListSortDirection _sortDir = ListSortDirection.Ascending;
-
     public ProcessesView()
     {
         InitializeComponent();
@@ -22,7 +18,7 @@ public partial class ProcessesView : UserControl
         base.OnLoaded(e);
         ProcessGrid.Sorting += OnGridSorting;
 
-        // Restore sort indicator after tab switch (DataGrid may have lost it).
+        // Restore sort indicator from the VM — survives tab switches (View is recreated, VM is not).
         RestoreSort();
 
         if (DataContext is ProcessesViewModel vm)
@@ -47,20 +43,21 @@ public partial class ProcessesView : UserControl
     private void OnGridSorting(object? sender, DataGridColumnEventArgs e)
     {
         if (e.Column?.SortMemberPath is not { } path) return;
+        if (DataContext is not ProcessesViewModel vm) return;
 
-        if (_sortMemberPath == path)
+        if (vm.SortMemberPath == path)
         {
             // Toggle: Ascending → Descending → cleared
-            if (_sortDir == ListSortDirection.Ascending)
-                _sortDir = ListSortDirection.Descending;
+            if (vm.SortDirection == ListSortDirection.Ascending)
+                vm.SortDirection = ListSortDirection.Descending;
             else
-                _sortMemberPath = null; // third click clears sort
+                vm.SortMemberPath = null; // third click clears sort
         }
         else
         {
             // New column — starts ascending
-            _sortMemberPath = path;
-            _sortDir        = ListSortDirection.Ascending;
+            vm.SortMemberPath = path;
+            vm.SortDirection  = ListSortDirection.Ascending;
         }
     }
 
@@ -80,11 +77,12 @@ public partial class ProcessesView : UserControl
 
     private void RestoreSort()
     {
-        if (_sortMemberPath is null) return;
+        if (DataContext is not ProcessesViewModel vm) return;
+        if (vm.SortMemberPath is null) return;
         foreach (var col in ProcessGrid.Columns)
         {
-            if (col.SortMemberPath == _sortMemberPath)
-                col.Sort(_sortDir);
+            if (col.SortMemberPath == vm.SortMemberPath)
+                col.Sort(vm.SortDirection);
             else
                 col.ClearSort();
         }

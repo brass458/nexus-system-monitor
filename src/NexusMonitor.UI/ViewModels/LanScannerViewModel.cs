@@ -13,16 +13,24 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
     private IDisposable? _progressSub;
     private CancellationTokenSource? _cts;
 
-    [ObservableProperty] private string  _target       = NmapScannerService.DetectLocalSubnet();
-    [ObservableProperty] private int     _scanTypeIndex = 1; // DefaultPorts
-    [ObservableProperty] private bool    _osDetection   = false;
-    [ObservableProperty] private bool    _serviceVersion = false;
-    [ObservableProperty] private bool    _isScanning    = false;
-    [ObservableProperty] private string  _statusText    = "Ready";
-    [ObservableProperty] private int     _hostsUp       = 0;
-    [ObservableProperty] private double  _progress      = 0;
-    [ObservableProperty] private bool    _nmapAvailable = false;
+    [ObservableProperty] private string  _target            = NmapScannerService.DetectLocalSubnet();
+    [ObservableProperty] private int     _scanTypeIndex      = 1; // DefaultPorts
+    [ObservableProperty] private bool    _osDetection        = false;
+    [ObservableProperty] private bool    _serviceVersion     = false;
+    [ObservableProperty] private bool    _isScanning         = false;
+    [ObservableProperty] private string  _statusText         = "Ready";
+    [ObservableProperty] private int     _hostsUp            = 0;
+    [ObservableProperty] private double  _progress           = 0;
+    [ObservableProperty] private bool    _nmapAvailable      = false;
+    [ObservableProperty] private bool    _isInstalling       = false;
+    [ObservableProperty] private string  _installOutput      = "";
+    [ObservableProperty] private string  _packageManagerName = "";
     [ObservableProperty] private NmapHost? _selectedHost;
+    [ObservableProperty] private bool    _showInstallDetails = false;
+    [ObservableProperty] private bool    _installSucceeded   = false;
+
+    public bool HasPackageManager  => !string.IsNullOrEmpty(PackageManagerName);
+    public bool ShowInstallOutput  => IsInstalling || !string.IsNullOrEmpty(InstallOutput);
 
     public ObservableCollection<NmapHost> Hosts { get; } = [];
 
@@ -34,10 +42,11 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
         Title    = "LAN Scanner";
         _scanner = scanner;
 
-        // Check nmap availability on background thread to avoid blocking startup
+        // Check nmap availability and package manager on background thread
         _ = Task.Run(() =>
         {
-            NmapAvailable = NmapScannerService.IsAvailable();
+            NmapAvailable       = NmapScannerService.IsAvailable();
+            PackageManagerName  = NmapScannerService.GetPackageManagerName();
             if (!NmapAvailable)
                 StatusText = "nmap not found \u2014 install nmap to use this feature";
         });
@@ -107,6 +116,9 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
 
+    [RelayCommand]
+    private void ToggleInstallDetails() => ShowInstallDetails = !ShowInstallDetails;
+
     private static long ParseIp(string ip)
     {
         try
@@ -119,8 +131,55 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
         catch { return 0; }
     }
 
+    [RelayCommand]
+    private async Task InstallNmap()
+    {
+        IsInstalling      = true;
+        InstallOutput     = "";
+        InstallSucceeded  = false;
+        ShowInstallDetails = false;
+
+        var prog = new Progress<string>(line => InstallOutput += line + "\n");
+        var (success, _) = await NmapScannerService.InstallAsync(prog);
+
+        IsInstalling = false;
+
+        if (!success)
+        {
+            StatusText         = "Installation failed \u2014 see output below for details";
+            ShowInstallDetails = true; // auto-expand details on failure
+            return;
+        }
+
+        NmapAvailable = await Task.Run(() => NmapScannerService.IsAvailable());
+        if (NmapAvailable)
+        {
+            InstallSucceeded   = true;
+            ShowInstallDetails = false; // hide raw output on success
+            StatusText         = "nmap installed successfully \u2014 ready to scan";
+        }
+        else
+        {
+            ShowInstallDetails = true;
+            StatusText         = "Install completed but nmap not found \u2014 try re-checking";
+        }
+    }
+
+    [RelayCommand]
+    private async Task RecheckNmap()
+    {
+        InstallOutput = "";
+        NmapAvailable = await Task.Run(() => NmapScannerService.IsAvailable());
+        StatusText = NmapAvailable
+            ? "nmap found \u2014 ready to scan"
+            : "nmap not found \u2014 install nmap to use this feature";
+    }
+
     partial void OnIsScanningChanged(bool value) => ScanCommand.NotifyCanExecuteChanged();
     partial void OnNmapAvailableChanged(bool value) => ScanCommand.NotifyCanExecuteChanged();
+    partial void OnIsInstallingChanged(bool value)  => OnPropertyChanged(nameof(ShowInstallOutput));
+    partial void OnInstallOutputChanged(string value) => OnPropertyChanged(nameof(ShowInstallOutput));
+    partial void OnPackageManagerNameChanged(string value) => OnPropertyChanged(nameof(HasPackageManager));
 
     public void Dispose()
     {

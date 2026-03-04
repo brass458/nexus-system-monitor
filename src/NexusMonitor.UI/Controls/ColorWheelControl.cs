@@ -21,7 +21,8 @@ public class ColorWheelControl : Avalonia.Controls.Control, Avalonia.Rendering.I
 
     public static readonly StyledProperty<Color> SelectedColorProperty =
         AvaloniaProperty.Register<ColorWheelControl, Color>(
-            nameof(SelectedColor), Color.Parse("#0A84FF"));
+            nameof(SelectedColor), Color.Parse("#0A84FF"),
+            defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
     public Color SelectedColor
     {

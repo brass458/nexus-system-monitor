@@ -115,8 +115,9 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
-            // Ctrl+Q — quit application
+            // Ctrl+Q — quit application (bypasses tray/minimize-to-tray behavior)
             case Key.Q when ctrl:
+                _forceClose = true;
                 Close();
                 e.Handled = true;
                 break;

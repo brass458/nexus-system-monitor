@@ -17,18 +17,39 @@ public sealed class NmapScannerService : IDisposable
     /// <summary>Stream of scan progress reports. Subscribe before calling <see cref="ScanAsync"/>.</summary>
     public IObservable<NmapScanProgress> Progress => _progress;
 
-    /// <summary>Detects whether nmap is available on PATH.</summary>
+    /// <summary>Detects whether nmap is available, checking well-known install paths first,
+    /// then re-reading PATH from the registry so newly installed nmap is found without
+    /// restarting the app.</summary>
     public static bool IsAvailable()
     {
+        // Check well-known install paths first — handles newly installed nmap before PATH updates
+        string[] fallbackPaths = OperatingSystem.IsWindows()
+            ? [@"C:\Program Files (x86)\Nmap\nmap.exe", @"C:\Program Files\Nmap\nmap.exe"]
+            : ["/usr/bin/nmap", "/usr/local/bin/nmap", "/opt/homebrew/bin/nmap"];
+
+        foreach (var path in fallbackPaths)
+            if (File.Exists(path)) return true;
+
         try
         {
-            using var proc = Process.Start(new ProcessStartInfo("nmap", "--version")
+            var psi = new ProcessStartInfo("nmap", "--version")
             {
                 UseShellExecute        = false,
                 CreateNoWindow         = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
-            });
+            };
+
+            // On Windows, refresh PATH from registry so newly installed tools are detected
+            // without requiring the app to restart.
+            if (OperatingSystem.IsWindows())
+            {
+                var machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "";
+                var userPath    = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
+                psi.Environment["PATH"] = machinePath + ";" + userPath;
+            }
+
+            using var proc = Process.Start(psi);
             proc?.WaitForExit(3000);
             return proc?.ExitCode == 0;
         }
@@ -158,6 +179,107 @@ public sealed class NmapScannerService : IDisposable
     }
 
     public void CancelScan() => _scanCts?.Cancel();
+
+    // ── Install helpers ────────────────────────────────────────────────────────
+
+    /// <summary>Platform-specific package manager install details.</summary>
+    public record NmapInstallInfo(string Executable, string Arguments, string PackageManagerName);
+
+    /// <summary>
+    /// Returns install info for the current platform, or <c>null</c> if no
+    /// supported package manager is detected.
+    /// </summary>
+    public static NmapInstallInfo? GetInstallInfo()
+    {
+        if (OperatingSystem.IsWindows())
+            return new NmapInstallInfo(
+                "winget",
+                "install Insecure.Nmap --accept-package-agreements --accept-source-agreements",
+                "winget");
+
+        if (OperatingSystem.IsMacOS())
+            return new NmapInstallInfo("brew", "install nmap", "brew");
+
+        if (OperatingSystem.IsLinux())
+        {
+            if (File.Exists("/usr/bin/apt-get"))
+                return new NmapInstallInfo("pkexec", "apt-get install -y nmap", "apt");
+            if (File.Exists("/usr/bin/pacman"))
+                return new NmapInstallInfo("pkexec", "pacman -S --noconfirm nmap", "pacman");
+            if (File.Exists("/usr/bin/dnf"))
+                return new NmapInstallInfo("pkexec", "dnf install -y nmap", "dnf");
+            if (File.Exists("/usr/bin/zypper"))
+                return new NmapInstallInfo("pkexec", "zypper install -y nmap", "zypper");
+            if (File.Exists("/sbin/apk"))
+                return new NmapInstallInfo("pkexec", "apk add nmap", "apk");
+        }
+
+        return null;
+    }
+
+    /// <summary>Returns the detected package manager name, or an empty string if none found.</summary>
+    public static string GetPackageManagerName() => GetInstallInfo()?.PackageManagerName ?? "";
+
+    /// <summary>
+    /// Installs nmap via the detected package manager.
+    /// Each output line is reported via <paramref name="progress"/>.
+    /// Returns <c>(success, full output)</c>.
+    /// </summary>
+    public static async Task<(bool Success, string Output)> InstallAsync(
+        IProgress<string>? progress = null,
+        CancellationToken ct = default)
+    {
+        var info = GetInstallInfo();
+        if (info is null)
+            return (false, "No supported package manager found on this system.");
+
+        var output = new System.Text.StringBuilder();
+
+        try
+        {
+            using var proc = new Process
+            {
+                StartInfo = new ProcessStartInfo(info.Executable, info.Arguments)
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError  = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                },
+                EnableRaisingEvents = true,
+            };
+
+            proc.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data is null) return;
+                output.AppendLine(e.Data);
+                progress?.Report(e.Data);
+            };
+
+            proc.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data is null) return;
+                output.AppendLine(e.Data);
+                progress?.Report(e.Data);
+            };
+
+            proc.Start();
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+
+            await proc.WaitForExitAsync(ct);
+
+            return (proc.ExitCode == 0, output.ToString());
+        }
+        catch (OperationCanceledException)
+        {
+            return (false, "Installation cancelled.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error: {ex.Message}\n{output}");
+        }
+    }
 
     private static string BuildArgs(NmapScanOptions o)
     {

@@ -2,12 +2,15 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using System.Linq;
+using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Storage;
+using NexusMonitor.UI.Messages;
 using SkiaSharp;
 
 namespace NexusMonitor.UI.ViewModels;
@@ -15,8 +18,11 @@ namespace NexusMonitor.UI.ViewModels;
 public partial class HistoryViewModel : ViewModelBase, IDisposable
 {
     private readonly IMetricsReader _reader;
+    private readonly AppSettings    _appSettings;
     private CancellationTokenSource? _loadCts;
     private TimeSpan _currentSpan = TimeSpan.FromHours(24);
+
+    [ObservableProperty] private bool _metricsEnabled;
 
     // ── UI state ─────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isLoading;
@@ -74,10 +80,15 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
     public Axis[] NetYAxes  { get; }
     public Axis[] GpuYAxes  { get; }
 
-    public HistoryViewModel(IMetricsReader reader)
+    public HistoryViewModel(IMetricsReader reader, AppSettings appSettings)
     {
-        _reader = reader;
-        Title   = "History";
+        _reader      = reader;
+        _appSettings = appSettings;
+        _metricsEnabled = appSettings.MetricsEnabled;
+        Title        = "History";
+
+        WeakReferenceMessenger.Default.Register<MetricsEnabledChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.Post(() => MetricsEnabled = msg.Enabled));
 
         // ── X axis ──────────────────────────────────────────────────────────
         // DateTimeAxis's constructor Labeler = (v) => labeler(new DateTime((long)(v-0.5)))
@@ -259,5 +270,6 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 }

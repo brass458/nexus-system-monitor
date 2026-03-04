@@ -92,6 +92,24 @@
                   HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="16,12" Spacing="10">
 
+        <!-- Metrics not enabled banner -->
+        <Border IsVisible="{Binding MetricsEnabled, Converter={x:Static BoolConverters.Not}}"
+                Padding="16"
+                Background="#200A84FF"
+                BorderBrush="{DynamicResource AccentBlueBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Metrics recording is not enabled"
+                       FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource AccentBlueBrush}"/>
+            <TextBlock Text="Enable 'Record System Metrics' in Settings → Metrics &amp; History to start collecting historical data. Charts and the top-process table will populate after a minute of recording."
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+
         <!-- Status text -->
         <TextBlock Text="{Binding StatusText}"
                    FontSize="{DynamicResource NxFont12}"

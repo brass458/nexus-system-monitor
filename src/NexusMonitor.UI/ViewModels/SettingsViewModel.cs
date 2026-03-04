@@ -7,6 +7,7 @@ using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
@@ -89,6 +90,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     // ── Smart Glass Tint ──────────────────────────────────────────────────────
     [ObservableProperty] private bool _smartTintEnabled;
+
+    // ── Metrics & History ─────────────────────────────────────────────────────
+    [ObservableProperty] private bool _metricsEnabled;
 
     // ── Anomaly Detection ─────────────────────────────────────────────────────
     [ObservableProperty] private bool    _anomalyDetectionEnabled;
@@ -212,6 +216,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         // Map stored UpdateIntervalMs → index
         _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
         if (_updateIntervalIndex < 0) _updateIntervalIndex = 1;
+
+        // ── Metrics & History ─────────────────────────────────────────────────
+        _metricsEnabled = settings.Current.MetricsEnabled;
 
         // ── Anomaly Detection ─────────────────────────────────────────────────
         _anomalyDetectionEnabled     = settings.Current.AnomalyDetectionEnabled;
@@ -455,6 +462,25 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _luminanceMinAlpha = minAlpha;
         ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, minAlpha);
+    }
+
+    partial void OnMetricsEnabledChanged(bool value)
+    {
+        _settings.Current.MetricsEnabled = value;
+        _settings.Save();
+        var store  = App.Services.GetRequiredService<MetricsStore>();
+        var rollup = App.Services.GetRequiredService<MetricsRollupService>();
+        if (value)
+        {
+            store.Start(TimeSpan.FromMilliseconds(_settings.Current.UpdateIntervalMs));
+            rollup.Start();
+        }
+        else
+        {
+            store.Stop();
+            rollup.Stop();
+        }
+        WeakReferenceMessenger.Default.Send(new MetricsEnabledChangedMessage(value));
     }
 
     partial void OnAnomalyDetectionEnabledChanged(bool value)

@@ -58,7 +58,7 @@
             <TextBlock Text="Affects window chrome, text, and card backgrounds"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="120" VerticalAlignment="Center"
                     SelectedIndex="{Binding ThemeModeIndex}"
                     ItemsSource="{x:Static vm:SettingsViewModel.ThemeModeLabels}"/>
         </Grid>
@@ -71,7 +71,7 @@
             <TextBlock Text="Polling rate for all views and the overlay widget"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="120" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.UpdateIntervalLabels}"
                     SelectedIndex="{Binding UpdateIntervalIndex}"/>
         </Grid>
@@ -98,7 +98,7 @@
             <TextBlock Text="Applied to all windows and the overlay widget"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="180" VerticalAlignment="Center"
                     MaxDropDownHeight="260"
                     ItemsSource="{x:Static vm:SettingsViewModel.SystemFonts}"
                     SelectedItem="{Binding FontFamily}"/>
@@ -455,7 +455,7 @@
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="110" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.BackdropModes}"
                     SelectedItem="{Binding BackdropBlurMode}"/>
         </Grid>
@@ -574,7 +574,7 @@
             <TextBlock Text="Default action when you click the × button on the main window"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="180" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.CloseActionLabels}"
                     SelectedIndex="{Binding CloseActionIndex}"/>
         </Grid>
@@ -595,6 +595,33 @@
         <TextBlock Text="Tip: Right-click the tray icon for quick access to Show / Widget / Exit"
                    FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap"/>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ===== METRICS & HISTORY ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Metrics &amp; History" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Record System Metrics" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Saves CPU, memory, disk, network, and GPU data to a local SQLite database for the History tab. Uses ~50–100 MB steady state."
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding MetricsEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
 
       </StackPanel>
     </Border>
@@ -647,7 +674,7 @@
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>
-          <ComboBox Grid.Column="1" Width="110" VerticalAlignment="Center"
+          <ComboBox Grid.Column="1" MinWidth="110" VerticalAlignment="Center"
                     ItemsSource="{x:Static vm:SettingsViewModel.AnomalySensitivities}"
                     SelectedItem="{Binding AnomalySensitivity}"/>
         </Grid>
