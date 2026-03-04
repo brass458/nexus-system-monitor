@@ -73,7 +73,7 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
             .Subscribe(p =>
             {
                 StatusText = p.StatusText;
-                HostsUp    = p.HostsUp;
+                if (p.HostsUp >= 0) HostsUp = p.HostsUp;
                 if (p.PercentDone >= 0) Progress = p.PercentDone;
             });
 

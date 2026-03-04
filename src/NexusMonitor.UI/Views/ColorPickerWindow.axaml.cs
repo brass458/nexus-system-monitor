@@ -49,11 +49,7 @@ public partial class ColorPickerWindow : Window
         if (!hex.StartsWith('#')) hex = "#" + hex;
         try
         {
-            _ = Color.Parse(hex); // validate
-            if (vm.TextAccentColorPickerActive)
-                vm.TextAccentColorHex = hex;
-            else
-                vm.AccentColorHex = hex;
+            vm.PickerCurrentColor = Color.Parse(hex);
         }
         catch
         {

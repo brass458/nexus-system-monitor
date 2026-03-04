@@ -8,6 +8,8 @@ namespace NexusMonitor.UI.Views;
 
 public partial class ProcessesView : UserControl
 {
+    private bool _restoringSort; // guards against RestoreSort→Sorting→OnGridSorting feedback loop
+
     public ProcessesView()
     {
         InitializeComponent();
@@ -42,6 +44,7 @@ public partial class ProcessesView : UserControl
 
     private void OnGridSorting(object? sender, DataGridColumnEventArgs e)
     {
+        if (_restoringSort) return;
         if (e.Column?.SortMemberPath is not { } path) return;
         if (DataContext is not ProcessesViewModel vm) return;
 
@@ -79,12 +82,17 @@ public partial class ProcessesView : UserControl
     {
         if (DataContext is not ProcessesViewModel vm) return;
         if (vm.SortMemberPath is null) return;
-        foreach (var col in ProcessGrid.Columns)
+        _restoringSort = true;
+        try
         {
-            if (col.SortMemberPath == vm.SortMemberPath)
-                col.Sort(vm.SortDirection);
-            else
-                col.ClearSort();
+            foreach (var col in ProcessGrid.Columns)
+            {
+                if (col.SortMemberPath == vm.SortMemberPath)
+                    col.Sort(vm.SortDirection);
+                else
+                    col.ClearSort();
+            }
         }
+        finally { _restoringSort = false; }
     }
 }

@@ -37,7 +37,7 @@ public static class NmapXmlParser
                 // Latency (RTT in ms)
                 double latency = 0;
                 var rttEl = hostEl.Element("times");
-                if (rttEl?.Attribute("rttvar")?.Value is { } rttStr &&
+                if (rttEl?.Attribute("srtt")?.Value is { } rttStr &&
                     double.TryParse(rttStr, System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out var rtt))
                     latency = rtt / 1000.0;

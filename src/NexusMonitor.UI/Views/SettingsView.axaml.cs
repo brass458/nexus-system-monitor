@@ -41,7 +41,7 @@ public partial class SettingsView : UserControl
         if (owner is null) return;
 
         var original = vm.AccentColorHex;
-        vm.TextAccentColorPickerActive = false;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
         try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
 
         var dlg = new ColorPickerWindow { DataContext = vm };
@@ -49,6 +49,7 @@ public partial class SettingsView : UserControl
 
         if (!applied)
             vm.AccentColorHex = original;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
     }
 
     private async void OnPickTextColorClick(object? sender, RoutedEventArgs e)
@@ -60,13 +61,13 @@ public partial class SettingsView : UserControl
         var originalText = vm.TextAccentColorHex;
         // Pre-seed picker with text accent color (or primary if not set)
         var seedHex = string.IsNullOrEmpty(originalText) ? vm.AccentColorHex : originalText;
-        vm.TextAccentColorPickerActive = true;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.TextAccent;
         try { vm.PickerCurrentColor = Color.Parse(seedHex); } catch { }
 
         var dlg = new ColorPickerWindow { DataContext = vm };
         var applied = await dlg.ShowDialog<bool>(owner);
 
-        vm.TextAccentColorPickerActive = false;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
         if (!applied)
             vm.TextAccentColorHex = originalText;
         // Restore PickerCurrentColor to primary accent
@@ -75,52 +76,61 @@ public partial class SettingsView : UserControl
 
     // ── Surface color pickers ─────────────────────────────────────────────────
 
-    /// <summary>Opens the surface color picker pre-seeded with the current window chrome color.</summary>
+    /// <summary>Opens ColorPickerWindow pre-seeded with the current window chrome color.</summary>
     private async void OnPickWindowBgClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel vm) return;
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (owner is null) return;
 
-        vm.PickerSurfaceColor = TryParseColor(vm.CustomWindowBgHex, Color.Parse("#0F0F12"));
+        var original = vm.CustomWindowBgHex;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.WindowBg;
+        try { vm.PickerCurrentColor = TryParseColor(vm.CustomWindowBgHex, Color.Parse("#0F0F12")); } catch { }
 
-        var dlg = new SurfaceColorPickerWindow { DataContext = vm };
+        var dlg = new ColorPickerWindow { DataContext = vm };
         var applied = await dlg.ShowDialog<bool>(owner);
-        if (applied)
-            vm.CustomWindowBgHex =
-                $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
+
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
+        if (!applied) vm.CustomWindowBgHex = original;
+        try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
     }
 
-    /// <summary>Opens the surface color picker pre-seeded with the current card/panel color.</summary>
+    /// <summary>Opens ColorPickerWindow pre-seeded with the current card/panel color.</summary>
     private async void OnPickSurfaceBgClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel vm) return;
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (owner is null) return;
 
-        vm.PickerSurfaceColor = TryParseColor(vm.CustomSurfaceBgHex, Color.Parse("#1C1C1E"));
+        var original = vm.CustomSurfaceBgHex;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.SurfaceBg;
+        try { vm.PickerCurrentColor = TryParseColor(vm.CustomSurfaceBgHex, Color.Parse("#1C1C1E")); } catch { }
 
-        var dlg = new SurfaceColorPickerWindow { DataContext = vm };
+        var dlg = new ColorPickerWindow { DataContext = vm };
         var applied = await dlg.ShowDialog<bool>(owner);
-        if (applied)
-            vm.CustomSurfaceBgHex =
-                $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
+
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
+        if (!applied) vm.CustomSurfaceBgHex = original;
+        try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
     }
 
-    /// <summary>Opens the surface color picker pre-seeded with the current sidebar/nav color.</summary>
+    /// <summary>Opens ColorPickerWindow pre-seeded with the current sidebar/nav color.</summary>
     private async void OnPickSidebarBgClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel vm) return;
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (owner is null) return;
 
-        vm.PickerSurfaceColor = TryParseColor(vm.CustomSidebarBgHex, Color.Parse("#1C1C1E"));
+        var original = vm.CustomSidebarBgHex;
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.SidebarBg;
+        try { vm.PickerCurrentColor = TryParseColor(vm.CustomSidebarBgHex, Color.Parse("#1C1C1E")); } catch { }
 
-        var dlg = new SurfaceColorPickerWindow { DataContext = vm };
+        var dlg = new ColorPickerWindow { DataContext = vm };
         var applied = await dlg.ShowDialog<bool>(owner);
-        if (applied)
-            vm.CustomSidebarBgHex =
-                $"#{vm.PickerSurfaceColor.R:X2}{vm.PickerSurfaceColor.G:X2}{vm.PickerSurfaceColor.B:X2}";
+
+        vm.ActivePickerTarget = SettingsViewModel.ColorPickerTarget.PrimaryAccent;
+        if (!applied) vm.CustomSidebarBgHex = original;
+        try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
     }
 
     // ── Setup guide ───────────────────────────────────────────────────────────

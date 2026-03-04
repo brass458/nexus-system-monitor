@@ -53,20 +53,43 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _customSidebarBgHex = "";
 
     // ── Color picker state ────────────────────────────────────────────────────
-    // Unified current-picker color — routes to AccentColorHex or TextAccentColorHex based on TextAccentColorPickerActive.
-    [ObservableProperty] private Color _pickerCurrentColor       = Color.Parse("#0A84FF");
-    [ObservableProperty] private bool  _textAccentColorPickerActive;
+    // Unified current-picker color — routes to the appropriate hex property based on ActivePickerTarget.
+    [ObservableProperty] private Color _pickerCurrentColor = Color.Parse("#0A84FF");
 
-    /// <summary>Dynamic title for the color picker window (changes when picking text accent).</summary>
-    public string PickerWindowTitle => TextAccentColorPickerActive ? "Custom Text Accent" : "Custom Accent Color";
+    internal enum ColorPickerTarget { PrimaryAccent, TextAccent, WindowBg, SurfaceBg, SidebarBg }
+
+    private ColorPickerTarget _activePickerTarget;
+    internal ColorPickerTarget ActivePickerTarget
+    {
+        get => _activePickerTarget;
+        set
+        {
+            _activePickerTarget = value;
+            OnPropertyChanged(nameof(PickerWindowTitle));
+            OnPropertyChanged(nameof(PickerCurrentHex));
+        }
+    }
+
+    /// <summary>Dynamic title for the color picker window.</summary>
+    public string PickerWindowTitle => _activePickerTarget switch
+    {
+        ColorPickerTarget.TextAccent => "Custom Text Accent",
+        ColorPickerTarget.WindowBg   => "Custom Window Chrome",
+        ColorPickerTarget.SurfaceBg  => "Custom Surface Color",
+        ColorPickerTarget.SidebarBg  => "Custom Sidebar Color",
+        _                            => "Custom Accent Color",
+    };
 
     /// <summary>Live hex string shown in the color picker window hex readout.</summary>
-    public string PickerCurrentHex  => TextAccentColorPickerActive ? TextAccentColorHex : AccentColorHex;
+    public string PickerCurrentHex => _activePickerTarget switch
+    {
+        ColorPickerTarget.TextAccent => TextAccentColorHex,
+        ColorPickerTarget.WindowBg   => CustomWindowBgHex,
+        ColorPickerTarget.SurfaceBg  => CustomSurfaceBgHex,
+        ColorPickerTarget.SidebarBg  => CustomSidebarBgHex,
+        _                            => AccentColorHex,
+    };
 
-    // Generic picker: shared by all surface pickers; set before opening dialog
-    [ObservableProperty] private Color  _pickerSurfaceColor = Color.Parse("#131318");
-    // Hex display string updated whenever PickerSurfaceColor changes (consumed by SurfaceColorPickerWindow)
-    [ObservableProperty] private string _pickerSurfaceHex   = "#131318";
     private bool _suppressColorSync;
 
     // ── Typography ────────────────────────────────────────────────────────────
@@ -303,6 +326,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Current.CustomWindowBgHex = value;
         _settings.Save();
         ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        if (_activePickerTarget == ColorPickerTarget.WindowBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnCustomSurfaceBgHexChanged(string value)
@@ -310,6 +334,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Current.CustomSurfaceBgHex = value;
         _settings.Save();
         ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex, _luminanceMinAlpha);
+        if (_activePickerTarget == ColorPickerTarget.SurfaceBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnCustomSidebarBgHexChanged(string value)
@@ -317,6 +342,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Current.CustomSidebarBgHex = value;
         _settings.Save();
         ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value, _luminanceMinAlpha);
+        if (_activePickerTarget == ColorPickerTarget.SidebarBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnBackdropBlurModeChanged(string value)
@@ -348,7 +374,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ApplyTextAccent(value, TextAccentColorHex);
 
         // Keep the color-wheel picker in sync when accent is changed via presets
-        if (!_suppressColorSync && !TextAccentColorPickerActive)
+        if (!_suppressColorSync && _activePickerTarget == ColorPickerTarget.PrimaryAccent)
         {
             try
             {
@@ -366,7 +392,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Current.TextAccentColorHex = value;
         _settings.Save();
         ApplyTextAccent(AccentColorHex, value);
-        if (TextAccentColorPickerActive) OnPropertyChanged(nameof(PickerCurrentHex));
+        if (_activePickerTarget == ColorPickerTarget.TextAccent) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnFontFamilyChanged(string value)
@@ -544,8 +570,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void ResetSidebarBg()          => CustomSidebarBgHex = "";
 
     /// <summary>Called by the ColorWheelControl binding when the user picks a color.
-    /// Routes to <see cref="AccentColorHex"/> or <see cref="TextAccentColorHex"/>
-    /// depending on <see cref="TextAccentColorPickerActive"/>.</summary>
+    /// Routes to the appropriate hex property based on <see cref="ActivePickerTarget"/>.</summary>
     partial void OnPickerCurrentColorChanged(Color value)
     {
         if (_suppressColorSync) return;
@@ -553,30 +578,26 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _suppressColorSync = true;
         try
         {
-            if (TextAccentColorPickerActive)
+            switch (_activePickerTarget)
             {
-                if (!string.Equals(hex, TextAccentColorHex, StringComparison.OrdinalIgnoreCase))
-                    TextAccentColorHex = hex;
-            }
-            else
-            {
-                if (!string.Equals(hex, AccentColorHex, StringComparison.OrdinalIgnoreCase))
-                    AccentColorHex = hex;
+                case ColorPickerTarget.TextAccent:
+                    if (!string.Equals(hex, TextAccentColorHex, StringComparison.OrdinalIgnoreCase)) TextAccentColorHex = hex;
+                    break;
+                case ColorPickerTarget.WindowBg:
+                    if (!string.Equals(hex, CustomWindowBgHex, StringComparison.OrdinalIgnoreCase)) CustomWindowBgHex = hex;
+                    break;
+                case ColorPickerTarget.SurfaceBg:
+                    if (!string.Equals(hex, CustomSurfaceBgHex, StringComparison.OrdinalIgnoreCase)) CustomSurfaceBgHex = hex;
+                    break;
+                case ColorPickerTarget.SidebarBg:
+                    if (!string.Equals(hex, CustomSidebarBgHex, StringComparison.OrdinalIgnoreCase)) CustomSidebarBgHex = hex;
+                    break;
+                default:
+                    if (!string.Equals(hex, AccentColorHex, StringComparison.OrdinalIgnoreCase)) AccentColorHex = hex;
+                    break;
             }
         }
         finally { _suppressColorSync = false; }
-    }
-
-    partial void OnTextAccentColorPickerActiveChanged(bool value)
-    {
-        OnPropertyChanged(nameof(PickerWindowTitle));
-        OnPropertyChanged(nameof(PickerCurrentHex));
-    }
-
-    /// <summary>Keeps <see cref="PickerSurfaceHex"/> in sync with the color wheel in SurfaceColorPickerWindow.</summary>
-    partial void OnPickerSurfaceColorChanged(Color value)
-    {
-        PickerSurfaceHex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";
     }
 
     // ── Static resource helpers ───────────────────────────────────────────────

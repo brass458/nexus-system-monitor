@@ -1,7 +1,9 @@
 using System.Diagnostics;
-using System.Net.NetworkInformation;
+using System.Globalization;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Reactive.Subjects;
+using System.Text.RegularExpressions;
 
 namespace NexusMonitor.Core.Network;
 
@@ -135,16 +137,27 @@ public sealed class NmapScannerService : IDisposable
             proc.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data is null) return;
-                // Parse nmap's stderr stats line: "Stats: 0:00:05 elapsed; 0 hosts completed (5 up), active scanning"
-                if (e.Data.Contains("Stats:", StringComparison.OrdinalIgnoreCase))
+
+                // Line like: "SYN Stealth Scan Timing: About 45.00% done; ETC: ..."
+                if (e.Data.Contains("% done", StringComparison.OrdinalIgnoreCase))
+                {
+                    var m = Regex.Match(e.Data, @"About\s+([\d.]+)%\s+done");
+                    if (m.Success && double.TryParse(m.Groups[1].Value,
+                        NumberStyles.Any, CultureInfo.InvariantCulture, out var pct))
+                        _progress.OnNext(new NmapScanProgress(pct, e.Data.Trim(), -1));
+                }
+                // Line like: "Stats: 0:00:05 elapsed; 0 hosts completed (5 up), ..."
+                else if (e.Data.Contains("Stats:", StringComparison.OrdinalIgnoreCase))
                 {
                     var hostsUp = 0;
-                    var m = System.Text.RegularExpressions.Regex.Match(e.Data, @"(\d+) up");
+                    var m = Regex.Match(e.Data, @"(\d+) up");
                     if (m.Success) int.TryParse(m.Groups[1].Value, out hostsUp);
-                    _progress.OnNext(new NmapScanProgress(
-                        PercentDone: -1,
-                        StatusText:  e.Data.Trim(),
-                        HostsUp:     hostsUp));
+                    _progress.OnNext(new NmapScanProgress(-1, e.Data.Trim(), hostsUp));
+                }
+                // Anything else on stderr: surface to user (e.g. privilege errors)
+                else if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    _progress.OnNext(new NmapScanProgress(-1, e.Data.Trim(), -1));
                 }
             };
 
