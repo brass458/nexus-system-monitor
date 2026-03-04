@@ -6,7 +6,7 @@
         x:DataType="vm:SettingsViewModel"
         x:CompileBindings="False"
         Title="Pick Color"
-        Width="252" Height="336"
+        Width="252" Height="400"
         CanResize="False"
         ShowInTaskbar="False"
         SystemDecorations="None"
@@ -33,7 +33,7 @@
           <TextBlock Text="✕" FontSize="{DynamicResource NxFont11}"
                      Foreground="{DynamicResource TextSecondaryBrush}"/>
         </Button>
-        <TextBlock Text="Custom Accent Color"
+        <TextBlock Text="{Binding PickerWindowTitle}"
                    FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center"/>
@@ -42,7 +42,7 @@
       <!-- ── Color wheel ── -->
       <controls:ColorWheelControl Width="196" Height="228"
                                   HorizontalAlignment="Center"
-                                  SelectedColor="{Binding PickerAccentColor}"/>
+                                  SelectedColor="{Binding PickerCurrentColor}"/>
 
       <!-- ── Hex readout ── -->
       <Border Background="{DynamicResource BgSecondaryBrush}"
@@ -54,11 +54,18 @@
                      Foreground="{DynamicResource TextTertiaryBrush}"
                      VerticalAlignment="Center"
                      Margin="0,0,8,0"/>
-          <TextBlock Grid.Column="1"
-                     Text="{Binding AccentColorHex}"
-                     FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                     Foreground="{DynamicResource TextSecondaryBrush}"
-                     VerticalAlignment="Center"/>
+          <TextBox Grid.Column="1"
+                   x:Name="HexInput"
+                   Text="{Binding PickerCurrentHex}"
+                   FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   Padding="0"
+                   VerticalAlignment="Center"
+                   MaxLength="9"
+                   LostFocus="OnHexLostFocus"
+                   KeyDown="OnHexKeyDown"/>
           <Border Grid.Column="2"
                   Width="18" Height="18" CornerRadius="9"
                   Background="{DynamicResource AccentBlueBrush}"

@@ -111,6 +111,19 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         // Restart process stream when the global update interval changes
         WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
             Dispatcher.UIThread.InvokeAsync(() => StartMonitoring((int)msg.Interval.TotalMilliseconds)));
+
+        // Re-evaluate Category converters when the theme changes so light-mode colors apply.
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            foreach (var row in _allRows.Values)
+                row.NotifyThemeChanged();
+        });
     }
 
     private void StartMonitoring(int intervalMs)
@@ -594,6 +607,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         (SelectedDetails as IDisposable)?.Dispose();
         _allRows.Clear();
         WeakReferenceMessenger.Default.UnregisterAll(this);
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged -= OnThemeChanged;
     }
 }
 
@@ -715,6 +730,12 @@ public partial class ProcessRowViewModel : ObservableObject
         if (bytes >= 1_024)         return $"{bytes / 1_024.0:F0} KB";
         return $"{bytes} B";
     }
+
+    /// <summary>
+    /// Forces the DataGrid to re-evaluate Category-based converters (foreground/background brushes)
+    /// after a theme switch.  Called by ProcessesViewModel when ActualThemeVariantChanged fires.
+    /// </summary>
+    public void NotifyThemeChanged() => OnPropertyChanged(nameof(Category));
 }
 
 /// <summary>

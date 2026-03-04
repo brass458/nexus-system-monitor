@@ -110,7 +110,7 @@ public class ColorWheelControl : Avalonia.Controls.Control, Avalonia.Rendering.I
             float dx    = (float)pos.X - cx;
             float dy    = (float)pos.Y - cy;
             float dist  = MathF.Sqrt(dx * dx + dy * dy);
-            _h = (MathF.Atan2(dy, dx) * 180f / MathF.PI + 360f) % 360f;
+            _h = (MathF.Atan2(dy, dx) * 180f / MathF.PI + 90f + 360f) % 360f;
             _s = Math.Clamp(dist / radius, 0f, 1f);
         }
         else if (zone == HitZone.Strip)
@@ -320,7 +320,7 @@ public class ColorWheelControl : Avalonia.Controls.Control, Avalonia.Rendering.I
             canvas.DrawCircle(cx, cy, radius, ringPaint);
 
             // ── 6. Selector dot on disc ──────────────────────────────────────
-            float dotAngle = _h * MathF.PI / 180f;
+            float dotAngle = (_h - 90f) * MathF.PI / 180f;
             float dotDist  = _s * radius;
             float dotX     = cx + MathF.Cos(dotAngle) * dotDist;
             float dotY     = cy + MathF.Sin(dotAngle) * dotDist;

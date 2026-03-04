@@ -32,7 +32,11 @@ public class ProcessCategoryToBrushConverter : IValueConverter
             if (Application.Current?.Resources.TryGetResource(key, theme, out var res) == true)
                 return res;
         }
-        return Brushes.White;
+        // Theme-aware fallback — visible in both dark and light modes
+        var theme2 = Application.Current?.ActualThemeVariant;
+        if (Application.Current?.Resources.TryGetResource("TextPrimaryBrush", theme2, out var fallback) == true)
+            return fallback;
+        return Brushes.Gray;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

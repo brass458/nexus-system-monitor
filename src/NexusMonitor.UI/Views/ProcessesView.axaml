@@ -169,6 +169,7 @@
 
       <!-- ── PROCESS LIST ── -->
       <DataGrid Grid.Column="0"
+                x:Name="ProcessGrid"
                 Classes="nx-grid"
                 ItemsSource="{Binding Processes}"
                 SelectedItem="{Binding SelectedProcess}"
@@ -177,7 +178,7 @@
                 CanUserReorderColumns="True"
                 SelectionMode="Single"
                 AutoGenerateColumns="False"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.HorizontalScrollBarVisibility="Auto"
                 Margin="0">
 
         <!-- Row background tinting by process category.
@@ -221,7 +222,7 @@
 
         <DataGrid.Columns>
 
-          <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="120" SortMemberPath="Name">
+          <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="150" SortMemberPath="Name">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid ColumnDefinitions="4,Auto,*"
@@ -245,10 +246,10 @@
 
           <DataGridTextColumn Header="PID"
                               Binding="{Binding Pid}"
-                              Width="0.7*" MinWidth="65"
+                              Width="0.7*" MinWidth="55"
                               IsReadOnly="True"/>
 
-          <DataGridTemplateColumn Header="CPU" Width="0.7*" MinWidth="60" SortMemberPath="CpuPercent">
+          <DataGridTemplateColumn Header="CPU" Width="0.7*" MinWidth="55" SortMemberPath="CpuPercent">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid Margin="6,0" RowDefinitions="Auto,3">
@@ -286,7 +287,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="I/O" Width="1.1*" MinWidth="80" SortMemberPath="IoReadBytesPerSec">
+          <DataGridTemplateColumn Header="I/O" Width="1.1*" MinWidth="55" SortMemberPath="IoReadBytesPerSec">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding IoDisplay}"
@@ -301,22 +302,22 @@
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
-                              Width="0.8*" MinWidth="90"
+                              Width="0.8*" MinWidth="75"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Handles"
                               Binding="{Binding HandleCount}"
-                              Width="0.8*" MinWidth="90"
+                              Width="0.8*" MinWidth="75"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="User"
                               Binding="{Binding UserName}"
-                              Width="0.9*" MinWidth="90"
+                              Width="0.9*" MinWidth="70"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Description"
                               Binding="{Binding Description}"
-                              Width="2*" MinWidth="80"
+                              Width="2*" MinWidth="100"
                               IsReadOnly="True"/>
 
         </DataGrid.Columns>

@@ -192,6 +192,11 @@
                   CornerRadius="13" Background="#FF453A"
                   Command="{Binding SetAccentColorCommand}" CommandParameter="#FF453A"
                   ToolTip.Tip="Red"/>
+          <Button Classes="nx-btn" Height="26" Padding="8,0" Margin="0,0,0,6"
+                  Click="OnPickColorClick"
+                  ToolTip.Tip="Open color wheel picker">
+            <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
+          </Button>
         </WrapPanel>
 
         <!-- Live preview row showing what the selected accent changes -->
@@ -272,6 +277,11 @@
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#FF453A"
                   Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FF453A" ToolTip.Tip="Red"/>
+          <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
+                  Click="OnPickTextColorClick"
+                  ToolTip.Tip="Open color wheel picker for text accent">
+            <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
+          </Button>
         </WrapPanel>
         <!-- Text accent preview -->
         <TextBlock FontSize="{DynamicResource NxFont11}" Margin="0,2,0,0">
@@ -281,30 +291,6 @@
                FontWeight="SemiBold"/>
         </TextBlock>
 
-        <!-- ── Custom Color Picker (opens isolated popup window) ──────── -->
-        <TextBlock Text="CUSTOM COLOR PICKER" FontSize="{DynamicResource NxFont11}" FontWeight="Medium" LetterSpacing="0.6"
-                   Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,12,0,6"/>
-        <Grid ColumnDefinitions="*,10,Auto">
-          <!-- Current-accent swatch + hex label -->
-          <Border Grid.Column="0" Height="34" CornerRadius="8"
-                  Background="{DynamicResource AccentBlueBrush}"
-                  Padding="12,0">
-            <TextBlock Text="{Binding AccentColorHex}"
-                       FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
-                       Foreground="White"
-                       VerticalAlignment="Center"/>
-          </Border>
-          <!-- Open picker dialog -->
-          <Button Grid.Column="2"
-                  Classes="nx-btn"
-                  Click="OnPickColorClick"
-                  ToolTip.Tip="Open color wheel picker">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Text="🎨" FontSize="{DynamicResource NxFont12}" VerticalAlignment="Center"/>
-              <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont12}" VerticalAlignment="Center"/>
-            </StackPanel>
-          </Button>
-        </Grid>
 
       </StackPanel>
     </Border>

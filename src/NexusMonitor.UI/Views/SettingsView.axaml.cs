@@ -37,23 +37,40 @@ public partial class SettingsView : UserControl
     private async void OnPickColorClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel vm) return;
-
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (owner is null) return;
 
-        // Snapshot current colour so we can revert on cancel
         var original = vm.AccentColorHex;
+        vm.TextAccentColorPickerActive = false;
+        try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
 
         var dlg = new ColorPickerWindow { DataContext = vm };
-
         var applied = await dlg.ShowDialog<bool>(owner);
 
         if (!applied)
-        {
-            // User cancelled — restore the colour that was active before the dialog opened.
-            // Use AccentColorHex setter so ApplyAccentColor fires automatically.
             vm.AccentColorHex = original;
-        }
+    }
+
+    private async void OnPickTextColorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (owner is null) return;
+
+        var originalText = vm.TextAccentColorHex;
+        // Pre-seed picker with text accent color (or primary if not set)
+        var seedHex = string.IsNullOrEmpty(originalText) ? vm.AccentColorHex : originalText;
+        vm.TextAccentColorPickerActive = true;
+        try { vm.PickerCurrentColor = Color.Parse(seedHex); } catch { }
+
+        var dlg = new ColorPickerWindow { DataContext = vm };
+        var applied = await dlg.ShowDialog<bool>(owner);
+
+        vm.TextAccentColorPickerActive = false;
+        if (!applied)
+            vm.TextAccentColorHex = originalText;
+        // Restore PickerCurrentColor to primary accent
+        try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
     }
 
     // ── Surface color pickers ─────────────────────────────────────────────────

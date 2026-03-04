@@ -52,7 +52,16 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _customSidebarBgHex = "";
 
     // ── Color picker state ────────────────────────────────────────────────────
-    [ObservableProperty] private Color  _pickerAccentColor  = Color.Parse("#0A84FF");
+    // Unified current-picker color — routes to AccentColorHex or TextAccentColorHex based on TextAccentColorPickerActive.
+    [ObservableProperty] private Color _pickerCurrentColor       = Color.Parse("#0A84FF");
+    [ObservableProperty] private bool  _textAccentColorPickerActive;
+
+    /// <summary>Dynamic title for the color picker window (changes when picking text accent).</summary>
+    public string PickerWindowTitle => TextAccentColorPickerActive ? "Custom Text Accent" : "Custom Accent Color";
+
+    /// <summary>Live hex string shown in the color picker window hex readout.</summary>
+    public string PickerCurrentHex  => TextAccentColorPickerActive ? TextAccentColorHex : AccentColorHex;
+
     // Generic picker: shared by all surface pickers; set before opening dialog
     [ObservableProperty] private Color  _pickerSurfaceColor = Color.Parse("#131318");
     // Hex display string updated whenever PickerSurfaceColor changes (consumed by SurfaceColorPickerWindow)
@@ -182,9 +191,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         // Initialise picker from stored accent
         try
         {
-            _pickerAccentColor = Color.Parse(settings.Current.AccentColorHex);
+            _pickerCurrentColor = Color.Parse(settings.Current.AccentColorHex);
         }
-        catch { _pickerAccentColor = Color.Parse("#0A84FF"); }
+        catch { _pickerCurrentColor = Color.Parse("#0A84FF"); }
         _customWindowBgHex  = settings.Current.CustomWindowBgHex;
         _customSurfaceBgHex = settings.Current.CustomSurfaceBgHex;
         _customSidebarBgHex = settings.Current.CustomSidebarBgHex;
@@ -332,16 +341,17 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ApplyTextAccent(value, TextAccentColorHex);
 
         // Keep the color-wheel picker in sync when accent is changed via presets
-        if (!_suppressColorSync)
+        if (!_suppressColorSync && !TextAccentColorPickerActive)
         {
             try
             {
                 _suppressColorSync = true;
-                PickerAccentColor  = Color.Parse(value);
+                PickerCurrentColor = Color.Parse(value);
             }
             catch { /* invalid hex — leave picker unchanged */ }
             finally { _suppressColorSync = false; }
         }
+        OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnTextAccentColorHexChanged(string value)
@@ -349,6 +359,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Current.TextAccentColorHex = value;
         _settings.Save();
         ApplyTextAccent(AccentColorHex, value);
+        if (TextAccentColorPickerActive) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     partial void OnFontFamilyChanged(string value)
@@ -506,13 +517,34 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void ResetSurfaceBg()          => CustomSurfaceBgHex = "";
     [RelayCommand] private void ResetSidebarBg()          => CustomSidebarBgHex = "";
 
-    /// <summary>Called by the ColorWheelControl binding when the user picks a color.</summary>
-    partial void OnPickerAccentColorChanged(Color value)
+    /// <summary>Called by the ColorWheelControl binding when the user picks a color.
+    /// Routes to <see cref="AccentColorHex"/> or <see cref="TextAccentColorHex"/>
+    /// depending on <see cref="TextAccentColorPickerActive"/>.</summary>
+    partial void OnPickerCurrentColorChanged(Color value)
     {
         if (_suppressColorSync) return;
         var hex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";
-        if (!string.Equals(hex, AccentColorHex, StringComparison.OrdinalIgnoreCase))
-            AccentColorHex = hex;
+        _suppressColorSync = true;
+        try
+        {
+            if (TextAccentColorPickerActive)
+            {
+                if (!string.Equals(hex, TextAccentColorHex, StringComparison.OrdinalIgnoreCase))
+                    TextAccentColorHex = hex;
+            }
+            else
+            {
+                if (!string.Equals(hex, AccentColorHex, StringComparison.OrdinalIgnoreCase))
+                    AccentColorHex = hex;
+            }
+        }
+        finally { _suppressColorSync = false; }
+    }
+
+    partial void OnTextAccentColorPickerActiveChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PickerWindowTitle));
+        OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
     /// <summary>Keeps <see cref="PickerSurfaceHex"/> in sync with the color wheel in SurfaceColorPickerWindow.</summary>
@@ -757,6 +789,20 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         double fontSize = BaseFontSize * Math.Clamp(multiplier, 0.5, 3.0);
         if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = fontSize; }
         if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = fontSize; }
+
+        // Scale all NxFont* and FontSize* resource tokens so {DynamicResource} bindings update instantly.
+        double m = Math.Clamp(multiplier, 0.5, 3.0);
+        (string Key, double Base)[] fontTokens =
+        [
+            ("NxFont10", 12), ("NxFont11", 13), ("NxFont12", 14), ("NxFont13", 15),
+            ("NxFont14", 16), ("NxFont16", 18), ("NxFont18", 21), ("NxFont24", 30),
+            ("NxFontSm", 13), ("NxFontBase", 14), ("NxFontMd", 15),
+            ("FontSizeXS", 12), ("FontSizeSM", 13), ("FontSizeMD", 14),
+            ("FontSizeBase", 15), ("FontSizeLG", 17), ("FontSizeXL", 19),
+            ("FontSize2XL", 23), ("FontSize3XL", 30),
+        ];
+        foreach (var (key, baseVal) in fontTokens)
+            Application.Current!.Resources[key] = Math.Round(baseVal * m, 1);
     }
 
     private static void SetBrush(string key, Color baseColor, byte alpha)

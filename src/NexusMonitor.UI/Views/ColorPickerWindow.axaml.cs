@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI.Views;
 
@@ -32,4 +34,30 @@ public partial class ColorPickerWindow : Window
 
     private void OnDragPressed(object? sender, PointerPressedEventArgs e) =>
         BeginMoveDrag(e);
+
+    private void OnHexLostFocus(object? sender, RoutedEventArgs e) => CommitHex();
+
+    private void OnHexKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) CommitHex();
+    }
+
+    private void CommitHex()
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var hex = HexInput.Text?.Trim() ?? "";
+        if (!hex.StartsWith('#')) hex = "#" + hex;
+        try
+        {
+            _ = Color.Parse(hex); // validate
+            if (vm.TextAccentColorPickerActive)
+                vm.TextAccentColorHex = hex;
+            else
+                vm.AccentColorHex = hex;
+        }
+        catch
+        {
+            HexInput.Text = vm.PickerCurrentHex; // revert on invalid
+        }
+    }
 }
