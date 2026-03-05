@@ -7,6 +7,22 @@
   <!-- Icon font — Fluent System Icons (MIT, cross-platform, bundled) -->
   <FontFamily x:Key="NexusIcons">avares://NexusMonitor/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular</FontFamily>
 
+  <!-- ===== BUNDLED THEME FONTS (SIL OFL) =====
+       Used by named theme presets. Registered here so they are discoverable via DynamicResource.
+       ApplyFont() in SettingsViewModel resolves these by name → avares:// URI at runtime. -->
+  <FontFamily x:Key="FontOrbitron">avares://NexusMonitor/Assets/Fonts/Orbitron-Regular.ttf#Orbitron</FontFamily>
+  <FontFamily x:Key="FontQuicksand">avares://NexusMonitor/Assets/Fonts/Quicksand-Regular.ttf#Quicksand</FontFamily>
+  <FontFamily x:Key="FontNunito">avares://NexusMonitor/Assets/Fonts/Nunito-Regular.ttf#Nunito</FontFamily>
+  <FontFamily x:Key="FontRajdhani">avares://NexusMonitor/Assets/Fonts/Rajdhani-Regular.ttf#Rajdhani</FontFamily>
+  <FontFamily x:Key="FontSpaceGrotesk">avares://NexusMonitor/Assets/Fonts/SpaceGrotesk-Regular.ttf#Space Grotesk</FontFamily>
+  <FontFamily x:Key="FontDMSans">avares://NexusMonitor/Assets/Fonts/DMSans-Regular.ttf#DM Sans</FontFamily>
+  <FontFamily x:Key="FontCinzel">avares://NexusMonitor/Assets/Fonts/Cinzel-Regular.ttf#Cinzel</FontFamily>
+  <FontFamily x:Key="FontShareTechMono">avares://NexusMonitor/Assets/Fonts/ShareTechMono-Regular.ttf#Share Tech Mono</FontFamily>
+  <FontFamily x:Key="FontExo2">avares://NexusMonitor/Assets/Fonts/Exo2-Regular.ttf#Exo 2</FontFamily>
+  <FontFamily x:Key="FontPoppins">avares://NexusMonitor/Assets/Fonts/Poppins-Regular.ttf#Poppins</FontFamily>
+  <FontFamily x:Key="FontFiraCode">avares://NexusMonitor/Assets/Fonts/FiraCode-Regular.ttf#Fira Code</FontFamily>
+  <FontFamily x:Key="FontSourceCodePro">avares://NexusMonitor/Assets/Fonts/SourceCodePro-Regular.ttf#Source Code Pro</FontFamily>
+
   <!-- ===== STATIC FONT SIZE SCALE =====
        Base: 14px body — comfortable for modern displays.
        Hierarchy goes from 11px compact labels up to 28px hero numbers. -->

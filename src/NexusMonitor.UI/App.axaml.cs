@@ -22,6 +22,7 @@ using NexusMonitor.UI.Controls;
 using NexusMonitor.UI.Services;
 using NexusMonitor.Core.Network;
 using NexusMonitor.Core.Health;
+using NexusMonitor.Core.Themes;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 #if WINDOWS
@@ -131,6 +132,10 @@ public class App : Application
             //     data points are persisted and Rx subscriptions are released cleanly.
             desktop.ShutdownRequested += (_, _) =>
             {
+                // Remove tray icon immediately so it doesn't ghost after process exit
+                _trayIcon?.Dispose();
+                _trayIcon = null;
+
                 Services.GetRequiredService<MetricsStore>().Stop();
                 Services.GetRequiredService<EventMonitorService>().Stop();
                 Services.GetRequiredService<SystemHealthService>().Stop();
@@ -349,6 +354,7 @@ public class App : Application
 
         // -- Core services --
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<ThemePresetService>();
         // Register the live AppSettings instance so ProBalanceService / RulesEngine
         // receive the same object that SettingsService mutates on save.
         services.AddSingleton<AppSettings>(sp =>

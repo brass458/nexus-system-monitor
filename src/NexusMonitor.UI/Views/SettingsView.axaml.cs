@@ -133,6 +133,69 @@ public partial class SettingsView : UserControl
         try { vm.PickerCurrentColor = Color.Parse(vm.AccentColorHex); } catch { }
     }
 
+    // ── Save-as-preset dialog ─────────────────────────────────────────────────
+
+    private async void OnSaveAsPresetClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm) return;
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (owner is null) return;
+
+        // Simple inline name dialog
+        var nameBox = new TextBox
+        {
+            Watermark     = "Enter preset name…",
+            MinWidth      = 260,
+            Margin        = new Avalonia.Thickness(0, 0, 0, 12),
+        };
+
+        var okBtn     = new Button { Content = "Save",   Classes = { "nx-btn" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+        var cancelBtn = new Button { Content = "Cancel", Classes = { "nx-btn" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+
+        var btnRow = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Spacing = 8,
+        };
+        btnRow.Children.Add(cancelBtn);
+        btnRow.Children.Add(okBtn);
+
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 0 };
+        panel.Children.Add(new TextBlock
+        {
+            Text       = "Save Current Settings As Preset",
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            Margin     = new Avalonia.Thickness(0, 0, 0, 10),
+        });
+        panel.Children.Add(nameBox);
+        panel.Children.Add(btnRow);
+
+        var dlg = new Window
+        {
+            Title              = "Save Theme Preset",
+            Content            = panel,
+            SizeToContent      = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize          = false,
+            ShowInTaskbar      = false,
+        };
+
+        string? resultName = null;
+        okBtn.Click     += (_, _) => { resultName = nameBox.Text; dlg.Close(); };
+        cancelBtn.Click += (_, _) => dlg.Close();
+        nameBox.KeyDown += (_, k) =>
+        {
+            if (k.Key == Avalonia.Input.Key.Enter)  { resultName = nameBox.Text; dlg.Close(); }
+            if (k.Key == Avalonia.Input.Key.Escape) dlg.Close();
+        };
+
+        await dlg.ShowDialog(owner);
+
+        if (!string.IsNullOrWhiteSpace(resultName))
+            vm.SaveCurrentAsPresetCommand.Execute(resultName);
+    }
+
     // ── Setup guide ───────────────────────────────────────────────────────────
 
     /// <summary>Writes the embedded Telegraf/Grafana setup guide to a temp file and opens it in the default browser.</summary>

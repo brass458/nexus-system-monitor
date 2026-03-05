@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
+using NexusMonitor.Core.Themes;
 using NexusMonitor.UI.Messages;
 using NexusMonitor.UI.Services;
 using SkiaSharp;
@@ -24,9 +25,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly AnomalyDetectionService _anomalyService;
     private readonly AnomalyDetectionConfig  _anomalyConfig;
     private readonly GlassAdaptiveService    _glassAdaptive;
+    private readonly ThemePresetService      _presetService;
 
     // Luminance-derived min alpha floor (0x80–0xE0); null = feature disabled
     private byte? _luminanceMinAlpha;
+
+    // ── Batch-apply guard ─────────────────────────────────────────────────────
+    // When true, OnXxxChanged callbacks skip Apply* calls (a single ApplyAllVisuals()
+    // is called after all properties are set).
+    private bool _suppressApply;
 
     // ── Appearance ────────────────────────────────────────────────────────────
     [ObservableProperty] private int    _themeModeIndex; // 0=System, 1=Dark, 2=Light
@@ -35,6 +42,63 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     public static IReadOnlyList<string> ThemeModeLabels => _themeModeValues;
 
     private Action? _osThemeCleanup;
+
+    // ── Theme Presets ─────────────────────────────────────────────────────────
+    // Manual property (not [ObservableProperty]) so we can set the backing field
+    // directly in MarkCustomPreset/RebuildPresetNames without triggering OnSelectedPresetIndexChanged.
+    private int _selectedPresetIndex;
+    private bool _suppressPresetCallback;
+
+    public int SelectedPresetIndex
+    {
+        get => _selectedPresetIndex;
+        set
+        {
+            if (!SetProperty(ref _selectedPresetIndex, value)) return;
+            OnPropertyChanged(nameof(CanDeleteSelectedPreset));
+            if (!_suppressPresetCallback && value >= 0 && value < _availablePresets.Count)
+                ApplyPreset(_availablePresets[value]);
+        }
+    }
+
+    /// <summary>All preset names plus "(Custom)" as the final entry.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<string> PresetNames { get; } = new();
+
+    private IReadOnlyList<NexusMonitor.Core.Models.ThemePreset> _availablePresets = Array.Empty<NexusMonitor.Core.Models.ThemePreset>();
+
+    /// <summary>True when the selected theme mode resolves to dark (for AXAML surface swatch visibility).</summary>
+    public bool IsDarkActive
+    {
+        get
+        {
+            if (ThemeModeIndex == 1) return true;   // Dark
+            if (ThemeModeIndex == 2) return false;  // Light
+            // System — check app variant
+            return Application.Current?.RequestedThemeVariant != ThemeVariant.Light;
+        }
+    }
+
+    public bool CanDeleteSelectedPreset =>
+        _selectedPresetIndex >= 0 &&
+        _selectedPresetIndex < _availablePresets.Count &&
+        !_availablePresets[_selectedPresetIndex].IsBuiltIn;
+
+    // Font name → avares:// URI for bundled fonts
+    private static readonly Dictionary<string, string> _bundledFontUris = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Orbitron"]        = "avares://NexusMonitor/Assets/Fonts/Orbitron-Regular.ttf#Orbitron",
+        ["Quicksand"]       = "avares://NexusMonitor/Assets/Fonts/Quicksand-Regular.ttf#Quicksand",
+        ["Nunito"]          = "avares://NexusMonitor/Assets/Fonts/Nunito-Regular.ttf#Nunito",
+        ["Rajdhani"]        = "avares://NexusMonitor/Assets/Fonts/Rajdhani-Regular.ttf#Rajdhani",
+        ["Space Grotesk"]   = "avares://NexusMonitor/Assets/Fonts/SpaceGrotesk-Regular.ttf#Space Grotesk",
+        ["DM Sans"]         = "avares://NexusMonitor/Assets/Fonts/DMSans-Regular.ttf#DM Sans",
+        ["Cinzel"]          = "avares://NexusMonitor/Assets/Fonts/Cinzel-Regular.ttf#Cinzel",
+        ["Share Tech Mono"] = "avares://NexusMonitor/Assets/Fonts/ShareTechMono-Regular.ttf#Share Tech Mono",
+        ["Exo 2"]           = "avares://NexusMonitor/Assets/Fonts/Exo2-Regular.ttf#Exo 2",
+        ["Poppins"]         = "avares://NexusMonitor/Assets/Fonts/Poppins-Regular.ttf#Poppins",
+        ["Fira Code"]       = "avares://NexusMonitor/Assets/Fonts/FiraCode-Regular.ttf#Fira Code",
+        ["Source Code Pro"] = "avares://NexusMonitor/Assets/Fonts/SourceCodePro-Regular.ttf#Source Code Pro",
+    };
 
     // ── Crystal Glass ──────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isGlassEnabled;
@@ -193,7 +257,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         PrometheusExporter      exporter,
         AnomalyDetectionService anomalyService,
         AnomalyDetectionConfig  anomalyConfig,
-        GlassAdaptiveService    glassAdaptive)
+        GlassAdaptiveService    glassAdaptive,
+        ThemePresetService      presetService)
     {
         Title           = "Settings";
         _settings       = settings;
@@ -201,6 +266,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _anomalyService = anomalyService;
         _anomalyConfig  = anomalyConfig;
         _glassAdaptive  = glassAdaptive;
+        _presetService  = presetService;
 
         // Subscribe to luminance changes from GlassAdaptiveService
         _glassAdaptive.LuminanceChanged += OnLuminanceChanged;
@@ -253,6 +319,25 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _prometheusEnabled = settings.Current.PrometheusEnabled;
         _prometheusPort    = settings.Current.PrometheusPort;
 
+        // ── Theme preset list ──────────────────────────────────────────────────
+        RebuildPresetNames();
+
+        // Restore active preset selection (dropdown only; visuals already loaded from individual settings)
+        _suppressPresetCallback = true;
+        var savedPresetId = settings.Current.ActiveThemePresetId;
+        if (!string.IsNullOrEmpty(savedPresetId))
+        {
+            var match = _availablePresets
+                .Select((p, i) => (p, i))
+                .FirstOrDefault(t => t.p.Id == savedPresetId);
+            SelectedPresetIndex = match.p is not null ? match.i : PresetNames.Count - 1;
+        }
+        else
+        {
+            SelectedPresetIndex = PresetNames.Count - 1; // "(Custom)"
+        }
+        _suppressPresetCallback = false;
+
         // Restore at startup
         ApplyGlass(_isGlassEnabled, _glassOpacity,
             _customWindowBgHex, _customSurfaceBgHex, _customSidebarBgHex);
@@ -263,69 +348,64 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ApplyFont(_fontFamily, _fontSizeMultiplier);
     }
 
+    private void RebuildPresetNames()
+    {
+        _availablePresets = _presetService.AllPresets;
+        PresetNames.Clear();
+        foreach (var p in _availablePresets)
+            PresetNames.Add(p.Name);
+        PresetNames.Add("(Custom)");
+    }
+
     // ── Partial callbacks ─────────────────────────────────────────────────────
 
     partial void OnThemeModeIndexChanged(int value)
     {
-        // Cancel any existing OS theme subscription
-        _osThemeCleanup?.Invoke();
-        _osThemeCleanup = null;
-
         var mode = _themeModeValues[Math.Clamp(value, 0, _themeModeValues.Length - 1)];
         _settings.Current.ThemeMode = mode;
         _settings.Save();
 
-        ThemeVariant variant;
-        if (mode == "System")
+        if (!_suppressApply)
         {
-            variant = NexusMonitor.UI.App.DetectSystemTheme();
-            // Re-follow OS theme changes while in System mode
-            if (Application.Current?.PlatformSettings is { } ps)
-            {
-                void Handler(object? s, PlatformColorValues e)
-                {
-                    if (Application.Current is not null)
-                        Application.Current.RequestedThemeVariant = NexusMonitor.UI.App.DetectSystemTheme();
-                    ApplyGlass(IsGlassEnabled, GlassOpacity,
-                        CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
-                }
-                ps.ColorValuesChanged += Handler;
-                _osThemeCleanup = () => ps.ColorValuesChanged -= Handler;
-            }
+            MarkCustomPreset();
+            ApplyAllVisuals();
+            OnPropertyChanged(nameof(IsDarkActive));
         }
-        else
-        {
-            variant = mode == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
-        }
-
-        if (Application.Current is not null)
-            Application.Current.RequestedThemeVariant = variant;
-        // Re-apply glass so background brushes recalculate with the new theme.
-        ApplyGlass(IsGlassEnabled, GlassOpacity,
-            CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
     }
 
     partial void OnIsGlassEnabledChanged(bool value)
     {
         _settings.Current.IsGlassEnabled = value;
         _settings.Save();
-        ApplyGlass(value, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
-        ApplySpecular(value, IsSpecularEnabled, SpecularIntensity);
-        ApplyBackdropMode(value, BackdropBlurMode);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyGlass(value, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+            ApplySpecular(value, IsSpecularEnabled, SpecularIntensity);
+            ApplyBackdropMode(value, BackdropBlurMode);
+        }
     }
 
     partial void OnGlassOpacityChanged(double value)
     {
         _settings.Current.GlassOpacity = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, value, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyGlass(IsGlassEnabled, value, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        }
     }
 
     partial void OnCustomWindowBgHexChanged(string value)
     {
         _settings.Current.CustomWindowBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyGlass(IsGlassEnabled, GlassOpacity, value, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        }
         if (_activePickerTarget == ColorPickerTarget.WindowBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
@@ -333,7 +413,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.CustomSurfaceBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex, _luminanceMinAlpha);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, value, CustomSidebarBgHex, _luminanceMinAlpha);
+        }
         if (_activePickerTarget == ColorPickerTarget.SurfaceBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
@@ -341,7 +425,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.CustomSidebarBgHex = value;
         _settings.Save();
-        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value, _luminanceMinAlpha);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, value, _luminanceMinAlpha);
+        }
         if (_activePickerTarget == ColorPickerTarget.SidebarBg) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
@@ -349,29 +437,45 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.BackdropBlurMode = value;
         _settings.Save();
-        ApplyBackdropMode(IsGlassEnabled, value);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyBackdropMode(IsGlassEnabled, value);
+        }
     }
 
     partial void OnIsSpecularEnabledChanged(bool value)
     {
         _settings.Current.IsSpecularEnabled = value;
         _settings.Save();
-        ApplySpecular(IsGlassEnabled, value, SpecularIntensity);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplySpecular(IsGlassEnabled, value, SpecularIntensity);
+        }
     }
 
     partial void OnSpecularIntensityChanged(double value)
     {
         _settings.Current.SpecularIntensity = value;
         _settings.Save();
-        ApplySpecular(IsGlassEnabled, IsSpecularEnabled, value);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplySpecular(IsGlassEnabled, IsSpecularEnabled, value);
+        }
     }
 
     partial void OnAccentColorHexChanged(string value)
     {
         _settings.Current.AccentColorHex = value;
         _settings.Save();
-        ApplyAccentColor(value);
-        ApplyTextAccent(value, TextAccentColorHex);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyAccentColor(value);
+            ApplyTextAccent(value, TextAccentColorHex);
+        }
 
         // Keep the color-wheel picker in sync when accent is changed via presets
         if (!_suppressColorSync && _activePickerTarget == ColorPickerTarget.PrimaryAccent)
@@ -391,7 +495,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.TextAccentColorHex = value;
         _settings.Save();
-        ApplyTextAccent(AccentColorHex, value);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyTextAccent(AccentColorHex, value);
+        }
         if (_activePickerTarget == ColorPickerTarget.TextAccent) OnPropertyChanged(nameof(PickerCurrentHex));
     }
 
@@ -399,14 +507,22 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         _settings.Current.FontFamily = value;
         _settings.Save();
-        ApplyFont(value, FontSizeMultiplier);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyFont(value, FontSizeMultiplier);
+        }
     }
 
     partial void OnFontSizeMultiplierChanged(double value)
     {
         _settings.Current.FontSizeMultiplier = value;
         _settings.Save();
-        ApplyFont(FontFamily, value);
+        if (!_suppressApply)
+        {
+            MarkCustomPreset();
+            ApplyFont(FontFamily, value);
+        }
     }
 
     partial void OnCloseActionIndexChanged(int value)
@@ -568,6 +684,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [RelayCommand] private void ResetWindowBg()               => CustomWindowBgHex  = "";
     [RelayCommand] private void ResetSurfaceBg()          => CustomSurfaceBgHex = "";
     [RelayCommand] private void ResetSidebarBg()          => CustomSidebarBgHex = "";
+    [RelayCommand] private void SetWindowBg(string h)     => CustomWindowBgHex  = h;
+    [RelayCommand] private void SetSurfaceBg(string h)    => CustomSurfaceBgHex = h;
+    [RelayCommand] private void SetSidebarBg(string h)    => CustomSidebarBgHex = h;
 
     /// <summary>Called by the ColorWheelControl binding when the user picks a color.
     /// Routes to the appropriate hex property based on <see cref="ActivePickerTarget"/>.</summary>
@@ -598,6 +717,140 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             }
         }
         finally { _suppressColorSync = false; }
+    }
+
+    // ── Preset apply ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Applies a theme preset: batch-sets all 13 visual properties, then calls
+    /// <see cref="ApplyAllVisuals"/> once to update the UI in a single pass.
+    /// </summary>
+    private void ApplyPreset(NexusMonitor.Core.Models.ThemePreset preset)
+    {
+        _suppressApply = true;
+        try
+        {
+            // Map ThemeMode string to index
+            var modeIdx = Array.IndexOf(_themeModeValues, preset.ThemeMode);
+            ThemeModeIndex      = modeIdx < 0 ? 0 : modeIdx;
+
+            AccentColorHex      = preset.AccentColorHex;
+            TextAccentColorHex  = preset.TextAccentColorHex;
+            CustomWindowBgHex   = preset.CustomWindowBgHex;
+            CustomSurfaceBgHex  = preset.CustomSurfaceBgHex;
+            CustomSidebarBgHex  = preset.CustomSidebarBgHex;
+            IsGlassEnabled      = preset.IsGlassEnabled;
+            GlassOpacity        = preset.GlassOpacity;
+            BackdropBlurMode    = preset.BackdropBlurMode;
+            IsSpecularEnabled   = preset.IsSpecularEnabled;
+            SpecularIntensity   = preset.SpecularIntensity;
+            FontFamily          = preset.FontFamily;
+            FontSizeMultiplier  = preset.FontSizeMultiplier;
+        }
+        finally
+        {
+            _suppressApply = false;
+        }
+
+        // Record active preset ID
+        _settings.Current.ActiveThemePresetId = preset.Id;
+        _settings.Save();
+
+        ApplyAllVisuals();
+    }
+
+    /// <summary>
+    /// Applies all visual settings in one consolidated call.
+    /// Sets the theme variant (including OS subscription if System mode),
+    /// then calls ApplyGlass/Specular/Backdrop/Accent/Font.
+    /// </summary>
+    private void ApplyAllVisuals()
+    {
+        // OS theme subscription
+        _osThemeCleanup?.Invoke();
+        _osThemeCleanup = null;
+
+        var mode = _themeModeValues[Math.Clamp(ThemeModeIndex, 0, _themeModeValues.Length - 1)];
+        ThemeVariant variant;
+        if (mode == "System")
+        {
+            variant = NexusMonitor.UI.App.DetectSystemTheme();
+            if (Application.Current?.PlatformSettings is { } ps)
+            {
+                void Handler(object? s, PlatformColorValues e)
+                {
+                    if (Application.Current is not null)
+                        Application.Current.RequestedThemeVariant = NexusMonitor.UI.App.DetectSystemTheme();
+                    ApplyGlass(IsGlassEnabled, GlassOpacity,
+                        CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+                }
+                ps.ColorValuesChanged += Handler;
+                _osThemeCleanup = () => ps.ColorValuesChanged -= Handler;
+            }
+        }
+        else
+        {
+            variant = mode == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
+
+        if (Application.Current is not null)
+            Application.Current.RequestedThemeVariant = variant;
+
+        ApplyGlass(IsGlassEnabled, GlassOpacity,
+            CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, _luminanceMinAlpha);
+        ApplySpecular(IsGlassEnabled, IsSpecularEnabled, SpecularIntensity);
+        ApplyBackdropMode(IsGlassEnabled, BackdropBlurMode);
+        ApplyAccentColor(AccentColorHex);
+        ApplyTextAccent(AccentColorHex, TextAccentColorHex);
+        ApplyFont(FontFamily, FontSizeMultiplier);
+        OnPropertyChanged(nameof(IsDarkActive));
+    }
+
+    /// <summary>
+    /// Clears the active preset (shows "(Custom)" in dropdown).
+    /// Called when the user manually edits any visual setting.
+    /// </summary>
+    private void MarkCustomPreset()
+    {
+        if (_suppressApply) return;
+        _settings.Current.ActiveThemePresetId = "";
+        var customIndex = PresetNames.Count - 1;
+        if (_selectedPresetIndex != customIndex)
+        {
+            // Set backing field directly to avoid re-triggering ApplyPreset
+            _suppressPresetCallback = true;
+            SelectedPresetIndex = customIndex;
+            _suppressPresetCallback = false;
+        }
+    }
+
+    // ── Preset commands ───────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private void SaveCurrentAsPreset(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+        _presetService.SaveCurrentAsPreset(name, _settings.Current);
+        RebuildPresetNames();
+        // Select the newly created preset (suppress callback to avoid re-applying)
+        _suppressPresetCallback = true;
+        SelectedPresetIndex = _availablePresets.Count - 1; // last user preset
+        _suppressPresetCallback = false;
+    }
+
+    [RelayCommand]
+    private void DeleteSelectedPreset()
+    {
+        if (!CanDeleteSelectedPreset) return;
+        var preset = _availablePresets[_selectedPresetIndex];
+        _presetService.DeleteUserPreset(preset.Id);
+        RebuildPresetNames();
+        // Reset to "(Custom)"
+        _settings.Current.ActiveThemePresetId = "";
+        _settings.Save();
+        _suppressPresetCallback = true;
+        SelectedPresetIndex = PresetNames.Count - 1;
+        _suppressPresetCallback = false;
     }
 
     // ── Static resource helpers ───────────────────────────────────────────────
@@ -828,9 +1081,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         if (Application.Current?.ApplicationLifetime
                 is not IClassicDesktopStyleApplicationLifetime desktop) return;
 
-        var ff = string.IsNullOrWhiteSpace(family) || family == "(System Default)"
+        // Resolve bundled font URI if this is a bundled font name
+        string resolvedFamily = family;
+        if (!string.IsNullOrWhiteSpace(family) && family != "(System Default)"
+            && _bundledFontUris.TryGetValue(family, out var uri))
+            resolvedFamily = uri;
+
+        var ff = string.IsNullOrWhiteSpace(resolvedFamily) || resolvedFamily == "(System Default)"
             ? Avalonia.Media.FontFamily.Default
-            : new Avalonia.Media.FontFamily(family);
+            : new Avalonia.Media.FontFamily(resolvedFamily);
 
         const double BaseFontSize = 15.0; // matches NxFont13 token (bumped from 14→15)
         double fontSize = BaseFontSize * Math.Clamp(multiplier, 0.5, 3.0);

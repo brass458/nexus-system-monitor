@@ -82,6 +82,9 @@ public class AppSettings
     // Dashboard (Phase 1)
     public bool DashboardEnabled { get; set; } = true;
 
+    // Theme Presets
+    public string ActiveThemePresetId { get; set; } = "";  // "" = custom/none
+
     // Anomaly Detection (Phase 13)
     public bool   AnomalyDetectionEnabled     { get; set; } = false;
     /// <summary>"Low", "Medium", or "High" — maps to sigma preset in AnomalyDetectionConfig.</summary>
