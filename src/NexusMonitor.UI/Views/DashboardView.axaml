@@ -20,7 +20,7 @@
     </Border>
 
     <!-- ══ Content ══════════════════════════════════════════════════════════ -->
-    <ScrollViewer Padding="16">
+    <ScrollViewer Padding="16" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel Spacing="14">
 
         <!-- ── Overall Health Ring Card ─────────────────────────────────── -->

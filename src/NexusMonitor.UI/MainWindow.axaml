@@ -25,9 +25,9 @@
 
   <Window.Styles>
 
-    <!-- ── Drag grip: hidden by default, visible on row hover, prominent when dragging ── -->
+    <!-- ── Drag grip: subtle hint by default, brighter on hover, prominent when dragging ── -->
     <Style Selector="TextBlock.nav-grip">
-      <Setter Property="Opacity" Value="0"/>
+      <Setter Property="Opacity" Value="0.20"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
@@ -35,10 +35,10 @@
       </Setter>
     </Style>
     <Style Selector="Grid.nav-row:pointerover TextBlock.nav-grip">
-      <Setter Property="Opacity" Value="0.35"/>
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="Grid.nav-row.dragging TextBlock.nav-grip">
-      <Setter Property="Opacity" Value="0.7"/>
+      <Setter Property="Opacity" Value="0.85"/>
     </Style>
 
     <!-- ── Nav item root: smooth ease-out transitions for transform + opacity ── -->
@@ -183,36 +183,63 @@
                           Margin="10,14">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:NavItem">
-                  <Grid ColumnDefinitions="18,*"
-                        Classes="nav-row"
-                        Classes.dragging="{Binding IsDragging}"
-                        Background="Transparent">
-                    <!-- Drag grip — hidden by default, appears on hover -->
-                    <TextBlock Grid.Column="0"
-                               Classes="nav-grip"
-                               Text="&#x2807;"
-                               FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextTertiaryBrush}"
-                               Cursor="Hand"
-                               ToolTip.Tip="Drag to reorder"/>
-                    <!-- Navigation button -->
-                    <Button Grid.Column="1"
-                            Classes="nx-btn-ghost"
-                            Classes.active="{Binding IsActive}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Left"
-                            Padding="10,10"
-                            Margin="0,1"
-                            CornerRadius="10"
-                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
-                            CommandParameter="{Binding}">
-                      <TextBlock Text="{Binding Label}"
-                                 FontSize="{DynamicResource NxFont13}"
-                                 VerticalAlignment="Center" />
-                    </Button>
-                  </Grid>
+                  <Panel>
+
+                    <!-- ── Group separator row — shown when IsSeparator=true ── -->
+                    <StackPanel IsVisible="{Binding IsSeparator}" Margin="0,6,0,0">
+                      <Border Height="1" Margin="14,0,14,0"
+                              Background="{DynamicResource SeparatorBrush}"/>
+                      <TextBlock Text="{Binding GroupLabel}"
+                                 FontSize="{DynamicResource NxFont10}"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 Margin="18,5,0,2"
+                                 LetterSpacing="1.2"/>
+                    </StackPanel>
+
+                    <!-- ── Nav item row — shown when IsSeparator=false ── -->
+                    <Grid ColumnDefinitions="20,*"
+                          Classes="nav-row"
+                          Classes.dragging="{Binding IsDragging}"
+                          IsVisible="{Binding !IsSeparator}"
+                          Background="Transparent">
+                      <!-- Drag grip — hidden for pinned items -->
+                      <TextBlock Grid.Column="0"
+                                 Classes="nav-grip"
+                                 IsVisible="{Binding !IsPinned}"
+                                 Text="&#x2807;"
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 Cursor="Hand"
+                                 ToolTip.Tip="Drag to reorder"/>
+                      <!-- Navigation button -->
+                      <Button Grid.Column="1"
+                              Classes="nx-btn-ghost"
+                              Classes.active="{Binding IsActive}"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Left"
+                              Padding="10,10"
+                              Margin="0,1"
+                              CornerRadius="10"
+                              Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).NavigateCommand}"
+                              CommandParameter="{Binding}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                          <TextBlock Text="{Binding Icon}"
+                                     FontFamily="{StaticResource NexusIcons}"
+                                     FontSize="16"
+                                     Width="20"
+                                     TextAlignment="Center"
+                                     VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Label}"
+                                     FontSize="{DynamicResource NxFont13}"
+                                     VerticalAlignment="Center"/>
+                        </StackPanel>
+                      </Button>
+                    </Grid>
+
+                  </Panel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

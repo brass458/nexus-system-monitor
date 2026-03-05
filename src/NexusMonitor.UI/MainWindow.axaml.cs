@@ -133,12 +133,13 @@ public partial class MainWindow : Window
 
     private static void CycleTab(MainViewModel vm, bool shift)
     {
-        int count   = vm.NavItems.Count;
-        int current = vm.NavItems.IndexOf(vm.SelectedNavItem!);
+        var navigable = vm.NavItems.Where(n => !n.IsSeparator).ToList();
+        int count   = navigable.Count;
+        int current = navigable.IndexOf(vm.SelectedNavItem!);
         int next    = shift
             ? (current - 1 + count) % count
             : (current + 1) % count;
-        vm.Navigate(vm.NavItems[next]);
+        vm.Navigate(navigable[next]);
     }
 
     /// <summary>
@@ -303,6 +304,9 @@ public partial class MainWindow : Window
         // Find which container was pressed and whether it's in the grip zone
         for (int i = 0; i < vm.NavItems.Count; i++)
         {
+            var item = vm.NavItems[i];
+            if (item.IsSeparator || item.IsPinned) continue;  // separators and pinned are not draggable
+
             var container = NavItemsControl.ContainerFromIndex(i) as Control;
             if (container is null) continue;
 
@@ -314,7 +318,7 @@ public partial class MainWindow : Window
 
             _dragFromIndex   = i;
             _dropTargetIndex = i;
-            _dragItem        = vm.NavItems[i];
+            _dragItem        = item;
             _dragStart       = e.GetCurrentPoint(NavItemsControl).Position;
             _isDragging      = false;
             e.Handled        = true;
@@ -335,9 +339,22 @@ public partial class MainWindow : Window
             _isDragging = true;
             _dragItem.IsDragging = true;
 
-            // Cache item height from first container
-            var c0 = NavItemsControl.ContainerFromIndex(0) as Control;
-            _itemHeight = c0?.Bounds.Height ?? 42;
+            // Cache item height from first non-separator container
+            var vm0 = DataContext as MainViewModel;
+            if (vm0 is not null)
+            {
+                for (int i = 0; i < vm0.NavItems.Count; i++)
+                {
+                    if (vm0.NavItems[i].IsSeparator) continue;
+                    var c0 = NavItemsControl.ContainerFromIndex(i) as Control;
+                    _itemHeight = c0?.Bounds.Height ?? 42;
+                    break;
+                }
+            }
+            else
+            {
+                _itemHeight = 42;
+            }
 
             // Disable transition on dragged item so it tracks the cursor instantly
             var dragContainer = NavItemsControl.ContainerFromIndex(_dragFromIndex) as Control;
@@ -348,9 +365,23 @@ public partial class MainWindow : Window
         var vm = DataContext as MainViewModel;
         if (vm is null) return;
 
-        // Calculate drop target from pointer position
-        _dropTargetIndex = GetNavIndexAt(e, vm.NavItems.Count);
-        _dropTargetIndex = Math.Clamp(_dropTargetIndex, 0, vm.NavItems.Count - 1);
+        // Find group boundaries (non-separator items in the same group)
+        var dragGroup = _dragItem.Group;
+        int groupMin = _dragFromIndex;
+        int groupMax = _dragFromIndex;
+        for (int i = 0; i < vm.NavItems.Count; i++)
+        {
+            if (vm.NavItems[i].IsSeparator) continue;
+            if (vm.NavItems[i].Group == dragGroup)
+            {
+                if (i < groupMin) groupMin = i;
+                if (i > groupMax) groupMax = i;
+            }
+        }
+
+        // Calculate drop target from pointer position, clamped to group bounds
+        int rawTarget = GetNavIndexAt(e, vm.NavItems.Count);
+        _dropTargetIndex = Math.Clamp(rawTarget, groupMin, groupMax);
 
         double deltaY = pos.Y - _dragStart.Y;
         int dy = (int)Math.Round(deltaY);
@@ -359,6 +390,8 @@ public partial class MainWindow : Window
         // Apply visual transforms — NO Move() during drag, just visual displacement
         for (int i = 0; i < vm.NavItems.Count; i++)
         {
+            if (vm.NavItems[i].IsSeparator) continue;  // separators have no transform
+
             var container = NavItemsControl.ContainerFromIndex(i) as Control;
             var grid = FindNavRowGrid(container);
             if (grid is null) continue;
@@ -410,6 +443,7 @@ public partial class MainWindow : Window
                 // Reset all transforms to identity — spring transition animates the settle
                 for (int i = 0; i < vm.NavItems.Count; i++)
                 {
+                    if (vm.NavItems[i].IsSeparator) continue;
                     var container = NavItemsControl.ContainerFromIndex(i) as Control;
                     var grid = FindNavRowGrid(container);
                     if (grid is not null)

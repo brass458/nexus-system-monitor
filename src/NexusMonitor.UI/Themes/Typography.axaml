@@ -4,6 +4,8 @@
   <!-- Font families — Inter (bundled via Avalonia.Fonts.Inter) as primary, platform fallbacks -->
   <FontFamily x:Key="FontSans">Inter,Segoe UI Variable,Segoe UI,Helvetica Neue,Arial,sans-serif</FontFamily>
   <FontFamily x:Key="FontMono">Cascadia Code,JetBrains Mono,Consolas,Menlo,monospace</FontFamily>
+  <!-- Icon font — Fluent System Icons (MIT, cross-platform, bundled) -->
+  <FontFamily x:Key="NexusIcons">avares://NexusMonitor/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular</FontFamily>
 
   <!-- ===== STATIC FONT SIZE SCALE =====
        Base: 14px body — comfortable for modern displays.
