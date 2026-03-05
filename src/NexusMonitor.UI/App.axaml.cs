@@ -21,6 +21,7 @@ using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.Controls;
 using NexusMonitor.UI.Services;
 using NexusMonitor.Core.Network;
+using NexusMonitor.Core.Health;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 #if WINDOWS
@@ -89,6 +90,10 @@ public class App : Application
             if (saved.Current.ShowOverlayWidget)
                 overlayWin.Show();
 
+            // Start health service (always on — powers the Dashboard tab)
+            Services.GetRequiredService<SystemHealthService>()
+                .Start(TimeSpan.FromMilliseconds(saved.Current.UpdateIntervalMs));
+
             // Start automation engines
             // ProBalance only starts if it was enabled in settings
             if (saved.Current.ProBalanceEnabled)
@@ -126,6 +131,7 @@ public class App : Application
             desktop.ShutdownRequested += (_, _) =>
             {
                 Services.GetRequiredService<MetricsStore>().Stop();
+                Services.GetRequiredService<SystemHealthService>().Stop();
                 _subscriptions.Dispose();
                 (Services as IDisposable)?.Dispose();
             };
@@ -408,8 +414,12 @@ public class App : Application
         // -- Network tools --
         services.AddSingleton<NmapScannerService>();
 
+        // -- Health service (Phase 1 Dashboard) --
+        services.AddSingleton<SystemHealthService>();
+
         // -- ViewModels --
         services.AddSingleton<MainViewModel>();
+        services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<ProcessesViewModel>();
         services.AddSingleton<PerformanceViewModel>();
         services.AddSingleton<SystemInfoViewModel>();

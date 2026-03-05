@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using Avalonia;
@@ -148,9 +149,15 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         foreach (var p in processes) _liveByPid[p.Pid] = p;
         var liveByPid = _liveByPid;
 
+        // ── Compute impact score totals once per tick ──────────────────────────
+        var totals = ImpactScoreCalculator.ComputeTotals(processes);
+
         // ── 1. Update existing rows in-place; create rows for new PIDs ─────────
         foreach (var (pid, info) in liveByPid)
         {
+            var impact     = ImpactScoreCalculator.Calculate(info, totals);
+            var activeRule = _appSettings.Rules.FirstOrDefault(r => r.IsEnabled && r.Matches(info.Name));
+
             if (_allRows.TryGetValue(pid, out var row))
             {
                 // Mutate observable properties — DataGrid keeps its sort & selection
@@ -160,10 +167,19 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 row.ThreadCount     = info.ThreadCount;
                 row.HandleCount     = info.HandleCount;
                 row.PushCpuHistory(info.CpuPercent);
+                row.ImpactScore     = impact;
+                row.HasActiveRule   = activeRule is not null;
+                row.RuleSummary     = activeRule?.Summary ?? string.Empty;
             }
             else
             {
-                _allRows[pid] = new ProcessRowViewModel(info);
+                var newRow = new ProcessRowViewModel(info)
+                {
+                    ImpactScore   = impact,
+                    HasActiveRule = activeRule is not null,
+                    RuleSummary   = activeRule?.Summary ?? string.Empty,
+                };
+                _allRows[pid] = newRow;
             }
         }
 
@@ -672,6 +688,16 @@ public partial class ProcessRowViewModel : ObservableObject
 
     [ObservableProperty] private int _threadCount;
     [ObservableProperty] private int _handleCount;
+
+    // ── Impact score (Phase 1 Dashboard) ─────────────────────────────────────
+    /// <summary>Composite 0-100 score of how much this process affects system performance.</summary>
+    [ObservableProperty] private double _impactScore;
+
+    // ── Rule indicators (Phase 1 Dashboard) ──────────────────────────────────
+    /// <summary>True when at least one active rule applies to this process.</summary>
+    [ObservableProperty] private bool _hasActiveRule;
+    /// <summary>Human-readable rule summary for tooltip display.</summary>
+    [ObservableProperty] private string _ruleSummary = string.Empty;
 
     /// <summary>Depth in the process tree (0 = root). Used for indentation in tree-view mode.</summary>
     [ObservableProperty] private int _treeDepth;

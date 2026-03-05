@@ -79,6 +79,9 @@ public class AppSettings
     // Smart Glass Tint (Phase 4 enhancements)
     public bool SmartTintEnabled { get; set; } = false;
 
+    // Dashboard (Phase 1)
+    public bool DashboardEnabled { get; set; } = true;
+
     // Anomaly Detection (Phase 13)
     public bool   AnomalyDetectionEnabled     { get; set; } = false;
     /// <summary>"Low", "Medium", or "High" — maps to sigma preset in AnomalyDetectionConfig.</summary>

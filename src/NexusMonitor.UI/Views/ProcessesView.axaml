@@ -300,6 +300,49 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
+          <!-- Impact Score column (Phase 1) -->
+          <DataGridTemplateColumn Header="Impact" Width="0.8*" MinWidth="65" SortMemberPath="ImpactScore">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <Grid Margin="6,0" RowDefinitions="Auto,3"
+                      ToolTip.Tip="How much this app is affecting your computer's speed (0–100). Higher = more impact.">
+                  <TextBlock Grid.Row="0"
+                             Text="{Binding ImpactScore, StringFormat={}{0:F0}}"
+                             FontSize="{DynamicResource NxFont11}"
+                             HorizontalAlignment="Right"
+                             Foreground="{DynamicResource TextSecondaryBrush}"/>
+                  <Grid Grid.Row="1" ColumnDefinitions="*">
+                    <Rectangle Grid.Column="0"
+                               Height="2" RadiusX="1" RadiusY="1"
+                               HorizontalAlignment="Stretch"
+                               Fill="{DynamicResource BgHoverBrush}"/>
+                    <Rectangle Grid.Column="0"
+                               Height="2" RadiusX="1" RadiusY="1"
+                               HorizontalAlignment="Left"
+                               Width="{Binding ImpactScore}"
+                               MaxWidth="62"
+                               Fill="{DynamicResource AccentBrush}"/>
+                  </Grid>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <!-- Rules indicator column (Phase 1) -->
+          <DataGridTemplateColumn Header="Rules" Width="55" MinWidth="50" SortMemberPath="HasActiveRule">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <TextBlock Text="⚙"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           IsVisible="{Binding HasActiveRule}"
+                           ToolTip.Tip="{Binding RuleSummary}"
+                           Foreground="{DynamicResource AccentBrush}"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
                               Width="0.8*" MinWidth="75"

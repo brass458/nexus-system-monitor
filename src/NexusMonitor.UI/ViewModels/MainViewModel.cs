@@ -34,6 +34,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         {
             // eager: true → ViewModel created immediately at startup so its
             // data streams are live before the user ever clicks the tab.
+            new NavItem("Dashboard",    "\ue9e0", () => services.GetRequiredService<DashboardViewModel>(),    eager: true),
             new NavItem("Processes",    "\ue9f5", () => services.GetRequiredService<ProcessesViewModel>(),    eager: true),
             new NavItem("Performance",  "\ue9d9", () => services.GetRequiredService<PerformanceViewModel>(),  eager: true),
             new NavItem("System Info",  "\ue9d8", () => services.GetRequiredService<SystemInfoViewModel>(),   eager: false),

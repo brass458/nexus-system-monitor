@@ -1,0 +1,311 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             x:Class="NexusMonitor.UI.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel"
+             x:CompileBindings="False">
+
+  <DockPanel>
+
+    <!-- ══ Header ══════════════════════════════════════════════════════════ -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{DynamicResource BgSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <TextBlock Text="System Health"
+                 FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- ══ Content ══════════════════════════════════════════════════════════ -->
+    <ScrollViewer Padding="16">
+      <StackPanel Spacing="14">
+
+        <!-- ── Overall Health Ring Card ─────────────────────────────────── -->
+        <Border Padding="24,20"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <Grid ColumnDefinitions="Auto,*">
+
+            <!-- Health score panel -->
+            <Border Grid.Column="0" Width="120" Height="120" Margin="0,0,24,0"
+                    CornerRadius="60"
+                    BorderBrush="{Binding HealthRingBrush}"
+                    BorderThickness="6"
+                    Background="{DynamicResource BgPrimaryBrush}">
+              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding OverallScore, StringFormat={}{0:F0}}"
+                           FontSize="28" FontWeight="Bold"
+                           Foreground="{Binding HealthRingBrush}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding TrendArrow}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Health label + description -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+              <TextBlock Text="{Binding OverallLabel}"
+                         FontSize="{DynamicResource NxFont24}" FontWeight="Bold"
+                         Foreground="{Binding HealthRingBrush}"/>
+              <TextBlock Text="{Binding OverallDescription}"
+                         FontSize="{DynamicResource NxFont14}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding AutomationStatus}"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextTertiaryBrush}"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- ── Subsystem Cards (2×2 grid) ──────────────────────────────── -->
+        <Grid ColumnDefinitions="*,10,*" RowDefinitions="Auto,10,Auto">
+
+          <!-- CPU Card -->
+          <Border Grid.Row="0" Grid.Column="0"
+                  Padding="16"
+                  Background="{DynamicResource BgElevatedBrush}"
+                  BorderBrush="{DynamicResource GlassBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource CornerMD}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding CpuCard.Icon}"
+                           FontFamily="{StaticResource NexusIcons}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding CpuCard.Name}"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding CpuCard.TrendArrow}"
+                           FontSize="13"
+                           Foreground="{Binding CpuCard.LevelBrush}"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0"/>
+              </StackPanel>
+              <TextBlock Text="{Binding CpuCard.Level}"
+                         FontSize="{DynamicResource NxFont20}" FontWeight="Bold"
+                         Foreground="{Binding CpuCard.LevelBrush}"/>
+              <TextBlock Text="{Binding CpuCard.Summary}"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Memory Card -->
+          <Border Grid.Row="0" Grid.Column="2"
+                  Padding="16"
+                  Background="{DynamicResource BgElevatedBrush}"
+                  BorderBrush="{DynamicResource GlassBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource CornerMD}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding MemoryCard.Icon}"
+                           FontFamily="{StaticResource NexusIcons}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding MemoryCard.Name}"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding MemoryCard.TrendArrow}"
+                           FontSize="13"
+                           Foreground="{Binding MemoryCard.LevelBrush}"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0"/>
+              </StackPanel>
+              <TextBlock Text="{Binding MemoryCard.Level}"
+                         FontSize="{DynamicResource NxFont20}" FontWeight="Bold"
+                         Foreground="{Binding MemoryCard.LevelBrush}"/>
+              <TextBlock Text="{Binding MemoryCard.Summary}"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Disk Card -->
+          <Border Grid.Row="2" Grid.Column="0"
+                  Padding="16"
+                  Background="{DynamicResource BgElevatedBrush}"
+                  BorderBrush="{DynamicResource GlassBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource CornerMD}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding DiskCard.Icon}"
+                           FontFamily="{StaticResource NexusIcons}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DiskCard.Name}"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DiskCard.TrendArrow}"
+                           FontSize="13"
+                           Foreground="{Binding DiskCard.LevelBrush}"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0"/>
+              </StackPanel>
+              <TextBlock Text="{Binding DiskCard.Level}"
+                         FontSize="{DynamicResource NxFont20}" FontWeight="Bold"
+                         Foreground="{Binding DiskCard.LevelBrush}"/>
+              <TextBlock Text="{Binding DiskCard.Summary}"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- GPU Card -->
+          <Border Grid.Row="2" Grid.Column="2"
+                  Padding="16"
+                  Background="{DynamicResource BgElevatedBrush}"
+                  BorderBrush="{DynamicResource GlassBorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{StaticResource CornerMD}">
+            <StackPanel Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding GpuCard.Icon}"
+                           FontFamily="{StaticResource NexusIcons}"
+                           FontSize="16"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GpuCard.Name}"
+                           FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GpuCard.TrendArrow}"
+                           FontSize="13"
+                           Foreground="{Binding GpuCard.LevelBrush}"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0"/>
+              </StackPanel>
+              <TextBlock Text="{Binding GpuCard.Level}"
+                         FontSize="{DynamicResource NxFont20}" FontWeight="Bold"
+                         Foreground="{Binding GpuCard.LevelBrush}"/>
+              <TextBlock Text="{Binding GpuCard.Summary}"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+        </Grid>
+
+        <!-- ── Top 5 Impact Consumers ───────────────────────────────────── -->
+        <Border Padding="20,16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Top Resource Consumers"
+                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Apps having the biggest impact on your system right now"
+                       FontSize="{DynamicResource NxFont12}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"/>
+
+            <ItemsControl ItemsSource="{Binding TopConsumers}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProcessImpactViewModel">
+                  <Grid ColumnDefinitions="*,60,60" Margin="0,4,0,0">
+                    <!-- Name + bar -->
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="{DynamicResource NxFont13}" FontWeight="Medium"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"/>
+                      <!-- Impact bar -->
+                      <Border Height="4" CornerRadius="2"
+                              Background="{DynamicResource BorderSubtleBrush}">
+                        <Border HorizontalAlignment="Left"
+                                Height="4" CornerRadius="2"
+                                Background="{DynamicResource AccentBrush}"
+                                Width="{Binding BarWidth}"/>
+                      </Border>
+                    </StackPanel>
+                    <!-- CPU% -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding CpuPercent, StringFormat={}{0:F1}%}"
+                               FontSize="{DynamicResource NxFont12}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"/>
+                    <!-- Memory -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding MemoryLabel}"
+                               FontSize="{DynamicResource NxFont12}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- ── Recommendations ──────────────────────────────────────────── -->
+        <Border Padding="20,16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Recommendations"
+                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+            <ItemsControl ItemsSource="{Binding Recommendations}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RecommendationViewModel">
+                  <Border Padding="12,10" Margin="0,3,0,0"
+                          Background="{DynamicResource BgPrimaryBrush}"
+                          BorderBrush="{DynamicResource BorderSubtleBrush}"
+                          BorderThickness="1"
+                          CornerRadius="{StaticResource CornerSM}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <!-- Icon -->
+                      <TextBlock Text="{Binding Icon}"
+                                 FontFamily="{StaticResource NexusIcons}"
+                                 FontSize="18"
+                                 Foreground="{Binding IconBrush}"
+                                 VerticalAlignment="Top"/>
+                      <!-- Text -->
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="{DynamicResource NxFont13}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding Body}"
+                                   FontSize="{DynamicResource NxFont12}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+
+</UserControl>
