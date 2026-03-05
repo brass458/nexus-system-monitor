@@ -1087,14 +1087,26 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             && _bundledFontUris.TryGetValue(family, out var uri))
             resolvedFamily = uri;
 
-        var ff = string.IsNullOrWhiteSpace(resolvedFamily) || resolvedFamily == "(System Default)"
-            ? Avalonia.Media.FontFamily.Default
-            : new Avalonia.Media.FontFamily(resolvedFamily);
+        Avalonia.Media.FontFamily ff;
+        try
+        {
+            ff = string.IsNullOrWhiteSpace(resolvedFamily) || resolvedFamily == "(System Default)"
+                ? Avalonia.Media.FontFamily.Default
+                : new Avalonia.Media.FontFamily(resolvedFamily);
+        }
+        catch
+        {
+            ff = Avalonia.Media.FontFamily.Default;
+        }
 
         const double BaseFontSize = 15.0; // matches NxFont13 token (bumped from 14→15)
         double fontSize = BaseFontSize * Math.Clamp(multiplier, 0.5, 3.0);
-        if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = fontSize; }
-        if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = fontSize; }
+        try
+        {
+            if (desktop.MainWindow is Window main) { main.FontFamily = ff; main.FontSize = fontSize; }
+            if (_overlayWindow      is Window ow)  { ow.FontFamily   = ff; ow.FontSize   = fontSize; }
+        }
+        catch { /* ignore font application failures — leave current font in place */ }
 
         // Scale all NxFont* and FontSize* resource tokens so {DynamicResource} bindings update instantly.
         double m = Math.Clamp(multiplier, 0.5, 3.0);
