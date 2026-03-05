@@ -91,7 +91,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ["Nunito"]          = "avares://NexusMonitor/Assets/Fonts/Nunito-Regular.ttf#Nunito",
         ["Rajdhani"]        = "avares://NexusMonitor/Assets/Fonts/Rajdhani-Regular.ttf#Rajdhani",
         ["Space Grotesk"]   = "avares://NexusMonitor/Assets/Fonts/SpaceGrotesk-Regular.ttf#Space Grotesk",
-        ["DM Sans"]         = "avares://NexusMonitor/Assets/Fonts/DMSans-Regular.ttf#DM Sans",
+        ["DM Sans"]         = "avares://NexusMonitor/Assets/Fonts/DMSans-Regular.ttf#DM Sans 14pt",
         ["Cinzel"]          = "avares://NexusMonitor/Assets/Fonts/Cinzel-Regular.ttf#Cinzel",
         ["Share Tech Mono"] = "avares://NexusMonitor/Assets/Fonts/ShareTechMono-Regular.ttf#Share Tech Mono",
         ["Exo 2"]           = "avares://NexusMonitor/Assets/Fonts/Exo2-Regular.ttf#Exo 2",
