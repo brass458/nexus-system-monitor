@@ -129,6 +129,24 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_ev_ts   ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_ev_type ON events(event_type, ts);
 
+-- Classified resource incidents (EventMonitorService)
+CREATE TABLE IF NOT EXISTS resource_events (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts                  INTEGER NOT NULL,
+    end_ts              INTEGER,
+    resource            INTEGER NOT NULL,
+    peak_pct            REAL    NOT NULL,
+    avg_pct             REAL    NOT NULL,
+    duration_sec        REAL    NOT NULL,
+    primary_process     TEXT,
+    primary_process_pid INTEGER NOT NULL DEFAULT 0,
+    classification      INTEGER NOT NULL,
+    severity            INTEGER NOT NULL,
+    summary             TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_re_ts    ON resource_events(ts);
+CREATE INDEX IF NOT EXISTS idx_re_class ON resource_events(classification, ts);
+
 -- 1-minute rollups (retained 7 days)
 CREATE TABLE IF NOT EXISTS rollups_1m (
     ts              INTEGER PRIMARY KEY,

@@ -12,13 +12,15 @@ using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Storage;
 using NexusMonitor.UI.Messages;
 using SkiaSharp;
+using System.Collections.Generic;
 
 namespace NexusMonitor.UI.ViewModels;
 
 public partial class HistoryViewModel : ViewModelBase, IDisposable
 {
-    private readonly IMetricsReader _reader;
-    private readonly AppSettings    _appSettings;
+    private readonly IMetricsReader      _reader;
+    private readonly IResourceEventReader _eventReader;
+    private readonly AppSettings         _appSettings;
     private CancellationTokenSource? _loadCts;
     private TimeSpan _currentSpan = TimeSpan.FromHours(24);
 
@@ -38,7 +40,7 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
     // ── Top-process table ────────────────────────────────────────────────────
     public ObservableCollection<ProcessSummary> TopProcesses { get; } = new();
 
-    // ── Events timeline ───────────────────────────────────────────────────────
+    // ── Events timeline (anomaly alerts) ─────────────────────────────────────
     public ObservableCollection<StoredEvent> Events { get; } = new();
 
     [ObservableProperty] private int    _eventCount;
@@ -54,6 +56,30 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         EventType.NewConnection,
         EventType.ProcessSpike,
     ];
+
+    // ── Resource Incidents (classified bottleneck events) ─────────────────────
+    public ObservableCollection<ResourceEvent> ResourceIncidents { get; } = new();
+
+    [ObservableProperty] private int    _incidentCount;
+    [ObservableProperty] private string _classificationFilter = "All";
+
+    public static IReadOnlyList<string> ClassificationFilters { get; } =
+    [
+        "All",
+        "Hardware Bottleneck",
+        "Application Spike",
+        "Memory Leak",
+        "Thermal Throttle",
+    ];
+
+    private static EventClassification? ParseClassification(string filter) => filter switch
+    {
+        "Hardware Bottleneck" => EventClassification.HardwareBottleneck,
+        "Application Spike"   => EventClassification.ApplicationSpike,
+        "Memory Leak"         => EventClassification.ApplicationLeak,
+        "Thermal Throttle"    => EventClassification.ThermalThrottle,
+        _                     => null,
+    };
 
     // ── Chart data collections ───────────────────────────────────────────────
     private readonly ObservableCollection<DateTimePoint> _cpuPts   = new();
@@ -80,9 +106,10 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
     public Axis[] NetYAxes  { get; }
     public Axis[] GpuYAxes  { get; }
 
-    public HistoryViewModel(IMetricsReader reader, AppSettings appSettings)
+    public HistoryViewModel(IMetricsReader reader, IResourceEventReader eventReader, AppSettings appSettings)
     {
         _reader      = reader;
+        _eventReader = eventReader;
         _appSettings = appSettings;
         _metricsEnabled = appSettings.MetricsEnabled;
         Title        = "History";
@@ -134,8 +161,9 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
         RefreshDbInfo();
     }
 
-    // 4B: Re-load when event type filter changes
-    partial void OnEventTypeFilterChanged(string value) => _ = Refresh();
+    // Re-load when filter changes
+    partial void OnEventTypeFilterChanged(string value)       => _ = Refresh();
+    partial void OnClassificationFilterChanged(string value)  => _ = Refresh();
 
     // ── Range commands ───────────────────────────────────────────────────────
     [RelayCommand] private Task Load1h()  => LoadAsync(TimeSpan.FromHours(1),  is1h:  true);
@@ -185,12 +213,21 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var metrics = await _reader.GetSystemMetricsAsync(from, to, ct);
-            var procs   = await _reader.GetTopProcessSummariesAsync(from, to, topN: 10, ct);
-            var evtType = EventTypeFilter == "All" ? null : EventTypeFilter;
-            var events  = await _reader.GetEventsAsync(from, to, evtType, ct);
+            var metricsTask   = _reader.GetSystemMetricsAsync(from, to, ct);
+            var procsTask     = _reader.GetTopProcessSummariesAsync(from, to, topN: 10, ct);
+            var evtType       = EventTypeFilter == "All" ? null : EventTypeFilter;
+            var eventsTask    = _reader.GetEventsAsync(from, to, evtType, ct);
+            var classification = ParseClassification(ClassificationFilter);
+            var incidentsTask = _eventReader.GetResourceEventsAsync(from, to, classification, ct);
+
+            await Task.WhenAll(metricsTask, procsTask, eventsTask, incidentsTask);
 
             if (ct.IsCancellationRequested) return;
+
+            var metrics   = metricsTask.Result;
+            var procs     = procsTask.Result;
+            var events    = eventsTask.Result;
+            var incidents = incidentsTask.Result;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -202,6 +239,10 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
                 Events.Clear();
                 foreach (var e in events.OrderByDescending(e => e.Timestamp)) Events.Add(e);
                 EventCount = events.Count;
+
+                ResourceIncidents.Clear();
+                foreach (var i in incidents) ResourceIncidents.Add(i);
+                IncidentCount = incidents.Count;
 
                 HasData    = metrics.Count > 0;
                 StatusText = metrics.Count > 0

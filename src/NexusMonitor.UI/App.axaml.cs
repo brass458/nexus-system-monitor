@@ -104,12 +104,13 @@ public class App : Application
             if (saved.Current.AlertRules.Count > 0)
                 Services.GetRequiredService<AlertsService>().Start();
 
-            // Start metrics persistence
+            // Start metrics persistence and incident monitoring
             if (saved.Current.MetricsEnabled)
             {
                 Services.GetRequiredService<MetricsStore>().Start(
                     TimeSpan.FromMilliseconds(saved.Current.UpdateIntervalMs));
                 Services.GetRequiredService<MetricsRollupService>().Start();
+                Services.GetRequiredService<EventMonitorService>().Start();
             }
 
             // Start anomaly detection if enabled
@@ -131,6 +132,7 @@ public class App : Application
             desktop.ShutdownRequested += (_, _) =>
             {
                 Services.GetRequiredService<MetricsStore>().Stop();
+                Services.GetRequiredService<EventMonitorService>().Stop();
                 Services.GetRequiredService<SystemHealthService>().Stop();
                 _subscriptions.Dispose();
                 (Services as IDisposable)?.Dispose();
@@ -375,6 +377,14 @@ public class App : Application
         services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<IEventWriter>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<MetricsRollupService>();
+
+        // -- Resource incident repository --
+        services.AddSingleton<EventRepository>();
+        services.AddSingleton<IResourceEventReader>(sp => sp.GetRequiredService<EventRepository>());
+        services.AddSingleton<IResourceEventWriter>(sp => sp.GetRequiredService<EventRepository>());
+
+        // -- Event monitor (incident classification) --
+        services.AddSingleton<EventMonitorService>();
 
         // -- Anomaly detection --
         services.AddSingleton<AnomalyDetectionConfig>(sp =>

@@ -470,6 +470,9 @@
           </StackPanel>
         </Border>
 
+        <!-- Bottom spacer so last card isn't flush with window edge -->
+        <Border Height="16"/>
+
       </StackPanel>
     </ScrollViewer>
 

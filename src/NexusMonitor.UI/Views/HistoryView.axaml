@@ -3,6 +3,7 @@
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
+             xmlns:models="using:NexusMonitor.Core.Models"
              x:Class="NexusMonitor.UI.Views.HistoryView"
              x:DataType="vm:HistoryViewModel"
              x:CompileBindings="False">
@@ -331,7 +332,149 @@
           </StackPanel>
         </Border>
 
-        <!-- ── Events Timeline ── -->
+        <!-- ── Resource Incidents (classified bottleneck events) ── -->
+        <Border Background="{DynamicResource BgSecondaryBrush}"
+                CornerRadius="{StaticResource CornerLG}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                Padding="16,12">
+          <StackPanel Spacing="8">
+
+            <!-- Card header -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Resource Incidents"
+                           FontSize="{DynamicResource NxFont13}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <!-- Count badge -->
+                <Border Background="{DynamicResource AccentBlueDimBrush}"
+                        BorderBrush="{DynamicResource AccentBlueBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="8,2"
+                        IsVisible="{Binding IncidentCount}">
+                  <TextBlock Text="{Binding IncidentCount}"
+                             FontSize="{DynamicResource NxFont11}"
+                             Foreground="{DynamicResource AccentBlueBrush}"
+                             FontFamily="{StaticResource FontMono}"/>
+                </Border>
+              </StackPanel>
+
+              <!-- Classification filter -->
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Filter:"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
+                           VerticalAlignment="Center"/>
+                <ComboBox Width="160"
+                          ItemsSource="{x:Static vm:HistoryViewModel.ClassificationFilters}"
+                          SelectedItem="{Binding ClassificationFilter}"
+                          FontSize="{DynamicResource NxFont11}"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- Sub-header explanation -->
+            <TextBlock Text="Classified resource incidents: each entry covers a full spike from start to resolution."
+                       FontSize="{DynamicResource NxFont11}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       TextWrapping="Wrap"/>
+
+            <!-- Empty state -->
+            <TextBlock Text="No resource incidents recorded in this time range."
+                       FontSize="{DynamicResource NxFont12}"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       IsVisible="{Binding ResourceIncidents.Count, Converter={x:Static BoolConverters.Not}}"
+                       Margin="0,4,0,4"/>
+
+            <!-- Column headers -->
+            <Grid ColumnDefinitions="130,55,130,70,*"
+                  Margin="0,4,0,0"
+                  IsVisible="{Binding ResourceIncidents.Count}">
+              <TextBlock Grid.Column="0" Text="Time"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="1" Text="Res"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="2" Text="Classification"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="3" Text="Peak / Dur"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="4" Text="Summary"
+                         FontSize="{DynamicResource NxFont11}"
+                         Foreground="{DynamicResource TextTertiaryBrush}" FontWeight="SemiBold"/>
+            </Grid>
+
+            <Border Height="1"
+                    Background="{DynamicResource GlassBorderBrush}"
+                    IsVisible="{Binding ResourceIncidents.Count}"/>
+
+            <!-- Incident rows -->
+            <ItemsControl ItemsSource="{Binding ResourceIncidents}"
+                          IsVisible="{Binding ResourceIncidents.Count}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:ResourceEvent">
+                  <Grid ColumnDefinitions="130,55,130,70,*" Margin="0,4">
+                    <!-- Time -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Timestamp.LocalDateTime, StringFormat='{}{0:MM/dd HH:mm:ss}'}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontFamily="{StaticResource FontMono}"
+                               VerticalAlignment="Center"/>
+                    <!-- Resource badge -->
+                    <Border Grid.Column="1"
+                            CornerRadius="4" Padding="5,2"
+                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Background="{DynamicResource BorderSubtleBrush}">
+                      <TextBlock Text="{Binding Resource,
+                                     Converter={x:Static conv:ResourceTypeToLabelConverter.Instance}}"
+                                 FontSize="9" FontWeight="Bold"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </Border>
+                    <!-- Classification badge -->
+                    <Border Grid.Column="2"
+                            CornerRadius="4" Padding="5,2"
+                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Background="{Binding Classification,
+                                Converter={x:Static conv:EventClassificationToBrushConverter.Instance},
+                                ConverterParameter=dim}">
+                      <TextBlock Text="{Binding Classification,
+                                     Converter={x:Static conv:EventClassificationToLabelConverter.Instance}}"
+                                 FontSize="9" FontWeight="Bold"
+                                 Foreground="White"/>
+                    </Border>
+                    <!-- Peak / Duration -->
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="1">
+                      <TextBlock Text="{Binding PeakUsagePercent, StringFormat='{}{0:F0}% peak'}"
+                                 FontSize="{DynamicResource NxFont10}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontFamily="{StaticResource FontMono}"/>
+                      <TextBlock Text="{Binding Duration.TotalSeconds, StringFormat='{}{0:F0}s'}"
+                                 FontSize="{DynamicResource NxFont10}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 FontFamily="{StaticResource FontMono}"/>
+                    </StackPanel>
+                    <!-- Summary -->
+                    <TextBlock Grid.Column="4"
+                               Text="{Binding Summary}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Summary}"
+                               VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+          </StackPanel>
+        </Border>
+
+        <!-- ── Events Timeline (anomaly alerts) ── -->
         <Border Background="{DynamicResource BgSecondaryBrush}"
                 CornerRadius="{StaticResource CornerLG}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
@@ -342,7 +485,7 @@
             <!-- Card header: title + event count + type filter -->
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <TextBlock Text="Events Timeline"
+                <TextBlock Text="Anomaly Alerts"
                            FontSize="{DynamicResource NxFont13}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}"/>

@@ -4,6 +4,10 @@
   <img src="Nexus System Monitor.png" width="128" alt="Nexus System Monitor">
 </p>
 
+<p align="center">
+  <a href="https://github.com/sponsors/brass458"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github" alt="Sponsor"></a>
+</p>
+
 **One tool. Every platform. Complete system visibility.**
 
 Nexus System Monitor is a cross-platform desktop application that gives you deep, granular insight into your system's processes, performance, services, and hardware — with a single, consistent interface whether you're on Windows, macOS, or Linux.
@@ -281,6 +285,20 @@ Adding support for a new platform means implementing these interfaces against na
 Early-access testing on macOS and Linux is open. See **[TESTING.md](TESTING.md)** for a step-by-step setup guide, a per-tab test checklist, known limitations, and instructions for filing issues.
 
 Report bugs and feedback at: https://github.com/brass458/nexus-system-monitor/issues
+
+---
+
+## Sponsorship
+
+Nexus System Monitor is free and open source. If you find it useful, consider sponsoring development:
+
+| Tier | Monthly | Perks |
+|------|---------|-------|
+| Supporter | $3/mo | Name in the README supporters list |
+| Backer | $10/mo | Name + priority responses on GitHub issues |
+| Champion | $25/mo | Above + vote on the feature roadmap |
+
+**[Sponsor on GitHub →](https://github.com/sponsors/brass458)**
 
 ---
 
