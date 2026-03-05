@@ -27,6 +27,11 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _lastError = string.Empty;
     [ObservableProperty] private bool _isDetailPanelVisible = false;
 
+    /// <summary>Sort column path persisted here so it survives tab switches (the View is recreated each time).</summary>
+    public string? SortMemberPath { get; set; }
+    /// <summary>Sort direction persisted here so it survives tab switches.</summary>
+    public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
+
     /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
     public bool IsServiceDetailShown => SelectedService is not null && IsDetailPanelVisible;
 

@@ -22,6 +22,11 @@ public partial class StartupViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private string _lastError = string.Empty;
 
+    /// <summary>Sort column path persisted here so it survives tab switches (the View is recreated each time).</summary>
+    public string? SortMemberPath { get; set; }
+    /// <summary>Sort direction persisted here so it survives tab switches.</summary>
+    public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
+
     public StartupViewModel(IStartupProvider provider)
     {
         Title     = "Startup";

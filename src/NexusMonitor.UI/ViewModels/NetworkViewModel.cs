@@ -27,6 +27,11 @@ public partial class NetworkViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _adapterRecvDisplay = "—";
     [ObservableProperty] private bool   _showThroughputColumns = true;
 
+    /// <summary>Sort column path persisted here so it survives tab switches (the View is recreated each time).</summary>
+    public string? SortMemberPath { get; set; }
+    /// <summary>Sort direction persisted here so it survives tab switches.</summary>
+    public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
+
     private bool _throughputChecked;
 
     // Reusable collections for SyncCollection — cleared and repopulated each tick instead of allocated anew

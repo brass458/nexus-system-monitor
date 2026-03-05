@@ -86,7 +86,8 @@
     <!-- Table + loading overlay -->
     <Panel>
 
-      <DataGrid Classes="nx-grid"
+      <DataGrid x:Name="StartupGrid"
+                Classes="nx-grid"
                 ItemsSource="{Binding Items}"
                 SelectedItem="{Binding SelectedItem}"
                 AutoGenerateColumns="False"
@@ -124,11 +125,11 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTextColumn Header="Name"           Binding="{Binding Name}"          Width="2*"   MinWidth="100" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Publisher"      Binding="{Binding Publisher}"     Width="1.8*" MinWidth="100" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Location"       Binding="{Binding Location}"      Width="1.3*" MinWidth="100" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Startup Impact" Binding="{Binding StartupImpact}" Width="1.5*" MinWidth="155" IsReadOnly="True"/>
-          <DataGridTextColumn Header="Command"        Binding="{Binding Command}"       Width="3*"   MinWidth="120" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Name"           Binding="{Binding Name}"          SortMemberPath="Name"          Width="2*"   MinWidth="100" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Publisher"      Binding="{Binding Publisher}"     SortMemberPath="Publisher"     Width="1.8*" MinWidth="100" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Location"       Binding="{Binding Location}"      SortMemberPath="Location"      Width="1.3*" MinWidth="100" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Startup Impact" Binding="{Binding StartupImpact}" SortMemberPath="StartupImpact" Width="1.5*" MinWidth="155" IsReadOnly="True"/>
+          <DataGridTextColumn Header="Command"        Binding="{Binding Command}"       SortMemberPath="Command"       Width="3*"   MinWidth="120" IsReadOnly="True"/>
 
         </DataGrid.Columns>
       </DataGrid>

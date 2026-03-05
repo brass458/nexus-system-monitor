@@ -1,7 +1,7 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI.Views;
@@ -64,10 +64,10 @@ public partial class ProcessesView : UserControl
         }
     }
 
-    private void OnProcessesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnProcessesCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         // After Processes.Clear() (tree-mode rebuild), re-apply the column sort.
-        if (e.Action == NotifyCollectionChangedAction.Reset)
+        if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
             RestoreSort();
     }
 
@@ -82,17 +82,15 @@ public partial class ProcessesView : UserControl
     {
         if (DataContext is not ProcessesViewModel vm) return;
         if (vm.SortMemberPath is null) return;
+
+        var col = ProcessGrid.Columns.FirstOrDefault(c => c.SortMemberPath == vm.SortMemberPath);
+        if (col is null) return;
+
+        // col.Sort() posts ProcessSort asynchronously (same dispatcher priority).
+        // Keep _restoringSort=true until all those callbacks have fired so OnGridSorting
+        // ignores them. Posting the reset at the same priority guarantees FIFO ordering.
         _restoringSort = true;
-        try
-        {
-            foreach (var col in ProcessGrid.Columns)
-            {
-                if (col.SortMemberPath == vm.SortMemberPath)
-                    col.Sort(vm.SortDirection);
-                else
-                    col.ClearSort();
-            }
-        }
-        finally { _restoringSort = false; }
+        col.Sort(vm.SortDirection);
+        Dispatcher.UIThread.Post(() => _restoringSort = false);
     }
 }
