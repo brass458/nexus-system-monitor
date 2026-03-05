@@ -5,6 +5,117 @@ All notable changes to Nexus System Monitor will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.5] - 2026-03-04
+
+### Added
+- **System Health Dashboard:** New default landing tab with an at-a-glance health score
+  (0–100 composite weighted across CPU 30%, Memory 25%, Disk 20%, GPU 15%, Thermal 10%),
+  4 subsystem cards, top-5 process consumers, and plain-English contextual recommendations
+- **Bottleneck Detection:** Live bottleneck analysis card on the Dashboard identifies the
+  performance-limiting component for Gaming, Streaming, Video Editing, 3D Rendering, and CAD
+  workloads. Reports GPU-bound, CPU-bound, VRAM-bound, Memory-bound, Storage-bound, Thermal
+  Throttle, or Balanced with explanations and actionable upgrade/tuning advice. Uses 5-tick
+  smoothing to suppress single-frame false positives
+- **Impact Score column** in Processes tab: composite 0–100 score per process visible alongside
+  the new Rules indicator column (gear icon + tooltip)
+- **Fluent icons:** `FluentSystemIcons-Regular.ttf` (MIT) registered as `NexusIcons` FontFamily;
+  replaces emoji/text icons in the sidebar and Dashboard subsystem cards
+
+### Changed
+- **Sidebar navigation** reorganised into four named groups — Pinned, Monitor, Tools, System —
+  with visual separators; pinned items are exempt from drag-reorder
+- **Drag constraints:** items can only be reordered within their own group; separators and
+  pinned items cannot be dragged
+- **Dashboard** is now the first tab (eager-loaded); previously Processes was the landing page
+
+### Fixed
+- **Dashboard scroll:** `ScrollViewer` was missing `VerticalScrollBarVisibility="Auto"` — tab
+  now scrolls correctly on smaller screens
+
+## [0.1.4] - 2026-03-04
+
+### Fixed
+- **DataGrid sort persistence:** sort state (column + direction) now survives tab switches in
+  Processes, Services, Startup, and Network views — Views are destroyed on tab switch but the
+  sort is saved in the ViewModel (singleton) and restored on `OnLoaded`
+- **Sort guard race:** `col.Sort()` posts `ProcessSort` via `Dispatcher.UIThread.Post`; the old
+  `finally { _restoringSort = false }` block fired before those async callbacks. Fixed by
+  resetting the guard via `Post` (same priority = FIFO), so it drops only after all sort events
+  complete
+- **Null `SortMemberPath`:** `DataGridTextColumn` without explicit `SortMemberPath` returns null
+  in the `Sorting` handler — added explicit `SortMemberPath` to every column in all four views
+
+## [0.1.3.1] - 2026-03-04
+
+### Added
+- **Shared color picker:** `SurfaceColorPickerWindow` removed; all 5 color pickers (primary
+  accent, text accent, window chrome, cards, sidebar) now share a single `ColorPickerWindow`
+  with live preview, editable hex input, and dynamic title via `ColorPickerTarget` enum
+- **Nmap progress bar:** scan progress parsed from stderr (`"About X% done"`) and displayed
+  as a live progress bar in LanScannerView
+- **Metrics toggle:** new enable/disable control in Settings → Metrics & History; dynamically
+  starts/stops `MetricsStore` and `MetricsRollupService`; HistoryView shows an informational
+  banner when disabled
+
+### Fixed
+- **Color wheel TwoWay binding:** `ColorWheelControl.SelectedColorProperty` now uses TwoWay
+  mode — dragging the wheel correctly pushes the selected color back to `PickerCurrentColor`
+  (fixes "Apply does nothing" and "hex stays empty")
+- **Sort state in ViewModel:** moved sort state (`SortMemberPath` / `SortDirection`) from
+  `ProcessesView` fields to `ProcessesViewModel` properties so sort survives View recreation
+- **Nmap latency:** was parsing `rttvar` (jitter); now parses `srtt` (actual RTT) from nmap XML
+- **Nmap stderr surfacing:** all stderr output (privilege errors, scan phase banners) shown in
+  UI; `HostsUp` guarded against sentinel `-1` values
+- **Nmap install detection:** `IsAvailable()` now checks well-known install paths first and
+  refreshes PATH from the Windows registry so newly installed nmap is found without restart;
+  install output hidden by default with a "Show Details" toggle
+- **Font size slider:** now scales all `NxFont*` / `FontSize*` resource tokens at runtime
+- **Color wheel hue offset:** corrected +90°/−90° so the selector dot matches the visual colour
+  under the cursor
+- **Color picker height:** `ColorPickerWindow` increased 336 → 400 px so Apply/Cancel always
+  visible
+- **Light mode category labels:** `ProcessCategoryToBrushConverter` fallback changed from
+  `Brushes.White` to `TextPrimaryBrush`; `ProcessesViewModel` re-evaluates on theme change
+- **ComboBox widths:** all `ComboBox` controls in SettingsView changed from `Width=` to
+  `MinWidth=` to prevent clipping at larger font-scale multipliers
+- **Priority Level Guide:** moved to top of Optimization tab with expanded user-friendly
+  descriptions for each priority level
+- **Ctrl+Q:** now sets `_forceClose = true` before `Close()` so it always quits regardless
+  of the "When Pressing Close Button" setting
+- **Process sort feedback loop:** `RestoreSort` → `OnGridSorting` re-entrancy fixed with a
+  guard flag
+
+## [0.1.3] - 2026-03-03
+
+### Added
+- **Nmap LAN Scanner tab:** scan the local network for hosts, open ports, OS detection, and
+  latency; host tree with detail sidebar and port table (`LanScannerView` / `LanScannerViewModel`)
+- **Linux init backends:** Dinit, Runit, S6 service managers detected and managed alongside
+  the existing Systemd, SysVinit, and OpenRC backends
+- **Linux hardware info:** full CPU / RAM / GPU / storage / BIOS details from sysfs via
+  `LinuxHardwareInfoProvider`
+- **Linux temperature:** scans `/sys/class/hwmon` for `coretemp` / `k10temp` / `zenpower`
+  before falling back to `thermal_zone*`
+- **Font size multiplier:** 0.8–1.5× slider in Settings scales all UI text via
+  `AppSettings.FontSizeMultiplier`; `NxFont*` tokens updated via `DynamicResource`
+- **Text accent color:** swatches in Settings now wire to `SetTextAccentColorCommand`
+
+### Changed
+- **Defaults tightened:** `MetricsEnabled`, `AnomalyDetectionEnabled`, and OS notifications
+  all default off; `AnomalySensitivity` defaults to Low; `MetricsDatabase` registration is
+  lazy; detail sidebars (Processes / Network / Services) default collapsed
+- **"Details" toggle** renamed to "Info Panel" throughout UI
+- **Process category brushes** moved into `ThemeDictionaries` (dark + light variants) so they
+  update on theme change without restart
+
+### Fixed
+- **Anomaly notifications:** re-check `AnomalyDetectionEnabled` at fire time to prevent
+  notifications firing after the feature is disabled mid-session
+- **Tray Quit on Linux:** `ForceQuitFromTray` flag allows clean exit from system tray
+- **Duplicate window decorations on Linux:** `SystemDecorations.BorderOnly` set in `OnOpened`
+
 ## [0.1.2] - 2026-03-03
 
 ### Added
@@ -103,5 +214,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **macOS 12+ (Intel + Apple Silicon):** Full support. Unsigned — see README for Gatekeeper bypass.
 - **Linux (x64, ARM64):** Full support. Best tested on Ubuntu 22.04+.
 
+[Unreleased]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.3.1...v0.1.4
+[0.1.3.1]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.3...v0.1.3.1
+[0.1.3]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/brass458/nexus-system-monitor/releases/tag/v0.1.0
