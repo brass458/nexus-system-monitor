@@ -38,5 +38,6 @@ public record SystemHealthSnapshot
     public SubsystemHealth     Gpu              { get; init; } = new();
     public IReadOnlyList<ProcessImpact> TopConsumers { get; init; } = [];
     public int                 ActiveAutomations { get; init; }
+    public BottleneckReport?   Bottleneck        { get; init; }
     public DateTime            Timestamp         { get; init; } = DateTime.UtcNow;
 }

@@ -108,6 +108,9 @@ public sealed class SystemHealthService : IDisposable
         if (_settings.Rules.Count > 0)     automations++;
         if (_settings.AlertRules.Count > 0) automations++;
 
+        // ── Bottleneck analysis ───────────────────────────────────────────────
+        var bottleneck = BottleneckDetector.Analyse(m, processes);
+
         // ── Build snapshot ─────────────────────────────────────────────────────
         var snapshot = new SystemHealthSnapshot
         {
@@ -150,9 +153,10 @@ public sealed class SystemHealthService : IDisposable
                 CurrentValue = gpuVal,
                 Summary      = m.Gpus.Count > 0 ? $"{gpuVal:F0}% used" : "No GPU data",
             },
-            TopConsumers     = top5,
+            TopConsumers      = top5,
             ActiveAutomations = automations,
-            Timestamp        = DateTime.UtcNow,
+            Bottleneck        = bottleneck,
+            Timestamp         = DateTime.UtcNow,
         };
 
         _subject.OnNext(snapshot);

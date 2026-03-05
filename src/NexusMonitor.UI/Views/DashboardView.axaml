@@ -206,6 +206,173 @@
 
         </Grid>
 
+        <!-- ── Bottleneck Analysis Card ─────────────────────────────────── -->
+        <Border Padding="20,16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}"
+                DataContext="{Binding BottleneckCard}">
+          <StackPanel Spacing="12">
+
+            <!-- Header row -->
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="{Binding BottleneckIcon}"
+                         FontSize="20" VerticalAlignment="Center"/>
+              <StackPanel Spacing="2">
+                <TextBlock Text="Performance Bottleneck Analysis"
+                           FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsIdle}">
+                  <TextBlock Text="{Binding WorkloadLabel}"
+                             FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                             Foreground="{DynamicResource AccentBrush}"/>
+                  <TextBlock Text="{Binding WorkloadProcess}"
+                             FontSize="{DynamicResource NxFont11}"
+                             Foreground="{DynamicResource TextTertiaryBrush}"/>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Verdict headline -->
+            <TextBlock Text="{Binding Headline}"
+                       FontSize="{DynamicResource NxFont15}" FontWeight="Bold"
+                       Foreground="{Binding SeverityBrush}"
+                       TextWrapping="Wrap"/>
+
+            <!-- Explanation -->
+            <TextBlock Text="{Binding Explanation}"
+                       FontSize="{DynamicResource NxFont12}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding !IsIdle}"/>
+
+            <!-- Utilisation bars (hidden at idle) -->
+            <StackPanel Spacing="6" IsVisible="{Binding !IsIdle}">
+              <TextBlock Text="Current Utilisation"
+                         FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextTertiaryBrush}"/>
+
+              <!-- CPU bar -->
+              <Grid ColumnDefinitions="55,*,45">
+                <TextBlock Grid.Column="0" Text="CPU"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Height="6" CornerRadius="3"
+                        Background="{DynamicResource BorderSubtleBrush}">
+                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
+                          Background="{DynamicResource AccentBrush}"
+                          Width="{Binding CpuPercent}"
+                          MaxWidth="300"/>
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding CpuPercent, StringFormat={}{0:F0}%}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- GPU bar -->
+              <Grid ColumnDefinitions="55,*,45">
+                <TextBlock Grid.Column="0" Text="GPU"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Height="6" CornerRadius="3"
+                        Background="{DynamicResource BorderSubtleBrush}">
+                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
+                          Background="{DynamicResource AccentBrush}"
+                          Width="{Binding GpuPercent}"
+                          MaxWidth="300"/>
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding GpuPercent, StringFormat={}{0:F0}%}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- VRAM bar -->
+              <Grid ColumnDefinitions="55,*,45">
+                <TextBlock Grid.Column="0" Text="VRAM"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Height="6" CornerRadius="3"
+                        Background="{DynamicResource BorderSubtleBrush}">
+                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
+                          Background="{DynamicResource AccentBrush}"
+                          Width="{Binding VramPercent}"
+                          MaxWidth="300"/>
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding VramPercent, StringFormat={}{0:F0}%}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- RAM bar -->
+              <Grid ColumnDefinitions="55,*,45">
+                <TextBlock Grid.Column="0" Text="RAM"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Border Grid.Column="1" Height="6" CornerRadius="3"
+                        Background="{DynamicResource BorderSubtleBrush}">
+                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
+                          Background="{DynamicResource AccentBrush}"
+                          Width="{Binding MemPercent}"
+                          MaxWidth="300"/>
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding MemPercent, StringFormat={}{0:F0}%}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- Temperatures + thermal throttle warning -->
+              <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
+                <TextBlock Text="{Binding CpuTempLabel, StringFormat=CPU temp: {0}}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="{Binding GpuTempLabel, StringFormat=GPU temp: {0}}"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+              </StackPanel>
+
+              <Border Padding="10,8" CornerRadius="{StaticResource CornerSM}"
+                      Background="#20FF3B30"
+                      IsVisible="{Binding ShowThermalWarning}">
+                <TextBlock Text="⚠ Thermal throttling detected — your hardware is running slower than it should due to heat."
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="#FF6B35"
+                           TextWrapping="Wrap"/>
+              </Border>
+            </StackPanel>
+
+            <!-- Upgrade / tuning advice (shown only when relevant) -->
+            <Border Padding="12,10" CornerRadius="{StaticResource CornerSM}"
+                    Background="{DynamicResource BgPrimaryBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
+                    BorderThickness="1"
+                    IsVisible="{Binding HasUpgradeAdvice}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="💡 Upgrade / Tuning Advice"
+                           FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="{Binding UpgradeAdvice}"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+
+          </StackPanel>
+        </Border>
+
         <!-- ── Top 5 Impact Consumers ───────────────────────────────────── -->
         <Border Padding="20,16"
                 Background="{DynamicResource BgElevatedBrush}"

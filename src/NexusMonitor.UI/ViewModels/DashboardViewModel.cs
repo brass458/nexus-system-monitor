@@ -38,6 +38,10 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private int    _activeAutomations;
     [ObservableProperty] private string _automationStatus = "No automations active";
 
+    // ── Bottleneck analysis ───────────────────────────────────────────────────
+
+    [ObservableProperty] private BottleneckCardViewModel _bottleneckCard = new();
+
     // ── Recommendations ───────────────────────────────────────────────────────
 
     public ObservableCollection<RecommendationViewModel> Recommendations { get; } = new();
@@ -80,6 +84,10 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         AutomationStatus = snapshot.ActiveAutomations == 0
             ? "No automations active"
             : $"{snapshot.ActiveAutomations} automation{(snapshot.ActiveAutomations > 1 ? "s" : "")} active";
+
+        // Bottleneck analysis
+        if (snapshot.Bottleneck is not null)
+            BottleneckCard.Apply(snapshot.Bottleneck);
 
         // Recommendations
         var recs = RecommendationEngine.Evaluate(snapshot, _settings);
@@ -172,6 +180,79 @@ public sealed class ProcessImpactViewModel
         if (bytes >= 1_073_741_824) return $"{bytes / 1_073_741_824.0:F1} GB";
         if (bytes >= 1_048_576)     return $"{bytes / 1_048_576.0:F0} MB";
         return $"{bytes / 1024.0:F0} KB";
+    }
+}
+
+/// <summary>
+/// Wraps a <see cref="BottleneckReport"/> for the Dashboard UI card.
+/// Mutable so it can be updated in-place every tick without recreating the object.
+/// </summary>
+public partial class BottleneckCardViewModel : ObservableObject
+{
+    [ObservableProperty] private string _headline       = "Gathering data…";
+    [ObservableProperty] private string _explanation    = string.Empty;
+    [ObservableProperty] private string _upgradeAdvice  = string.Empty;
+    [ObservableProperty] private string _workloadLabel  = string.Empty;
+    [ObservableProperty] private string _workloadProcess = string.Empty;
+    [ObservableProperty] private bool   _hasUpgradeAdvice;
+    [ObservableProperty] private bool   _isIdle = true;
+    [ObservableProperty] private IBrush _severityBrush = Brushes.Gray;
+    [ObservableProperty] private string _bottleneckIcon = "⚙";
+
+    // Detail bars
+    [ObservableProperty] private double _cpuPercent;
+    [ObservableProperty] private double _gpuPercent;
+    [ObservableProperty] private double _vramPercent;
+    [ObservableProperty] private double _memPercent;
+    [ObservableProperty] private double _diskPercent;
+    [ObservableProperty] private string _cpuTempLabel  = string.Empty;
+    [ObservableProperty] private string _gpuTempLabel  = string.Empty;
+    [ObservableProperty] private bool   _showThermalWarning;
+
+    public void Apply(BottleneckReport r)
+    {
+        Headline        = r.Headline;
+        Explanation     = r.Explanation;
+        UpgradeAdvice   = r.UpgradeAdvice;
+        WorkloadLabel   = WorkloadClassifier.WorkloadLabel(r.Workload);
+        WorkloadProcess = string.IsNullOrEmpty(r.WorkloadProcess) ? string.Empty : $"({r.WorkloadProcess})";
+        HasUpgradeAdvice = !string.IsNullOrEmpty(r.UpgradeAdvice);
+        IsIdle           = r.Bottleneck == BottleneckType.Idle;
+
+        SeverityBrush = r.Bottleneck switch
+        {
+            BottleneckType.Idle     => new SolidColorBrush(Color.Parse("#8E8E93")),
+            BottleneckType.Balanced => new SolidColorBrush(Color.Parse("#30D158")),
+            _ => r.Severity switch
+            {
+                BottleneckSeverity.Mild     => new SolidColorBrush(Color.Parse("#FF9F0A")),
+                BottleneckSeverity.Moderate => new SolidColorBrush(Color.Parse("#FF6B35")),
+                BottleneckSeverity.Severe   => new SolidColorBrush(Color.Parse("#FF3B30")),
+                _                           => Brushes.Gray,
+            }
+        };
+
+        BottleneckIcon = r.Bottleneck switch
+        {
+            BottleneckType.GpuBound      => "🖥",
+            BottleneckType.VramBound     => "💾",
+            BottleneckType.CpuBound      => "⚡",
+            BottleneckType.MemoryBound   => "🧠",
+            BottleneckType.StorageBound  => "💿",
+            BottleneckType.ThermalThrottle => "🌡",
+            BottleneckType.Balanced      => "✅",
+            _                            => "⏸",
+        };
+
+        CpuPercent  = r.CpuPercent;
+        GpuPercent  = r.GpuPercent;
+        VramPercent = r.GpuVramPercent;
+        MemPercent  = r.MemoryPercent;
+        DiskPercent = r.DiskPercent;
+
+        CpuTempLabel = r.CpuTempCelsius > 0 ? $"{r.CpuTempCelsius:F0}°C" : "—";
+        GpuTempLabel = r.GpuTempCelsius > 0 ? $"{r.GpuTempCelsius:F0}°C" : "—";
+        ShowThermalWarning = r.CpuIsThrottling || r.CpuTempCelsius > 95 || r.GpuTempCelsius > 90;
     }
 }
 
