@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5.1] - 2026-03-04
+
+### Added
+- **GitHub Sponsors:** `FUNDING.yml` and README sponsor badge configured for `brass458`
+- **Event-based bottleneck analysis:** `ResourceEvent` model, `EventMonitorService`, and
+  `EventRepository` capture discrete resource threshold-crossing events; persisted to a new
+  `resource_events` SQLite table; surfaced in the History tab as a **Resource Incidents**
+  section showing event type, severity, value, and timestamp
+
+### Fixed
+- **Dashboard scroll:** `ScrollViewer` bottom spacer added so content is not clipped at the
+  bottom of the tab on standard-height displays
+
 ## [0.1.5] - 2026-03-04
 
 ### Added
