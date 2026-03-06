@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NexusMonitor.Core.Abstractions;
 using NexusMonitor.DiskAnalyzer.Analysis;
 using NexusMonitor.DiskAnalyzer.Models;
 using NexusMonitor.DiskAnalyzer.Scanning;
@@ -125,7 +126,14 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     // Available drives
     public IReadOnlyList<string> AvailableDrives { get; } = GetAvailableDrives();
 
-    public DiskAnalyzerViewModel() { Title = "Disk Analyzer"; }
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
+
+    public DiskAnalyzerViewModel(IPlatformCapabilities? platformCapabilities = null)
+    {
+        Title    = "Disk Analyzer";
+        Platform = platformCapabilities ?? new MockPlatformCapabilities();
+    }
 
     // ── Tab switching ────────────────────────────────────────────────────────
 

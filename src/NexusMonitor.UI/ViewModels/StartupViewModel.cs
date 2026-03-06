@@ -14,6 +14,9 @@ public partial class StartupViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlyList<StartupItem> _allItems = [];
 
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
+
     [ObservableProperty] private ObservableCollection<StartupItem> _items = [];
     [ObservableProperty] private StartupItem? _selectedItem;
     [ObservableProperty] private string _searchText = string.Empty;
@@ -27,10 +30,12 @@ public partial class StartupViewModel : ViewModelBase, IDisposable
     /// <summary>Sort direction persisted here so it survives tab switches.</summary>
     public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
 
-    public StartupViewModel(IStartupProvider provider)
+    public StartupViewModel(IStartupProvider provider,
+        IPlatformCapabilities? platformCapabilities = null)
     {
         Title     = "Startup";
         _provider = provider;
+        Platform  = platformCapabilities ?? new MockPlatformCapabilities();
         _ = LoadAsync();
     }
 

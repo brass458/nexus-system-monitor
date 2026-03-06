@@ -286,7 +286,8 @@
                                  Foreground="{DynamicResource TextTertiaryBrush}"
                                  TextWrapping="Wrap"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Spacing="4">
+                    <StackPanel Grid.Column="2" Spacing="4"
+                                IsVisible="{Binding Platform.SupportsCpuAffinity}">
                       <TextBlock Text="CPU Set IDs (comma-separated)" FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditCpuSetIds}"
@@ -324,14 +325,16 @@
                                 SelectedIndex="{Binding EditPriorityIndex}"/>
                     </StackPanel>
                     <!-- I/O Priority -->
-                    <StackPanel Grid.Column="2" Spacing="4">
+                    <StackPanel Grid.Column="2" Spacing="4"
+                                IsVisible="{Binding Platform.SupportsIoPriority}">
                       <TextBlock Text="I/O Priority" FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.IoPriorityOptions}"
                                 SelectedIndex="{Binding EditIoPriorityIndex}"/>
                     </StackPanel>
                     <!-- Memory Priority -->
-                    <StackPanel Grid.Column="4" Spacing="4">
+                    <StackPanel Grid.Column="4" Spacing="4"
+                                IsVisible="{Binding Platform.SupportsMemoryPriority}">
                       <TextBlock Text="Memory Priority" FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.MemPriorityOptions}"
@@ -341,7 +344,8 @@
 
                   <Grid ColumnDefinitions="*,14,*">
                     <!-- Efficiency Mode -->
-                    <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel Grid.Column="0" Spacing="4"
+                                IsVisible="{Binding Platform.SupportsEfficiencyMode}">
                       <TextBlock Text="Efficiency Mode (EcoQoS)" FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <ComboBox ItemsSource="{x:Static vm:RulesViewModel.EfficiencyOptions}"
@@ -351,7 +355,8 @@
                                  TextWrapping="Wrap"/>
                     </StackPanel>
                     <!-- CPU Affinity -->
-                    <StackPanel Grid.Column="2" Spacing="4">
+                    <StackPanel Grid.Column="2" Spacing="4"
+                                IsVisible="{Binding Platform.SupportsCpuAffinity}">
                       <TextBlock Text="CPU Affinity Mask (hex)" FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"/>
                       <TextBox Text="{Binding EditAffinityHex}"

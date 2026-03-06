@@ -14,4 +14,10 @@ public sealed class LinuxPlatformCapabilities : IPlatformCapabilities
     public string FileManagerName          => "Files";
     public string ServiceManagerName       => "systemd";
     public bool SupportsServiceStartupType => true;
+    public bool SupportsRegistry           => false;
+    public bool SupportsEfficiencyMode     => false;
+    public bool SupportsHandles            => false;
+    public bool SupportsMemoryMap          => false;
+    public bool SupportsPowerPlan          => true;
+    public string OpenLocationMenuLabel    => "Show in Files";
 }

@@ -7,7 +7,7 @@ namespace NexusMonitor.Platform.Linux;
 /// Prevents system sleep on Linux by holding a systemd-inhibit lock.
 /// Falls back silently if systemd-inhibit is not available.
 /// </summary>
-public sealed class LinuxSleepPreventionProvider : ISleepPreventionProvider
+public sealed class LinuxSleepPreventionProvider : ISleepPreventionProvider, IDisposable
 {
     private readonly object _lock = new();
     private Process? _inhibitProcess;
@@ -52,4 +52,6 @@ public sealed class LinuxSleepPreventionProvider : ISleepPreventionProvider
             finally { _inhibitProcess = null; }
         }
     }
+
+    public void Dispose() => AllowSleep();
 }

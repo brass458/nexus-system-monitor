@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Rules;
@@ -12,6 +13,9 @@ public partial class AutomationViewModel : ViewModelBase
 {
     private readonly AppSettings      _settings;
     private readonly SettingsService  _settingsService;
+
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
 
     // ── Foreground Boost ────────────────────────────────────────────────────
     [ObservableProperty] private bool   _foregroundBoostEnabled;
@@ -40,11 +44,13 @@ public partial class AutomationViewModel : ViewModelBase
     public ObservableCollection<InstanceBalancerRule> InstanceBalancerRules { get; } = [];
     [ObservableProperty] private InstanceBalancerRule? _selectedInstanceBalancerRule;
 
-    public AutomationViewModel(AppSettings settings, SettingsService settingsService)
+    public AutomationViewModel(AppSettings settings, SettingsService settingsService,
+        IPlatformCapabilities? platformCapabilities = null)
     {
         Title             = "Automation";
         _settings         = settings;
         _settingsService  = settingsService;
+        Platform          = platformCapabilities ?? new MockPlatformCapabilities();
 
         LoadFromSettings();
     }

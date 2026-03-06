@@ -14,4 +14,10 @@ public sealed class WindowsPlatformCapabilities : IPlatformCapabilities
     public string FileManagerName         => "Explorer";
     public string ServiceManagerName      => "Services";
     public bool SupportsServiceStartupType => true;
+    public bool SupportsRegistry           => true;
+    public bool SupportsEfficiencyMode     => true;
+    public bool SupportsHandles            => true;
+    public bool SupportsMemoryMap          => true;
+    public bool SupportsPowerPlan          => true;
+    public string OpenLocationMenuLabel    => "Open File Location";
 }

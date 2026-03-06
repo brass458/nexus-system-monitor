@@ -52,6 +52,9 @@ public partial class RulesViewModel : ViewModelBase
     // Validation
     [ObservableProperty] private string _validationError = "";
 
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
+
     // ── Visibility helpers ────────────────────────────────────────────────────
     public bool IsConditionEnabled => EditConditionTypeIndex > 0;
     public bool IsWatchdogEnabled  => EditWatchdogActionIndex > 0;
@@ -239,10 +242,12 @@ public partial class RulesViewModel : ViewModelBase
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public RulesViewModel(RulesPersistence persistence)
+    public RulesViewModel(RulesPersistence persistence,
+        IPlatformCapabilities? platformCapabilities = null)
     {
         Title        = "Rules";
         _persistence = persistence;
+        Platform     = platformCapabilities ?? new MockPlatformCapabilities();
         LoadRules();
     }
 

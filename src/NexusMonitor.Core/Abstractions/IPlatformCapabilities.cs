@@ -20,6 +20,18 @@ public interface IPlatformCapabilities
     string ServiceManagerName { get; }
     /// <summary>True if the Services tab's startup-type submenu is supported on this platform.</summary>
     bool SupportsServiceStartupType { get; }
+    /// <summary>True on Windows where the registry editor and registry-key startup entries exist.</summary>
+    bool SupportsRegistry { get; }
+    /// <summary>True on Windows 11+ where EcoQoS (Efficiency Mode) is available.</summary>
+    bool SupportsEfficiencyMode { get; }
+    /// <summary>True on Windows where handle enumeration via NtQuerySystemInformation is available.</summary>
+    bool SupportsHandles { get; }
+    /// <summary>True on Windows where VirtualQueryEx memory map is available.</summary>
+    bool SupportsMemoryMap { get; }
+    /// <summary>True on platforms where power plans are switchable (Windows and Linux; not macOS).</summary>
+    bool SupportsPowerPlan { get; }
+    /// <summary>Platform-correct label for the "Open file location" context menu item.</summary>
+    string OpenLocationMenuLabel { get; }
 }
 
 /// <summary>Full-featured fallback used in mock/design-time builds.</summary>
@@ -35,4 +47,10 @@ public sealed class MockPlatformCapabilities : IPlatformCapabilities
     public string FileManagerName          => "Explorer";
     public string ServiceManagerName       => "Services";
     public bool SupportsServiceStartupType => true;
+    public bool SupportsRegistry           => true;
+    public bool SupportsEfficiencyMode     => true;
+    public bool SupportsHandles            => true;
+    public bool SupportsMemoryMap          => true;
+    public bool SupportsPowerPlan          => true;
+    public string OpenLocationMenuLabel    => "Open File Location";
 }

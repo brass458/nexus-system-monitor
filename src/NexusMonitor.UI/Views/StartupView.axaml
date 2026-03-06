@@ -101,8 +101,9 @@
             <MenuItem Header="Enable"             Command="{Binding EnableItemCommand}"/>
             <MenuItem Header="Disable"            Command="{Binding DisableItemCommand}"/>
             <Separator/>
-            <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
-            <MenuItem Header="Open Registry Key"  Command="{Binding OpenRegistryKeyCommand}"/>
+            <MenuItem Header="{Binding Platform.OpenLocationMenuLabel}" Command="{Binding OpenFileLocationCommand}"/>
+            <MenuItem Header="Open Registry Key"  Command="{Binding OpenRegistryKeyCommand}"
+                      IsVisible="{Binding Platform.SupportsRegistry}"/>
           </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>

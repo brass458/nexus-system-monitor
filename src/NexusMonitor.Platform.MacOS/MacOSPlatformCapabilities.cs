@@ -14,4 +14,10 @@ public sealed class MacOSPlatformCapabilities : IPlatformCapabilities
     public string FileManagerName          => "Finder";
     public string ServiceManagerName       => "Launch Daemons";
     public bool SupportsServiceStartupType => false;
+    public bool SupportsRegistry           => false;
+    public bool SupportsEfficiencyMode     => false;
+    public bool SupportsHandles            => false;
+    public bool SupportsMemoryMap          => false;
+    public bool SupportsPowerPlan          => false;
+    public string OpenLocationMenuLabel    => "Reveal in Finder";
 }

@@ -124,7 +124,7 @@
               </MenuItem>
               <Separator/>
               <MenuItem Header="Go to Process"      Command="{Binding GoToProcessCommand}"/>
-              <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
+              <MenuItem Header="{Binding Platform.OpenLocationMenuLabel}" Command="{Binding OpenFileLocationCommand}"/>
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Columns>

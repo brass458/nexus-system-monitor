@@ -70,6 +70,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     // Shared multicast observable
     private IObservable<SystemMetrics>? _shared;
     private readonly object _sharedLock = new();
+    private readonly object _metricsLock = new();
 
     // ── ISystemMetricsProvider ─────────────────────────────────────────────────
     public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
@@ -95,15 +96,18 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     // ── Snapshot ───────────────────────────────────────────────────────────────
     private SystemMetrics BuildMetrics()
     {
-        return new SystemMetrics
+        lock (_metricsLock)
         {
-            Cpu             = ReadCpu(),
-            Memory          = ReadMemory(),
-            Disks           = ReadDisks(),
-            NetworkAdapters = ReadNetwork(),
-            Gpus            = ReadGpu(),
-            Timestamp       = DateTime.UtcNow,
-        };
+            return new SystemMetrics
+            {
+                Cpu             = ReadCpu(),
+                Memory          = ReadMemory(),
+                Disks           = ReadDisks(),
+                NetworkAdapters = ReadNetwork(),
+                Gpus            = ReadGpu(),
+                Timestamp       = DateTime.UtcNow,
+            };
+        }
     }
 
     // ── CPU (/proc/stat) ───────────────────────────────────────────────────────
@@ -557,8 +561,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { proc.Kill(); return []; }
+            var output = outputTask.Result;
 
             var result = new List<GpuMetrics>();
             foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))

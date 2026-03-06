@@ -767,7 +767,7 @@
           <StackPanel Grid.Column="0" VerticalAlignment="Center">
             <TextBlock Text="Backdrop Blur Mode" FontSize="{DynamicResource NxFont12}"
                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <TextBlock Text="Acrylic: Win 10/11  ·  Mica: Win 11+  ·  Blur: legacy"
+            <TextBlock Text="Acrylic  ·  Mica  ·  Blur  ·  None"
                        FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                        Margin="0,2,0,0"/>
           </StackPanel>

@@ -173,9 +173,11 @@ public sealed class MacOSHardwareInfoProvider
                 long sizeB   = 0;
                 if (vol.TryGetProperty("spstorage_volume_size", out var sz))
                 {
-                    // Value may be a number (bytes) or string "123.45 GB"
+                    // Value may be a number (bytes) or string "499.96 GB"
                     if (sz.ValueKind == JsonValueKind.Number)
                         sizeB = sz.GetInt64();
+                    else if (sz.ValueKind == JsonValueKind.String)
+                        sizeB = ParseVramString(sz.GetString() ?? "");
                 }
                 result.Add(new StorageDriveInfo(
                     Index:        idx++,
@@ -255,9 +257,9 @@ public sealed class MacOSHardwareInfoProvider
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(5000)) { proc.Kill(); return string.Empty; }
+            return outputTask.Result;
         }
         catch { return string.Empty; }
     }

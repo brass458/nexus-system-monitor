@@ -1,49 +1,39 @@
-using System.Runtime.InteropServices;
+using System.Diagnostics;
 using NexusMonitor.Core.Automation;
 
 namespace NexusMonitor.Platform.MacOS;
 
 /// <summary>
-/// Prevents system sleep on macOS using IOKit power management assertions.
+/// Prevents system sleep on macOS by holding a <c>caffeinate -di</c> subprocess.
+/// Uses the same subprocess-hold pattern as LinuxSleepPreventionProvider to avoid
+/// the CFStringRef marshalling issue with IOPMAssertionCreateWithName P/Invoke.
 /// </summary>
-public sealed class MacOSSleepPreventionProvider : ISleepPreventionProvider
+public sealed class MacOSSleepPreventionProvider : ISleepPreventionProvider, IDisposable
 {
-    [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    private static extern int IOPMAssertionCreateWithName(
-        string assertionType,
-        int assertionLevel,
-        string assertionName,
-        out uint assertionID);
-
-    [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    private static extern int IOPMAssertionRelease(uint assertionID);
-
-    private const string AssertionType  = "PreventUserIdleSystemSleep";
-    private const int    AssertionLevel = 255; // kIOPMAssertionLevelOn
-
     private readonly object _lock = new();
-    private uint _assertionId;
-    private bool _isActive;
+    private Process? _caffeinateProcess;
 
     public void PreventSleep()
     {
         lock (_lock)
         {
-            if (_isActive) return;
+            if (_caffeinateProcess is not null) return;
             try
             {
-                var result = IOPMAssertionCreateWithName(
-                    AssertionType,
-                    AssertionLevel,
-                    "NexusMonitor: sleep prevention active",
-                    out var id);
-                if (result == 0)
+                var psi = new ProcessStartInfo("caffeinate", "-di")
                 {
-                    _assertionId = id;
-                    _isActive    = true;
-                }
+                    UseShellExecute        = false,
+                    RedirectStandardInput  = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow         = true,
+                };
+                _caffeinateProcess = Process.Start(psi);
             }
-            catch { }
+            catch
+            {
+                // caffeinate not available — no-op
+                _caffeinateProcess = null;
+            }
         }
     }
 
@@ -51,13 +41,17 @@ public sealed class MacOSSleepPreventionProvider : ISleepPreventionProvider
     {
         lock (_lock)
         {
-            if (!_isActive) return;
+            if (_caffeinateProcess is null) return;
             try
             {
-                IOPMAssertionRelease(_assertionId);
-                _isActive = false;
+                if (!_caffeinateProcess.HasExited)
+                    _caffeinateProcess.Kill();
+                _caffeinateProcess.Dispose();
             }
             catch { }
+            finally { _caffeinateProcess = null; }
         }
     }
+
+    public void Dispose() => AllowSleep();
 }

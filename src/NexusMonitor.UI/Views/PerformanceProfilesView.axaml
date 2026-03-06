@@ -159,7 +159,8 @@
                 <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Power Plan:"
                              FontSize="{DynamicResource NxFont11}"
-                             Foreground="{DynamicResource TextSecondaryBrush}"/>
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             IsVisible="{Binding Platform.SupportsPowerPlan}"/>
                   <TextBlock Grid.Row="0" Grid.Column="1"
                              Text="{Binding SelectedProfile.PowerPlanName}"
                              FontSize="{DynamicResource NxFont11}"
@@ -218,7 +219,8 @@
                 </Grid>
 
                 <!-- Power Plan -->
-                <Grid ColumnDefinitions="120,Auto,*" RowDefinitions="Auto">
+                <Grid ColumnDefinitions="120,Auto,*" RowDefinitions="Auto"
+                      IsVisible="{Binding Platform.SupportsPowerPlan}">
                   <TextBlock Text="Power Plan" VerticalAlignment="Center"
                              FontSize="{DynamicResource NxFont12}"
                              Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -266,7 +268,8 @@
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Efficiency Mode" Width="120">
+                    <DataGridTemplateColumn Header="Efficiency Mode" Width="120"
+                                            IsVisible="{Binding $parent[UserControl].DataContext.Platform.SupportsEfficiencyMode}">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:ProfileProcessRule">
                           <CheckBox IsChecked="{Binding EfficiencyMode}"

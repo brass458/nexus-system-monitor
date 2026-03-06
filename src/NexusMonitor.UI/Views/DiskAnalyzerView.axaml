@@ -471,7 +471,7 @@
           </DataGrid.Columns>
           <DataGrid.ContextMenu>
             <ContextMenu>
-              <MenuItem Header="Open Location"
+              <MenuItem Header="{Binding $parent[ContextMenu].PlacementTarget.DataContext.Platform.OpenLocationMenuLabel}"
                         Command="{Binding $parent[ContextMenu].PlacementTarget.DataContext.OpenFileLocationCommand}"
                         CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.SelectedItem}"/>
               <MenuItem Header="Copy Path"
@@ -595,7 +595,7 @@
                      FontSize="{DynamicResource NxFont16}"
                      Foreground="{DynamicResource TextSecondaryBrush}"
                      HorizontalAlignment="Center"/>
-          <TextBlock Text="Supports NTFS (MFT direct read) and all other file systems"
+          <TextBlock Text="Supports fast scanning on all local file systems"
                      FontSize="{DynamicResource NxFont12}"
                      Foreground="{DynamicResource TextTertiaryBrush}"
                      HorizontalAlignment="Center"/>

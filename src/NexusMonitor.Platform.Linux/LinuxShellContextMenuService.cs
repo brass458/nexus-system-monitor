@@ -21,10 +21,11 @@ public sealed class LinuxShellContextMenuService : IShellContextMenuService
         try
         {
             var dir = Path.GetDirectoryName(path) ?? path;
-            Process.Start(new ProcessStartInfo("xdg-open", $"\"{dir}\"")
+            using var p = Process.Start(new ProcessStartInfo("xdg-open")
             {
                 UseShellExecute = false,
                 CreateNoWindow  = true,
+                ArgumentList    = { dir },
             });
         }
         catch { }

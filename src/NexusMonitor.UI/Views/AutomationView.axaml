@@ -109,7 +109,8 @@
                 </StackPanel>
               </Grid>
               <CheckBox IsChecked="{Binding IdleSaverUseEfficiencyMode}"
-                        Content="Also enable Efficiency Mode (EcoQoS) on throttled processes"/>
+                        Content="Also enable Efficiency Mode (EcoQoS) on throttled processes"
+                        IsVisible="{Binding Platform.SupportsEfficiencyMode}"/>
               <StackPanel Spacing="4">
                 <TextBlock Text="Excluded processes (comma-separated)"
                            FontSize="{DynamicResource NxFont12}"
@@ -126,7 +127,8 @@
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="{StaticResource CornerLG}">
+                CornerRadius="{StaticResource CornerLG}"
+                IsVisible="{Binding Platform.SupportsTrimMemory}">
           <StackPanel Spacing="12">
             <DockPanel>
               <ToggleSwitch DockPanel.Dock="Right"
@@ -179,7 +181,8 @@
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="{StaticResource CornerLG}">
+                CornerRadius="{StaticResource CornerLG}"
+                IsVisible="{Binding Platform.SupportsCpuAffinity}">
           <StackPanel Spacing="12">
             <DockPanel>
               <ToggleSwitch DockPanel.Dock="Right"
@@ -239,7 +242,8 @@
                 Background="{DynamicResource BgElevatedBrush}"
                 BorderBrush="{DynamicResource GlassBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="{StaticResource CornerLG}">
+                CornerRadius="{StaticResource CornerLG}"
+                IsVisible="{Binding Platform.SupportsCpuAffinity}">
           <StackPanel Spacing="12">
             <DockPanel>
               <ToggleSwitch DockPanel.Dock="Right"

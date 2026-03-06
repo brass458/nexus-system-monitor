@@ -20,10 +20,11 @@ public sealed class MacOSShellContextMenuService : IShellContextMenuService
         if (string.IsNullOrEmpty(path)) return;
         try
         {
-            Process.Start(new ProcessStartInfo("open", $"-R \"{path}\"")
+            using var p = Process.Start(new ProcessStartInfo("open")
             {
                 UseShellExecute = false,
                 CreateNoWindow  = true,
+                ArgumentList    = { "-R", path },
             });
         }
         catch { }

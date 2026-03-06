@@ -16,6 +16,9 @@ public partial class PerformanceProfilesViewModel : ViewModelBase, IDisposable
     private readonly IPowerPlanProvider        _powerPlanProvider;
     private IDisposable? _statusSub;
 
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
+
     public ObservableCollection<PerformanceProfile> Profiles { get; } = new();
 
     [ObservableProperty] private PerformanceProfile? _selectedProfile;
@@ -41,12 +44,14 @@ public partial class PerformanceProfilesViewModel : ViewModelBase, IDisposable
     public PerformanceProfilesViewModel(
         PerformanceProfileService profileService,
         SettingsService           settings,
-        IPowerPlanProvider        powerPlanProvider)
+        IPowerPlanProvider        powerPlanProvider,
+        IPlatformCapabilities?    platformCapabilities = null)
     {
         Title             = "Performance Profiles";
         _profileService   = profileService;
         _settings         = settings;
         _powerPlanProvider= powerPlanProvider;
+        Platform          = platformCapabilities ?? new MockPlatformCapabilities();
 
         // Load saved profiles
         foreach (var p in _settings.Current.PerformanceProfiles)
