@@ -25,6 +25,17 @@ public sealed class RulesEngine : IDisposable
     private List<ProcessRule>? _cachedRules;
     private IReadOnlyList<ProcessRule>? _cachedRulesSource;
 
+    // KeepRunning state: normalized exe name → state record
+    private sealed class KeepRunningState
+    {
+        public string?   ImagePath    { get; set; }
+        public string?   CommandLine  { get; set; }
+        public DateTime  LastExitTime { get; set; }
+        public int       RestartCount { get; set; }
+        public DateTime  WindowStart  { get; set; } = DateTime.UtcNow;
+    }
+    private readonly Dictionary<string, KeepRunningState> _keepRunningState = new();
+
     public RulesEngine(IProcessProvider processProvider, AppSettings settings,
         ProcessPreferenceStore? preferenceStore = null)
     {
@@ -45,7 +56,6 @@ public sealed class RulesEngine : IDisposable
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
         // Rebuild cached enabled-rules list only when the source collection reference changes.
-        // Avoids allocating a new List every tick when rules are unchanged.
         var srcRules = _settings.Rules;
         if (!ReferenceEquals(srcRules, _cachedRulesSource))
         {
@@ -84,6 +94,20 @@ public sealed class RulesEngine : IDisposable
                         try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, rule.MemoryPriority.Value); } catch { }
                     if (rule.EfficiencyMode.HasValue)
                         try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, rule.EfficiencyMode.Value); } catch { }
+                    if (rule.CpuSetIds is { Length: > 0 })
+                        try { await _processProvider.SetCpuSetsAsync(proc.Pid, rule.CpuSetIds); } catch { }
+                }
+
+                // ── KeepRunning: record image path while alive ─────────────
+                if (rule.KeepRunning)
+                {
+                    var key = rule.ProcessNamePattern.ToLowerInvariant();
+                    if (!_keepRunningState.TryGetValue(key, out var ks))
+                        _keepRunningState[key] = ks = new KeepRunningState();
+                    // Update image path from the running process snapshot
+                    if (!string.IsNullOrEmpty(proc.ImagePath))
+                        ks.ImagePath = proc.ImagePath;
+                    ks.RestartCount = 0; // process is alive — reset counter
                 }
 
                 // ── Watchdog conditions ────────────────────────────────────
@@ -111,14 +135,106 @@ public sealed class RulesEngine : IDisposable
             }
         }
 
-        // Evict dead PIDs
-        foreach (var dead in _seenPids.Where(pid => !alive.Contains(pid)).ToList())
+        // ── Evict dead PIDs ────────────────────────────────────────────────
+        var deadPids = _seenPids.Where(pid => !alive.Contains(pid)).ToList();
+        foreach (var dead in deadPids)
         {
             _seenPids.Remove(dead);
             foreach (var key in _conditionFirstSeen.Keys.Where(k => k.pid == dead).ToList())
                 _conditionFirstSeen.Remove(key);
         }
+
+        // ── KeepRunning: detect exits and restart ─────────────────────────
+        await EvaluateKeepRunning(processes, rules);
+
+        // ── Instance count limits ─────────────────────────────────────────
+        await EvaluateInstanceLimits(processes, rules);
     }
+
+    // ── KeepRunning ──────────────────────────────────────────────────────────
+
+    private Task EvaluateKeepRunning(
+        IReadOnlyList<ProcessInfo> processes,
+        List<ProcessRule> rules)
+    {
+        var now = DateTime.UtcNow;
+        var aliveNames = new HashSet<string>(
+            processes.Select(p => p.Name.ToLowerInvariant()));
+
+        foreach (var rule in rules.Where(r => r.KeepRunning))
+        {
+            var key = rule.ProcessNamePattern.ToLowerInvariant();
+            if (!_keepRunningState.TryGetValue(key, out var ks)) continue;
+
+            // Check if process has exited (we had image path, but it's no longer running)
+            bool isAlive = aliveNames.Any(n =>
+                rule.Matches(n) || n.Contains(key.TrimEnd('*').TrimStart('*'),
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (isAlive || string.IsNullOrEmpty(ks.ImagePath)) continue;
+
+            // Process exited — record exit time on first observation
+            if (ks.LastExitTime == default)
+            {
+                ks.LastExitTime = now;
+                continue;
+            }
+
+            // Cooldown check
+            var cooldown = TimeSpan.FromSeconds(
+                Math.Max(1, rule.KeepRunningCooldownSeconds));
+            if ((now - ks.LastExitTime) < cooldown) continue;
+
+            // Retry cap: max N restarts per 60-second window
+            if ((now - ks.WindowStart).TotalSeconds > 60)
+            {
+                ks.WindowStart  = now;
+                ks.RestartCount = 0;
+            }
+            if (ks.RestartCount >= rule.KeepRunningMaxRetries) continue;
+
+            // Restart
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName        = ks.ImagePath,
+                    UseShellExecute = true
+                });
+                ks.RestartCount++;
+                ks.LastExitTime = default;
+            }
+            catch { /* best-effort */ }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    // ── Instance count limits ─────────────────────────────────────────────────
+
+    private async Task EvaluateInstanceLimits(
+        IReadOnlyList<ProcessInfo> processes,
+        List<ProcessRule> rules)
+    {
+        foreach (var rule in rules.Where(r => r.MaxInstances.HasValue))
+        {
+            var max = rule.MaxInstances!.Value;
+            var matching = processes
+                .Where(p => rule.Matches(p.Name))
+                .OrderBy(p => p.StartTime)    // oldest first → kill newest excess
+                .ToList();
+
+            if (matching.Count <= max) continue;
+
+            var excess = matching.Skip(max).ToList();
+            foreach (var proc in excess)
+            {
+                try { await _processProvider.KillProcessAsync(proc.Pid); } catch { }
+            }
+        }
+    }
+
+    // ── Watchdog ─────────────────────────────────────────────────────────────
 
     private async Task EvaluateWatchdog(ProcessInfo proc, ProcessRule rule)
     {
@@ -156,6 +272,37 @@ public sealed class RulesEngine : IDisposable
                     case WatchdogAction.Terminate:
                         await _processProvider.KillProcessAsync(proc.Pid);
                         break;
+                    case WatchdogAction.SetIoPriorityLow:
+                        await _processProvider.SetIoPriorityAsync(proc.Pid, IoPriority.Low);
+                        break;
+                    case WatchdogAction.SetEfficiencyMode:
+                        await _processProvider.SetEfficiencyModeAsync(proc.Pid, true);
+                        break;
+                    case WatchdogAction.TrimWorkingSet:
+                        await _processProvider.TrimWorkingSetAsync(proc.Pid);
+                        break;
+                    case WatchdogAction.Restart:
+                        await _processProvider.KillProcessAsync(proc.Pid);
+                        // Process restart (best-effort via image path if available)
+                        if (!string.IsNullOrEmpty(proc.ImagePath))
+                        {
+                            try
+                            {
+                                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName        = proc.ImagePath,
+                                    UseShellExecute = true
+                                });
+                            }
+                            catch { }
+                        }
+                        break;
+                    case WatchdogAction.ReduceAffinity:
+                        await ApplyReduceAffinityAsync(proc.Pid, rule.ActionParams?.ReduceCoreCount ?? 1);
+                        break;
+                    case WatchdogAction.LogOnly:
+                        // No action — the condition-sustained log is implicit
+                        break;
                 }
             }
             catch { /* process may have exited */ }
@@ -164,6 +311,37 @@ public sealed class RulesEngine : IDisposable
         {
             _conditionFirstSeen.Remove(key);
         }
+    }
+
+    private async Task ApplyReduceAffinityAsync(int pid, int reduceCores)
+    {
+        try
+        {
+            var (procMask, sysMask) = await _processProvider.GetAffinityMasksAsync(pid);
+            int coreCount = CountBits(procMask);
+            int newCount  = Math.Max(1, coreCount - reduceCores);
+            long newMask  = BuildMaskWithNCores(newCount, sysMask);
+            await _processProvider.SetAffinityAsync(pid, newMask);
+        }
+        catch { }
+    }
+
+    private static int CountBits(long mask)
+    {
+        int count = 0;
+        while (mask != 0) { count += (int)(mask & 1); mask >>= 1; }
+        return count;
+    }
+
+    private static long BuildMaskWithNCores(int n, long sysMask)
+    {
+        long result = 0;
+        int  added  = 0;
+        for (int i = 0; i < 64 && added < n; i++)
+        {
+            if ((sysMask & (1L << i)) != 0) { result |= (1L << i); added++; }
+        }
+        return result == 0 ? 1 : result;
     }
 
     public void Dispose() => Stop();

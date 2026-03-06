@@ -126,6 +126,19 @@ public class App : Application
                 Services.GetRequiredService<PerformanceProfileService>()
                     .ActivateProfile(saved.Current.ActiveProfileId.Value);
 
+            // Start Phase 18 automation services
+            Services.GetRequiredService<SleepPreventionService>().Start();
+            if (saved.Current.ForegroundBoostEnabled)
+                Services.GetRequiredService<ForegroundBoostService>().Start();
+            if (saved.Current.IdleSaverEnabled)
+                Services.GetRequiredService<IdleSaverService>().Start();
+            if (saved.Current.SmartTrimEnabled)
+                Services.GetRequiredService<SmartTrimService>().Start();
+            if (saved.Current.CpuLimiterEnabled)
+                Services.GetRequiredService<CpuLimiterService>().Start();
+            if (saved.Current.InstanceBalancerEnabled)
+                Services.GetRequiredService<InstanceBalancerService>().Start();
+
             // Start smart glass adaptive service if enabled
             if (saved.Current.SmartTintEnabled)
                 Services.GetRequiredService<GlassAdaptiveService>().Start();
@@ -325,6 +338,7 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           WindowsPowerPlanProvider>();
         services.AddSingleton<INotificationService,         WindowsNotificationService>();
         services.AddSingleton<IWallpaperService,            WindowsWallpaperService>();
+        services.AddSingleton<ISleepPreventionProvider,     WindowsSleepPreventionProvider>();
         services.AddSingleton<WindowsHardwareInfoProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
@@ -336,6 +350,7 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           MacOSPowerPlanProvider>();
         services.AddSingleton<INotificationService,         MacOSNotificationService>();
         services.AddSingleton<IWallpaperService,            MacOSWallpaperService>();
+        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -346,6 +361,7 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
         services.AddSingleton<INotificationService,         LinuxNotificationService>();
         services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
+        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
         services.AddSingleton<LinuxHardwareInfoProvider>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
@@ -357,6 +373,7 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
         services.AddSingleton<INotificationService,         NullNotificationService>();
         services.AddSingleton<IWallpaperService,            NullWallpaperService>();
+        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
 #endif
 
         // -- Core services --
@@ -429,10 +446,17 @@ public class App : Application
         services.AddSingleton<ProcessPreferenceStore>();
 
         // -- Automation services --
+        services.AddSingleton<ProcessActionLock>();
         services.AddSingleton<ProBalanceService>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<RulesPersistence>();
         services.AddSingleton<PerformanceProfileService>();
+        services.AddSingleton<SleepPreventionService>();
+        services.AddSingleton<ForegroundBoostService>();
+        services.AddSingleton<IdleSaverService>();
+        services.AddSingleton<SmartTrimService>();
+        services.AddSingleton<CpuLimiterService>();
+        services.AddSingleton<InstanceBalancerService>();
 
         // -- Gaming and Alerts services --
         services.AddSingleton<GamingModeService>();
@@ -464,6 +488,7 @@ public class App : Application
         services.AddSingleton<OverlayViewModel>();
         services.AddSingleton<LanScannerViewModel>();
         services.AddSingleton<PerformanceProfilesViewModel>();
+        services.AddSingleton<AutomationViewModel>();
 
         return services.BuildServiceProvider();
     }

@@ -3,8 +3,26 @@ using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Core.Rules;
 
-public enum WatchdogAction { None, SetBelowNormal, SetIdle, Terminate }
+public enum WatchdogAction
+{
+    None,
+    SetBelowNormal,
+    SetIdle,
+    Terminate,
+    ReduceAffinity,
+    SetIoPriorityLow,
+    SetEfficiencyMode,
+    TrimWorkingSet,
+    Restart,
+    LogOnly
+}
+
 public enum ConditionType  { Always, CpuAbove, RamAbove }
+
+public class WatchdogActionParams
+{
+    public int? ReduceCoreCount { get; set; }
+}
 
 public class RuleCondition
 {
@@ -45,10 +63,16 @@ public class ProcessRule
     public bool?            EfficiencyMode { get; set; }
 
     // ── Watchdog / conditional actions ───────────────────────────────────
-    public RuleCondition? Condition      { get; set; }
-    public WatchdogAction WatchdogAction { get; set; } = WatchdogAction.None;
-    public bool           KeepRunning    { get; set; } = false; // auto-restart on exit
-    public bool           Disallowed     { get; set; } = false; // auto-terminate on launch
+    public RuleCondition?      Condition       { get; set; }
+    public WatchdogAction      WatchdogAction  { get; set; } = WatchdogAction.None;
+    public WatchdogActionParams? ActionParams  { get; set; }
+    public bool                KeepRunning     { get; set; } = false; // auto-restart on exit
+    public int                 KeepRunningMaxRetries       { get; set; } = 3;
+    public int                 KeepRunningCooldownSeconds  { get; set; } = 5;
+    public bool                Disallowed      { get; set; } = false; // auto-terminate on launch
+    public int?                MaxInstances    { get; set; }
+    public bool                PreventSleep    { get; set; } = false;
+    public uint[]?             CpuSetIds       { get; set; }
 
     // ── Display ───────────────────────────────────────────────────────────
     public string Summary => BuildSummary();
@@ -62,6 +86,9 @@ public class ProcessRule
         if (EfficiencyMode == true) parts.Add("Efficiency");
         if (Disallowed)             parts.Add("Block");
         if (KeepRunning)            parts.Add("KeepRunning");
+        if (MaxInstances.HasValue)  parts.Add($"MaxInstances={MaxInstances}");
+        if (PreventSleep)           parts.Add("PreventSleep");
+        if (CpuSetIds?.Length > 0)  parts.Add($"CpuSets=[{string.Join(",", CpuSetIds!)}]");
         if (WatchdogAction != WatchdogAction.None) parts.Add($"Watchdog={WatchdogAction}");
         return parts.Count == 0 ? "(no actions)" : string.Join(", ", parts);
     }

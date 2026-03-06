@@ -44,6 +44,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("Startup",      "\uF678", () => services.GetRequiredService<StartupViewModel>(),      NavGroup.Monitor,  eager: false),
             new NavItem("System Info",  "\uF35A", () => services.GetRequiredService<SystemInfoViewModel>(),   NavGroup.Monitor,  eager: false),
             // Tools — alphabetical
+            new NavItem("Automation",   "\uE945", () => services.GetRequiredService<AutomationViewModel>(),             NavGroup.Tools,    eager: false),
             new NavItem("Disk Analyzer","\uF1C9", () => services.GetRequiredService<DiskAnalyzerViewModel>(),           NavGroup.Tools,    eager: false),
             new NavItem("Gaming Mode",  "\uF451", () => services.GetRequiredService<GamingModeViewModel>(),             NavGroup.Tools,    eager: false),
             new NavItem("LAN Scanner",  "\uEA5D", () => services.GetRequiredService<LanScannerViewModel>(),             NavGroup.Tools,    eager: false),

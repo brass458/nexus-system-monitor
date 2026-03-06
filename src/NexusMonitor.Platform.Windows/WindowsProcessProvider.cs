@@ -1181,6 +1181,26 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             finally { Kernel32.CloseHandle(h); }
         }, ct);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetProcessDefaultCpuSets(
+        nint process, uint[]? cpuSetIds, uint count);
+
+    public Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default) =>
+        Task.Run(() =>
+        {
+            nint h = Kernel32.OpenProcess(Kernel32.PROCESS_SET_INFORMATION, false, (uint)pid);
+            if (h == nint.Zero) return;
+            try
+            {
+                SetProcessDefaultCpuSets(
+                    h,
+                    cpuSetIds.Length == 0 ? null : cpuSetIds,
+                    (uint)cpuSetIds.Length);
+            }
+            finally { Kernel32.CloseHandle(h); }
+        }, ct);
+
     public void Dispose()
     {
         _cpuSamples.Clear();

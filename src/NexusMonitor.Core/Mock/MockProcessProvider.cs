@@ -80,6 +80,9 @@ public sealed class MockProcessProvider : IProcessProvider
     public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult((0xFFL, 0xFFL));
 
+    public Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
 
     private static ProcessInfo[] GetAnimatedSnapshot()
     {

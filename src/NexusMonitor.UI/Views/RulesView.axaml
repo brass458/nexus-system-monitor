@@ -256,16 +256,48 @@
                                  FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </StackPanel>
                   </Grid>
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <CheckBox IsChecked="{Binding EditEnabled}"
+                  <WrapPanel Orientation="Horizontal">
+                    <CheckBox Margin="0,0,12,4"
+                              IsChecked="{Binding EditEnabled}"
                               Content="Rule is enabled"/>
-                    <CheckBox IsChecked="{Binding EditDisallowed}"
+                    <CheckBox Margin="0,0,12,4"
+                              IsChecked="{Binding EditDisallowed}"
                               Content="Disallowed (terminate on launch)"
                               Foreground="{StaticResource ColorDangerBrush}"/>
-                    <CheckBox IsChecked="{Binding EditKeepRunning}"
+                    <CheckBox Margin="0,0,12,4"
+                              IsChecked="{Binding EditKeepRunning}"
                               Content="Keep running (restart on exit)"
                               Foreground="{StaticResource ColorSuccessBrush}"/>
-                  </StackPanel>
+                    <CheckBox Margin="0,0,12,4"
+                              IsChecked="{Binding EditPreventSleep}"
+                              Content="Prevent sleep while running"/>
+                  </WrapPanel>
+
+                  <!-- Max instances + CPU sets -->
+                  <Grid ColumnDefinitions="*,14,*">
+                    <StackPanel Grid.Column="0" Spacing="4">
+                      <TextBlock Text="Max Instances" FontSize="{DynamicResource NxFont12}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
+                      <TextBox Text="{Binding EditMaxInstances}"
+                               Watermark="(unlimited)"
+                               FontFamily="Consolas,Courier New,monospace"/>
+                      <TextBlock Text="Newest excess instances will be terminated."
+                                 FontSize="{DynamicResource NxFont10}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                      <TextBlock Text="CPU Set IDs (comma-separated)" FontSize="{DynamicResource NxFont12}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"/>
+                      <TextBox Text="{Binding EditCpuSetIds}"
+                               Watermark="e.g. 256,257,258"
+                               FontFamily="Consolas,Courier New,monospace"/>
+                      <TextBlock Text="Windows 10+ preferred-core hint (softer than affinity). Leave blank to use default."
+                                 FontSize="{DynamicResource NxFont10}"
+                                 Foreground="{DynamicResource TextTertiaryBrush}"
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Grid>
                 </StackPanel>
               </Border>
 
@@ -361,6 +393,20 @@
                                 SelectedIndex="{Binding EditWatchdogActionIndex}"/>
                     </StackPanel>
                   </Grid>
+
+                  <!-- ReduceAffinity parameter (shown only for that action) -->
+                  <StackPanel IsVisible="{Binding IsReduceAffinitySelected}" Spacing="4">
+                    <TextBlock Text="Reduce by N cores" FontSize="{DynamicResource NxFont12}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBox Text="{Binding EditReduceCoreCount}"
+                             Watermark="1"
+                             FontFamily="Consolas,Courier New,monospace"
+                             Width="100" HorizontalAlignment="Left"/>
+                    <TextBlock Text="How many cores to remove from affinity mask when condition fires."
+                               FontSize="{DynamicResource NxFont10}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
 
                   <!-- Condition parameters (shown when condition != Always) -->
                   <Grid ColumnDefinitions="*,14,*,14,*"

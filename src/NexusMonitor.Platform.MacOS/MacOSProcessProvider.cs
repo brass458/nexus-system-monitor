@@ -358,6 +358,10 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     public Task SetEfficiencyModeAsync(int pid, bool enabled, CancellationToken ct = default) =>
         Task.CompletedTask;
 
+    // macOS CPU sets — no equivalent, no-op
+    public Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
     // ── Detail queries ─────────────────────────────────────────────────────────
     public Task<IReadOnlyList<ModuleInfo>> GetModulesAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ModuleInfo>>([]);

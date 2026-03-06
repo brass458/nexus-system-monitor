@@ -1,0 +1,300 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             x:Class="NexusMonitor.UI.Views.AutomationView"
+             x:DataType="vm:AutomationViewModel"
+             x:CompileBindings="False">
+
+  <DockPanel>
+
+    <!-- ══ Header ══════════════════════════════════════════════════════════ -->
+    <Border DockPanel.Dock="Top"
+            Padding="16,10"
+            Background="{DynamicResource BgSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderSubtleBrush}"
+            BorderThickness="0,0,0,1">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left"
+                   Text="Automation Services"
+                   FontSize="{DynamicResource NxFont16}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   VerticalAlignment="Center"/>
+        <Button DockPanel.Dock="Right"
+                Classes="nx-btn"
+                Command="{Binding SaveCommand}">
+          <TextBlock Text="💾 Save All" FontSize="{DynamicResource NxFont12}"/>
+        </Button>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Spacing="12" Margin="16" MaxWidth="820">
+
+        <!-- Intro -->
+        <TextBlock Text="These services run continuously in the background and automatically manage process priorities, CPU affinity, and memory — no manual intervention required."
+                   FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+        <!-- ══ Foreground Boost ══════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding ForegroundBoostEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="FOREGROUND BOOST" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="Medium" LetterSpacing="0.6"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="Boosts the active window's process to Above Normal priority. Restores when focus moves away."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding ForegroundBoostEnabled}">
+              <TextBlock Text="Excluded processes (comma-separated)"
+                         FontSize="{DynamicResource NxFont12}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"/>
+              <TextBox Text="{Binding ForegroundBoostExclusionsText}"
+                       Watermark="e.g. devenv, chrome, winlogon"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ IdleSaver ════════════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding IdleSaverEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="IDLESAVER" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="Medium" LetterSpacing="0.6"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="Throttles background processes that have been idle for several consecutive ticks. Restores when they become active again."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+            <StackPanel Spacing="10" IsVisible="{Binding IdleSaverEnabled}">
+              <Grid ColumnDefinitions="*,14,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="CPU Idle Threshold (%)"
+                             FontSize="{DynamicResource NxFont12}"
+                             Foreground="{DynamicResource TextSecondaryBrush}"/>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <Slider Grid.Column="0" Minimum="0.1" Maximum="10"
+                            Value="{Binding IdleSaverCpuThreshold}"/>
+                    <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}"
+                               Text="{Binding IdleSaverCpuThreshold, StringFormat='{}{0:F1}%'}"
+                               Foreground="{DynamicResource AccentBlueBrush}"
+                               VerticalAlignment="Center" Margin="6,0,0,0"/>
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="Idle Ticks Required"
+                             FontSize="{DynamicResource NxFont12}"
+                             Foreground="{DynamicResource TextSecondaryBrush}"/>
+                  <NumericUpDown Value="{Binding IdleSaverIdleTicks}"
+                                 Minimum="1" Maximum="20" Increment="1" FormatString="0"/>
+                </StackPanel>
+              </Grid>
+              <CheckBox IsChecked="{Binding IdleSaverUseEfficiencyMode}"
+                        Content="Also enable Efficiency Mode (EcoQoS) on throttled processes"/>
+              <StackPanel Spacing="4">
+                <TextBlock Text="Excluded processes (comma-separated)"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <TextBox Text="{Binding IdleSaverExclusionsText}"
+                         Watermark="e.g. audiodg, svchost"/>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ SmartTrim ════════════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding SmartTrimEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="SMART TRIM (AUTO)" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="Medium" LetterSpacing="0.6"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="Automatically trims process working sets on a timer. Under RAM pressure, trims all background processes. Otherwise trims only large idle processes."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+            <Grid ColumnDefinitions="*,14,*,14,*"
+                  IsVisible="{Binding SmartTrimEnabled}">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="Interval (seconds)"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <NumericUpDown Value="{Binding SmartTrimInterval}"
+                               Minimum="10" Maximum="3600" Increment="10" FormatString="0"/>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Text="RAM Pressure Threshold (%)"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Grid ColumnDefinitions="*,Auto">
+                  <Slider Grid.Column="0" Minimum="5" Maximum="50"
+                          Value="{Binding SmartTrimPressurePercent}"/>
+                  <TextBlock Grid.Column="1" FontSize="{DynamicResource NxFont11}"
+                             Text="{Binding SmartTrimPressurePercent, StringFormat='{}{0:F0}%'}"
+                             Foreground="{DynamicResource AccentBlueBrush}"
+                             VerticalAlignment="Center" Margin="6,0,0,0"/>
+                </Grid>
+              </StackPanel>
+              <StackPanel Grid.Column="4" Spacing="4">
+                <TextBlock Text="Min Working Set (MB)"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <NumericUpDown Value="{Binding SmartTrimMinWorkingSetMb}"
+                               Minimum="10" Maximum="4096" Increment="10" FormatString="0"/>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ CPU Limiter ══════════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding CpuLimiterEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="CPU LIMITER" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="Medium" LetterSpacing="0.6"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="Temporarily reduces CPU affinity of a process that exceeds a threshold for a sustained period, then restores it."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+
+            <!-- Rules DataGrid -->
+            <DataGrid ItemsSource="{Binding CpuLimiterRules}"
+                      SelectedItem="{Binding SelectedCpuLimiterRule}"
+                      AutoGenerateColumns="False"
+                      CanUserReorderColumns="False"
+                      CanUserResizeColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      MinHeight="120">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Process Pattern"
+                                    Binding="{Binding ProcessNamePattern}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="CPU %" Width="60"
+                                    Binding="{Binding CpuThresholdPercent}"/>
+                <DataGridTextColumn Header="Over (s)" Width="65"
+                                    Binding="{Binding OverLimitSeconds}"/>
+                <DataGridTextColumn Header="Reduce Cores" Width="90"
+                                    Binding="{Binding ReduceByCores}"/>
+                <DataGridTextColumn Header="Limit (s)" Width="65"
+                                    Binding="{Binding LimitDurationSeconds}"/>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="nx-btn"
+                      Command="{Binding AddCpuLimiterRuleCommand}">
+                <TextBlock Text="＋ Add Rule" FontSize="{DynamicResource NxFont12}"/>
+              </Button>
+              <Button Classes="nx-btn"
+                      Command="{Binding RemoveCpuLimiterRuleCommand}"
+                      CommandParameter="{Binding SelectedCpuLimiterRule}"
+                      IsEnabled="{Binding SelectedCpuLimiterRule,
+                                  Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="🗑 Remove" FontSize="{DynamicResource NxFont12}"/>
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ Instance Balancer ════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding InstanceBalancerEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="INSTANCE BALANCER" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="Medium" LetterSpacing="0.6"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+                <TextBlock Text="Distributes CPU affinity across multiple instances of the same process to prevent core contention."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+
+            <DataGrid ItemsSource="{Binding InstanceBalancerRules}"
+                      SelectedItem="{Binding SelectedInstanceBalancerRule}"
+                      AutoGenerateColumns="False"
+                      CanUserReorderColumns="False"
+                      CanUserResizeColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      MinHeight="120">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Process Pattern"
+                                    Binding="{Binding ProcessNamePattern}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Algorithm" Width="130"
+                                    Binding="{Binding Algorithm}"/>
+                <DataGridTextColumn Header="Cores/Instance" Width="100"
+                                    Binding="{Binding CoresPerInstance}"/>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="nx-btn"
+                      Command="{Binding AddInstanceBalancerRuleCommand}">
+                <TextBlock Text="＋ Add Rule" FontSize="{DynamicResource NxFont12}"/>
+              </Button>
+              <Button Classes="nx-btn"
+                      Command="{Binding RemoveInstanceBalancerRuleCommand}"
+                      CommandParameter="{Binding SelectedInstanceBalancerRule}"
+                      IsEnabled="{Binding SelectedInstanceBalancerRule,
+                                  Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="🗑 Remove" FontSize="{DynamicResource NxFont12}"/>
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Bottom padding -->
+        <Border Height="16"/>
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+
+</UserControl>

@@ -42,8 +42,12 @@ public partial class RulesViewModel : ViewModelBase
     [ObservableProperty] private int    _editConditionDurationSecs  = 5;
     [ObservableProperty] private int    _editWatchdogActionIndex    = 0; // None/BelowNormal/Idle/Terminate
 
-    [ObservableProperty] private bool _editDisallowed  = false;
-    [ObservableProperty] private bool _editKeepRunning = false;
+    [ObservableProperty] private bool   _editDisallowed    = false;
+    [ObservableProperty] private bool   _editKeepRunning   = false;
+    [ObservableProperty] private bool   _editPreventSleep  = false;
+    [ObservableProperty] private string _editMaxInstances  = "";  // "" = not set
+    [ObservableProperty] private string _editCpuSetIds     = "";  // comma-separated uint IDs
+    [ObservableProperty] private string _editReduceCoreCount = ""; // for ReduceAffinity action
 
     // Validation
     [ObservableProperty] private string _validationError = "";
@@ -55,7 +59,10 @@ public partial class RulesViewModel : ViewModelBase
     partial void OnEditConditionTypeIndexChanged(int value)
         => OnPropertyChanged(nameof(IsConditionEnabled));
     partial void OnEditWatchdogActionIndexChanged(int value)
-        => OnPropertyChanged(nameof(IsWatchdogEnabled));
+    {
+        OnPropertyChanged(nameof(IsWatchdogEnabled));
+        OnPropertyChanged(nameof(IsReduceAffinitySelected));
+    }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
@@ -96,7 +103,21 @@ public partial class RulesViewModel : ViewModelBase
         ["Always (on launch)", "CPU above threshold", "RAM above threshold"];
 
     public static IReadOnlyList<string> WatchdogActionOptions { get; } =
-        ["None", "Set Below Normal", "Set Idle", "Terminate process"];
+    [
+        "None",
+        "Set Below Normal",
+        "Set Idle",
+        "Terminate process",
+        "Reduce Affinity",
+        "Set I/O Priority Low",
+        "Set Efficiency Mode",
+        "Trim Working Set",
+        "Restart process",
+        "Log Only"
+    ];
+
+    // True when the ReduceAffinity action is selected (shows core count input)
+    public bool IsReduceAffinitySelected => EditWatchdogActionIndex == 4;
 
     // ── Priority enum helpers (index ↔ nullable enum) ─────────────────────────
 
@@ -179,15 +200,27 @@ public partial class RulesViewModel : ViewModelBase
         1 => WatchdogAction.SetBelowNormal,
         2 => WatchdogAction.SetIdle,
         3 => WatchdogAction.Terminate,
+        4 => WatchdogAction.ReduceAffinity,
+        5 => WatchdogAction.SetIoPriorityLow,
+        6 => WatchdogAction.SetEfficiencyMode,
+        7 => WatchdogAction.TrimWorkingSet,
+        8 => WatchdogAction.Restart,
+        9 => WatchdogAction.LogOnly,
         _ => WatchdogAction.None
     };
 
     private static int WatchdogToIndex(WatchdogAction a) => a switch
     {
-        WatchdogAction.SetBelowNormal => 1,
-        WatchdogAction.SetIdle        => 2,
-        WatchdogAction.Terminate      => 3,
-        _                             => 0
+        WatchdogAction.SetBelowNormal   => 1,
+        WatchdogAction.SetIdle          => 2,
+        WatchdogAction.Terminate        => 3,
+        WatchdogAction.ReduceAffinity   => 4,
+        WatchdogAction.SetIoPriorityLow => 5,
+        WatchdogAction.SetEfficiencyMode => 6,
+        WatchdogAction.TrimWorkingSet   => 7,
+        WatchdogAction.Restart          => 8,
+        WatchdogAction.LogOnly          => 9,
+        _                               => 0
     };
 
     private static ConditionType IndexToConditionType(int index) => index switch
@@ -294,7 +327,39 @@ public partial class RulesViewModel : ViewModelBase
         rule.EfficiencyMode     = IndexToEfficiency(EditEfficiencyIndex);
         rule.Disallowed         = EditDisallowed;
         rule.KeepRunning        = EditKeepRunning;
+        rule.PreventSleep       = EditPreventSleep;
         rule.WatchdogAction     = IndexToWatchdog(EditWatchdogActionIndex);
+
+        // MaxInstances
+        rule.MaxInstances = int.TryParse(EditMaxInstances, out int mi) && mi > 0 ? mi : null;
+
+        // CPU Sets
+        if (!string.IsNullOrWhiteSpace(EditCpuSetIds))
+        {
+            var ids = EditCpuSetIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => uint.TryParse(s.Trim(), out var u) ? (uint?)u : null)
+                .Where(u => u.HasValue)
+                .Select(u => u!.Value)
+                .ToArray();
+            rule.CpuSetIds = ids.Length > 0 ? ids : null;
+        }
+        else
+        {
+            rule.CpuSetIds = null;
+        }
+
+        // ReduceAffinity action params
+        if (rule.WatchdogAction == WatchdogAction.ReduceAffinity)
+        {
+            rule.ActionParams = new WatchdogActionParams
+            {
+                ReduceCoreCount = int.TryParse(EditReduceCoreCount, out int rc) && rc > 0 ? rc : 1
+            };
+        }
+        else
+        {
+            rule.ActionParams = null;
+        }
 
         // Affinity mask
         if (!string.IsNullOrWhiteSpace(EditAffinityHex))
@@ -364,6 +429,10 @@ public partial class RulesViewModel : ViewModelBase
         EditWatchdogActionIndex    = 0;
         EditDisallowed             = false;
         EditKeepRunning            = false;
+        EditPreventSleep           = false;
+        EditMaxInstances           = "";
+        EditCpuSetIds              = "";
+        EditReduceCoreCount        = "";
         ValidationError            = "";
     }
 
@@ -386,6 +455,12 @@ public partial class RulesViewModel : ViewModelBase
         EditWatchdogActionIndex   = WatchdogToIndex(rule.WatchdogAction);
         EditDisallowed            = rule.Disallowed;
         EditKeepRunning           = rule.KeepRunning;
+        EditPreventSleep          = rule.PreventSleep;
+        EditMaxInstances          = rule.MaxInstances?.ToString() ?? "";
+        EditCpuSetIds             = rule.CpuSetIds is { Length: > 0 }
+                                        ? string.Join(",", rule.CpuSetIds)
+                                        : "";
+        EditReduceCoreCount       = rule.ActionParams?.ReduceCoreCount?.ToString() ?? "";
         ValidationError           = "";
     }
 }

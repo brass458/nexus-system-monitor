@@ -1,4 +1,5 @@
 using NexusMonitor.Core.Alerts;
+using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Rules;
 
 namespace NexusMonitor.Core.Models;
@@ -96,4 +97,29 @@ public class AppSettings
     public int    AnomalyCooldownSeconds      { get; set; } = 60;
     public int    AnomalyNewConnGracePeriodSec{ get; set; } = 120;
     public int    MetricsEventsRetentionDays  { get; set; } = 90;
+
+    // Foreground Boosting (Phase 18)
+    public bool          ForegroundBoostEnabled    { get; set; } = false;
+    public List<string>  ForegroundBoostExclusions { get; set; } = new();
+
+    // IdleSaver (Phase 18)
+    public bool          IdleSaverEnabled           { get; set; } = false;
+    public double        IdleSaverCpuThreshold      { get; set; } = 1.0;
+    public int           IdleSaverIdleTicksRequired { get; set; } = 3;
+    public List<string>  IdleSaverExclusions        { get; set; } = new();
+    public bool          IdleSaverUseEfficiencyMode { get; set; } = true;
+
+    // SmartTrim Automation (Phase 18)
+    public bool   SmartTrimEnabled         { get; set; } = false;
+    public int    SmartTrimIntervalSeconds { get; set; } = 60;
+    public double SmartTrimPressurePercent { get; set; } = 20.0;
+    public int    SmartTrimMinWorkingSetMB { get; set; } = 100;
+
+    // CPU Limiter (Phase 18)
+    public bool                  CpuLimiterEnabled { get; set; } = false;
+    public List<CpuLimiterRule>  CpuLimiterRules   { get; set; } = new();
+
+    // Instance Balancer (Phase 18)
+    public bool                       InstanceBalancerEnabled { get; set; } = false;
+    public List<InstanceBalancerRule> InstanceBalancerRules   { get; set; } = new();
 }

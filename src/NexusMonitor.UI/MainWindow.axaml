@@ -301,6 +301,9 @@
               <CrossFade Duration="0:0:0.18"/>
             </TransitioningContentControl.PageTransition>
           <TransitioningContentControl.DataTemplates>
+            <DataTemplate DataType="vm:AutomationViewModel">
+              <views:AutomationView />
+            </DataTemplate>
             <DataTemplate DataType="vm:DashboardViewModel">
               <views:DashboardView />
             </DataTemplate>

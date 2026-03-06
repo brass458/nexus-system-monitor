@@ -512,6 +512,10 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
         Task.FromResult(((long)(1L << Environment.ProcessorCount) - 1, (long)(1L << Environment.ProcessorCount) - 1));
 
+    // Linux CPU sets — no direct equivalent API, no-op
+    public Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
 
     // ── IDisposable ────────────────────────────────────────────────────────────
     public void Dispose()

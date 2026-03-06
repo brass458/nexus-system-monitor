@@ -27,6 +27,14 @@ public interface IProcessProvider
 
     /// <summary>Returns (processAffinityMask, systemAffinityMask) for the given process.</summary>
     Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default);
+
+    /// <summary>
+    /// Assigns preferred CPU sets to the process (Windows 10+). Softer than affinity —
+    /// the OS prefers these CPUs but may schedule elsewhere if needed.
+    /// Pass an empty array to clear CPU set assignments.
+    /// No-op on macOS/Linux.
+    /// </summary>
+    Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default);
 }
 
 public enum ProcessPriority { Idle, BelowNormal, Normal, AboveNormal, High, RealTime }
