@@ -96,7 +96,7 @@
           </StackPanel>
 
           <!-- Window controls -->
-          <StackPanel Grid.Column="2"
+          <StackPanel x:Name="WindowControls" Grid.Column="2"
                       Orientation="Horizontal"
                       Spacing="2"
                       VerticalAlignment="Center">

@@ -185,14 +185,18 @@ public partial class MainWindow : Window
     /// </summary>
     private void ApplyMacOSTitleBarPadding()
     {
-        // The titlebar content is a Panel inside a Border. The inner Grid has Margin="18,0".
-        // We need to find it and bump the left margin to 86px (80 traffic lights + 6 gap).
+        // Bump left margin so content clears the traffic light buttons (~80px wide + 6px gap).
         var grid = FindDescendant<Grid>(this, "TitleBarGrid");
         if (grid is not null)
         {
             var m = grid.Margin;
             grid.Margin = new Thickness(86, m.Top, m.Right, m.Bottom);
         }
+
+        // Hide custom min/max/close buttons — macOS shows native traffic lights instead.
+        var controls = FindDescendant<StackPanel>(this, "WindowControls");
+        if (controls is not null)
+            controls.IsVisible = false;
     }
 
     // ── Crystal Glass: pointer-tracked specular + prismatic shimmer ─────────

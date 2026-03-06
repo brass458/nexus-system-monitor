@@ -18,6 +18,9 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     [DllImport("libc.so.6", SetLastError = true)]
     private static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong mask);
 
+    [DllImport("libc.so.6", SetLastError = true)]
+    private static extern int sched_getaffinity(int pid, IntPtr cpusetsize, out ulong mask);
+
     private const int PRIO_PROCESS = 0;
     private const int SIGKILL      = 9;
     private const int SIGSTOP      = 19;
@@ -509,8 +512,14 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     public Task CreateDumpFileAsync(int pid, string outputPath, CancellationToken ct = default) =>
         throw new PlatformNotSupportedException("Process dump is not yet implemented on Linux.");
 
-    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default) =>
-        Task.FromResult(((long)(1L << Environment.ProcessorCount) - 1, (long)(1L << Environment.ProcessorCount) - 1));
+    public Task<(long ProcessMask, long SystemMask)> GetAffinityMasksAsync(int pid, CancellationToken ct = default)
+    {
+        long allCores = Environment.ProcessorCount >= 64 ? -1L : (1L << Environment.ProcessorCount) - 1;
+        long procMask = allCores;
+        if (sched_getaffinity(pid, new IntPtr(sizeof(ulong)), out ulong raw) == 0)
+            procMask = (long)raw;
+        return Task.FromResult((procMask, allCores));
+    }
 
     // Linux CPU sets — no direct equivalent API, no-op
     public Task SetCpuSetsAsync(int pid, uint[] cpuSetIds, CancellationToken ct = default) =>
