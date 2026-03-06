@@ -117,12 +117,13 @@
   </Style>
   <Style Selector="DataGrid.nx-grid DataGridColumnHeader">
     <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource DataGridHeaderFgBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Padding" Value="10,9" />
     <Setter Property="FontSize" Value="{DynamicResource NxFontSm}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="MinHeight" Value="36" />
   </Style>
   <Style Selector="DataGrid.nx-grid DataGridRow /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Transitions">
@@ -137,10 +138,14 @@
   <Style Selector="DataGrid.nx-grid DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Fill" Value="{DynamicResource AccentBlueDimBrush}" />
   </Style>
+  <Style Selector="DataGrid.nx-grid DataGridRow">
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
   <Style Selector="DataGrid.nx-grid DataGridCell">
-    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="Padding" Value="10,6" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource DataGridCellFgBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource NxFontSm}" />
   </Style>
 
   <!-- ===== LIST BOX ===== -->
@@ -262,7 +267,7 @@
     <Setter Property="UseLayoutRounding" Value="True"/>
   </Style>
   <Style Selector="DataGridColumnHeader">
-    <Setter Property="MinWidth" Value="40"/>
+    <Setter Property="MinWidth" Value="60"/>
   </Style>
 
 </Styles>

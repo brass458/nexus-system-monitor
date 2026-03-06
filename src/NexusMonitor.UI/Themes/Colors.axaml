@@ -61,6 +61,10 @@
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45FFFFFF" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25FFFFFF" />
 
+      <!-- ── DataGrid brushes — Dark ── -->
+      <SolidColorBrush x:Key="DataGridHeaderFgBrush" Color="#A0A0B0" />
+      <SolidColorBrush x:Key="DataGridCellFgBrush"   Color="#DDDDE8" />
+
       <!-- ── Process category brushes — Dark ── -->
       <SolidColorBrush x:Key="ProcSystemBrush"       Color="#5E5CE6" />
       <SolidColorBrush x:Key="ProcSystemBgBrush"     Color="#1A5E5CE6" />
@@ -138,6 +142,10 @@
       </LinearGradientBrush>
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45000000" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25000000" />
+
+      <!-- ── DataGrid brushes — Light ── -->
+      <SolidColorBrush x:Key="DataGridHeaderFgBrush" Color="#6B6B80" />
+      <SolidColorBrush x:Key="DataGridCellFgBrush"   Color="#2D2D44" />
 
       <!-- ── Process category brushes — Light (darker/higher-contrast variants) ── -->
       <SolidColorBrush x:Key="ProcSystemBrush"       Color="#3F3DBF" />

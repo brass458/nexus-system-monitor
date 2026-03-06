@@ -184,8 +184,8 @@
         <TextBlock Text="Affects: buttons, chart lines, active nav item, toggle state, selections"
                    FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}" Margin="0,0,0,4"/>
 
-        <!-- Row of accent swatches with live accent-color mini-preview beside each -->
-        <WrapPanel Orientation="Horizontal">
+        <!-- Row of accent swatches — dark palette -->
+        <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsDarkActive}">
           <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
                   CornerRadius="13" Background="#0A84FF"
                   Command="{Binding SetAccentColorCommand}" CommandParameter="#0A84FF"
@@ -207,8 +207,8 @@
                   Command="{Binding SetAccentColorCommand}" CommandParameter="#FFD60A"
                   ToolTip.Tip="Yellow"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
-                  CornerRadius="13" Background="#34C759"
-                  Command="{Binding SetAccentColorCommand}" CommandParameter="#34C759"
+                  CornerRadius="13" Background="#30D158"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#30D158"
                   ToolTip.Tip="Green"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
                   CornerRadius="13" Background="#5AC8FA"
@@ -217,6 +217,46 @@
           <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
                   CornerRadius="13" Background="#FF453A"
                   Command="{Binding SetAccentColorCommand}" CommandParameter="#FF453A"
+                  ToolTip.Tip="Red"/>
+          <Button Classes="nx-btn" Height="26" Padding="8,0" Margin="0,0,0,6"
+                  Click="OnPickColorClick"
+                  ToolTip.Tip="Open color wheel picker">
+            <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
+          </Button>
+        </WrapPanel>
+        <!-- Row of accent swatches — light palette -->
+        <WrapPanel Orientation="Horizontal" IsVisible="{Binding !IsDarkActive}">
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#007AFF" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#007AFF"
+                  ToolTip.Tip="Blue"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#AF52DE" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#AF52DE"
+                  ToolTip.Tip="Purple"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#E84393" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#E84393"
+                  ToolTip.Tip="Pink"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#E8590C" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#E8590C"
+                  ToolTip.Tip="Orange"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#D4A017" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#D4A017"
+                  ToolTip.Tip="Amber"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#28A745" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#28A745"
+                  ToolTip.Tip="Green"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#0288D1" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#0288D1"
+                  ToolTip.Tip="Teal"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="26" Height="26" Margin="0,0,6,6"
+                  CornerRadius="13" Background="#DC3545" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetAccentColorCommand}" CommandParameter="#DC3545"
                   ToolTip.Tip="Red"/>
           <Button Classes="nx-btn" Height="26" Padding="8,0" Margin="0,0,0,6"
                   Click="OnPickColorClick"
@@ -269,8 +309,8 @@
         <TextBlock Text="Separate color for highlighted text, links, and active labels. Leave empty to derive from primary accent."
                    FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,4"/>
-        <WrapPanel Orientation="Horizontal">
-          <!-- Same swatches as primary, setting text accent instead -->
+        <!-- Text accent swatches — dark palette -->
+        <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsDarkActive}">
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="Transparent"
                   BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -298,14 +338,57 @@
                   CornerRadius="11" Background="#FFD60A"
                   Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FFD60A" ToolTip.Tip="Yellow"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#34C759"
-                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#34C759" ToolTip.Tip="Green"/>
+                  CornerRadius="11" Background="#30D158"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#30D158" ToolTip.Tip="Green"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#5AC8FA"
                   Command="{Binding SetTextAccentColorCommand}" CommandParameter="#5AC8FA" ToolTip.Tip="Teal"/>
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
                   CornerRadius="11" Background="#FF453A"
                   Command="{Binding SetTextAccentColorCommand}" CommandParameter="#FF453A" ToolTip.Tip="Red"/>
+          <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
+                  Click="OnPickTextColorClick"
+                  ToolTip.Tip="Open color wheel picker for text accent">
+            <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
+          </Button>
+        </WrapPanel>
+        <!-- Text accent swatches — light palette -->
+        <WrapPanel Orientation="Horizontal" IsVisible="{Binding !IsDarkActive}">
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="Transparent"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter=""
+                  ToolTip.Tip="Derive from Primary (default)">
+            <Button.Styles>
+              <Style Selector="Button">
+                <Setter Property="BorderThickness" Value="1"/>
+              </Style>
+            </Button.Styles>
+          </Button>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#007AFF" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#007AFF" ToolTip.Tip="Blue"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#AF52DE" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#AF52DE" ToolTip.Tip="Purple"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#E84393" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#E84393" ToolTip.Tip="Pink"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#E8590C" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#E8590C" ToolTip.Tip="Orange"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#D4A017" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#D4A017" ToolTip.Tip="Amber"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#28A745" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#28A745" ToolTip.Tip="Green"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#0288D1" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#0288D1" ToolTip.Tip="Teal"/>
+          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                  CornerRadius="11" Background="#DC3545" BorderBrush="#DDDDDD" BorderThickness="1"
+                  Command="{Binding SetTextAccentColorCommand}" CommandParameter="#DC3545" ToolTip.Tip="Red"/>
           <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
                   Click="OnPickTextColorClick"
                   ToolTip.Tip="Open color wheel picker for text accent">
@@ -339,7 +422,7 @@
                    FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"
                    TextWrapping="Wrap"/>
 
-        <!-- WINDOW CHROME row — dark palette -->
+        <!-- WINDOW CHROME row — dark palette (dynamic, preset-aware) -->
         <WrapPanel Orientation="Horizontal" Margin="0,4,0,2"
                    IsVisible="{Binding IsDarkActive}">
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
@@ -353,30 +436,19 @@
               </Style>
             </Button.Styles>
           </Button>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1628"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#0A1628" ToolTip.Tip="Midnight Blue"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#160C28"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#160C28" ToolTip.Tip="Deep Purple"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0D1A10"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#0D1A10" ToolTip.Tip="Forest"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A0A0E"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#1A0A0E" ToolTip.Tip="Crimson Night"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1A1A"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#0A1A1A" ToolTip.Tip="Teal Abyss"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1C1C1E"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#1C1C1E" ToolTip.Tip="Graphite"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A150A"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#1A150A" ToolTip.Tip="Amber Black"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#000000"
-                  Command="{Binding SetWindowBgCommand}" CommandParameter="#000000" ToolTip.Tip="Pure Dark"/>
+          <ItemsControl ItemsSource="{Binding DarkSurfaceSwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                        CornerRadius="11" Background="{Binding Hex}"
+                        Command="{Binding DataContext.SetWindowBgCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding Hex}" ToolTip.Tip="{Binding Name}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
                   Click="OnPickWindowBgClick">
             <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
@@ -449,7 +521,7 @@
           </Button>
         </Grid>
 
-        <!-- CARDS & CONTENT PANELS row — dark palette -->
+        <!-- CARDS & CONTENT PANELS row — dark palette (dynamic, preset-aware) -->
         <WrapPanel Orientation="Horizontal" Margin="0,4,0,2"
                    IsVisible="{Binding IsDarkActive}">
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
@@ -463,30 +535,19 @@
               </Style>
             </Button.Styles>
           </Button>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1628"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#0A1628" ToolTip.Tip="Midnight Blue"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#160C28"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#160C28" ToolTip.Tip="Deep Purple"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0D1A10"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#0D1A10" ToolTip.Tip="Forest"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A0A0E"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#1A0A0E" ToolTip.Tip="Crimson Night"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1A1A"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#0A1A1A" ToolTip.Tip="Teal Abyss"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1C1C1E"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#1C1C1E" ToolTip.Tip="Graphite"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A150A"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#1A150A" ToolTip.Tip="Amber Black"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#000000"
-                  Command="{Binding SetSurfaceBgCommand}" CommandParameter="#000000" ToolTip.Tip="Pure Dark"/>
+          <ItemsControl ItemsSource="{Binding DarkSurfaceSwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                        CornerRadius="11" Background="{Binding Hex}"
+                        Command="{Binding DataContext.SetSurfaceBgCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding Hex}" ToolTip.Tip="{Binding Name}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
                   Click="OnPickSurfaceBgClick">
             <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>
@@ -559,7 +620,7 @@
           </Button>
         </Grid>
 
-        <!-- SIDEBAR & NAVIGATION row — dark palette -->
+        <!-- SIDEBAR & NAVIGATION row — dark palette (dynamic, preset-aware) -->
         <WrapPanel Orientation="Horizontal" Margin="0,4,0,2"
                    IsVisible="{Binding IsDarkActive}">
           <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
@@ -573,30 +634,19 @@
               </Style>
             </Button.Styles>
           </Button>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1628"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#0A1628" ToolTip.Tip="Midnight Blue"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#160C28"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#160C28" ToolTip.Tip="Deep Purple"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0D1A10"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#0D1A10" ToolTip.Tip="Forest"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A0A0E"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#1A0A0E" ToolTip.Tip="Crimson Night"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#0A1A1A"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#0A1A1A" ToolTip.Tip="Teal Abyss"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1C1C1E"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#1C1C1E" ToolTip.Tip="Graphite"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#1A150A"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#1A150A" ToolTip.Tip="Amber Black"/>
-          <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
-                  CornerRadius="11" Background="#000000"
-                  Command="{Binding SetSidebarBgCommand}" CommandParameter="#000000" ToolTip.Tip="Pure Dark"/>
+          <ItemsControl ItemsSource="{Binding DarkSurfaceSwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Theme="{StaticResource SwatchTheme}" Width="22" Height="22" Margin="0,0,5,5"
+                        CornerRadius="11" Background="{Binding Hex}"
+                        Command="{Binding DataContext.SetSidebarBgCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding Hex}" ToolTip.Tip="{Binding Name}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Button Classes="nx-btn" Height="22" Padding="8,0" Margin="0,0,0,5"
                   Click="OnPickSidebarBgClick">
             <TextBlock Text="Pick Color…" FontSize="{DynamicResource NxFont11}" VerticalAlignment="Center"/>

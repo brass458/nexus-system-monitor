@@ -222,7 +222,7 @@
 
         <DataGrid.Columns>
 
-          <DataGridTemplateColumn Header="Name" Width="3*" MinWidth="150" SortMemberPath="Name">
+          <DataGridTemplateColumn Header="Name" Width="2.5*" MinWidth="140" SortMemberPath="Name">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid ColumnDefinitions="4,Auto,*"
@@ -236,8 +236,8 @@
                               Text="{Binding Name}"
                               Margin="8,0,0,0"
                               VerticalAlignment="Center"
-                              FontSize="{DynamicResource NxFont12}"
-                              Foreground="{Binding Category, Converter={StaticResource CategoryBrush}}"
+                              FontSize="{DynamicResource NxFontSm}"
+                              Foreground="{DynamicResource DataGridCellFgBrush}"
                               TextTrimming="CharacterEllipsis"/>
                 </Grid>
               </DataTemplate>
@@ -246,10 +246,10 @@
 
           <DataGridTextColumn Header="PID"
                               Binding="{Binding Pid}"
-                              Width="0.7*" MinWidth="55"
+                              Width="80"
                               IsReadOnly="True"/>
 
-          <DataGridTemplateColumn Header="CPU" Width="0.7*" MinWidth="55" SortMemberPath="CpuPercent">
+          <DataGridTemplateColumn Header="CPU" Width="80" SortMemberPath="CpuPercent">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid Margin="6,0" RowDefinitions="Auto,3">
@@ -275,7 +275,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Memory" Width="1.1*" MinWidth="80" SortMemberPath="WorkingSetBytes">
+          <DataGridTemplateColumn Header="Memory" Width="100" SortMemberPath="WorkingSetBytes">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding WorkingSetBytes, Converter={StaticResource BytesFmt}}"
@@ -287,7 +287,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="I/O" Width="1.1*" MinWidth="55" SortMemberPath="IoReadBytesPerSec">
+          <DataGridTemplateColumn Header="I/O" Width="78" SortMemberPath="IoReadBytesPerSec">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="{Binding IoDisplay}"
@@ -301,7 +301,7 @@
           </DataGridTemplateColumn>
 
           <!-- Impact Score column (Phase 1) -->
-          <DataGridTemplateColumn Header="Impact" Width="0.8*" MinWidth="65" SortMemberPath="ImpactScore">
+          <DataGridTemplateColumn Header="Impact" Width="96" SortMemberPath="ImpactScore">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <Grid Margin="6,0" RowDefinitions="Auto,3"
@@ -329,7 +329,7 @@
           </DataGridTemplateColumn>
 
           <!-- Rules indicator column (Phase 1) -->
-          <DataGridTemplateColumn Header="Rules" Width="55" MinWidth="50" SortMemberPath="HasActiveRule">
+          <DataGridTemplateColumn Header="Rules" Width="88" SortMemberPath="HasActiveRule">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
                 <TextBlock Text="⚙"
@@ -345,22 +345,22 @@
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"
-                              Width="0.8*" MinWidth="75"
+                              Width="100"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Handles"
                               Binding="{Binding HandleCount}"
-                              Width="0.8*" MinWidth="75"
+                              Width="100"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="User"
                               Binding="{Binding UserName}"
-                              Width="0.9*" MinWidth="70"
+                              Width="0.8*" MinWidth="85"
                               IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Description"
                               Binding="{Binding Description}"
-                              Width="2*" MinWidth="100"
+                              Width="2.0*" MinWidth="100"
                               IsReadOnly="True"/>
 
         </DataGrid.Columns>

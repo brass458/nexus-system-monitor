@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-03-05
+
+### Added
+- **Dynamic surface swatch palettes:** Background & Surface Colors section now shows 8 vibrant,
+  theme-aware swatches for each UI surface (Window Chrome, Cards & Content, Sidebar & Navigation).
+  Swatches update automatically when switching presets — e.g. cherry-blossom pinks for Dark Sakura,
+  neon/cyberpunk colors for Neon, Dracula palette for Dracula, aurora colors for Nord, and
+  Apple-style accent colors for base dark/custom mode. Light-theme palettes are unchanged.
+- **18 built-in theme presets** with curated per-preset surface palettes covering all themes:
+  Nexus Default, Deep Dark, Neon, Dark Sakura, Anime, Futuristic, Outer Space, Magical, Techno,
+  Ocean Depth, Sunset, Dracula, Solarized Dark/Light, Nord, Cherry Blossom, Arctic, Minimalist.
+- **`SwatchColor` model** (`NexusMonitor.Core.Models`) and **`SurfaceSwatchPalettes`** static
+  lookup class (`NexusMonitor.Core.Themes`) for clean preset → palette resolution.
+
 ## [0.1.5.1] - 2026-03-04
 
 ### Added

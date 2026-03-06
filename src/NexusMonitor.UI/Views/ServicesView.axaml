@@ -108,7 +108,7 @@
                   CanUserResizeColumns="True"
                   CanUserReorderColumns="True"
                   IsReadOnly="True"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
           <DataGrid.ContextMenu>
             <ContextMenu>
               <MenuItem Header="Start"   Command="{Binding StartServiceCommand}"/>
@@ -120,7 +120,7 @@
             </ContextMenu>
           </DataGrid.ContextMenu>
           <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Status" Width="1*" MinWidth="120" SortMemberPath="State">
+            <DataGridTemplateColumn Header="Status" Width="90" SortMemberPath="State">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="models:ServiceInfo">
                   <Border CornerRadius="4" Padding="5,2" Margin="4,2"
@@ -131,12 +131,12 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="Name"         Binding="{Binding Name}"        SortMemberPath="Name"        Width="1.5*" MinWidth="90"  IsReadOnly="True"/>
-            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" SortMemberPath="DisplayName" Width="2.5*" MinWidth="145" IsReadOnly="True"/>
-            <DataGridTextColumn Header="Start Type"   Binding="{Binding StartType}"   SortMemberPath="StartType"   Width="1.3*" MinWidth="120" IsReadOnly="True"/>
-            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   SortMemberPath="ProcessId"   Width="0.7*" MinWidth="65"  IsReadOnly="True"/>
-            <DataGridTextColumn Header="Account"      Binding="{Binding UserAccount}" SortMemberPath="UserAccount" Width="1.3*" MinWidth="90"  IsReadOnly="True"/>
-            <DataGridTextColumn Header="Binary Path"  Binding="{Binding BinaryPath}"  SortMemberPath="BinaryPath"  Width="3*"   MinWidth="120" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Name"         Binding="{Binding Name}"        SortMemberPath="Name"        Width="110"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" SortMemberPath="DisplayName" Width="2.2*" MinWidth="130" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Start Type"   Binding="{Binding StartType}"   SortMemberPath="StartType"   Width="110"  IsReadOnly="True"/>
+            <DataGridTextColumn Header="PID"          Binding="{Binding ProcessId}"   SortMemberPath="ProcessId"   Width="76"   IsReadOnly="True"/>
+            <DataGridTextColumn Header="Account"      Binding="{Binding UserAccount}" SortMemberPath="UserAccount" Width="1.2*" MinWidth="110" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Binary Path"  Binding="{Binding BinaryPath}"  SortMemberPath="BinaryPath"  Width="2.5*" MinWidth="120" IsReadOnly="True"/>
           </DataGrid.Columns>
         </DataGrid>
 

@@ -93,8 +93,8 @@
           </Border>
 
           <!-- Rule list -->
-          <ScrollViewer Padding="16">
-            <StackPanel Spacing="6">
+          <ScrollViewer>
+            <StackPanel Spacing="6" Margin="16">
               <ItemsControl ItemsSource="{Binding FilteredRules}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
@@ -228,8 +228,8 @@
                        FontSize="{DynamicResource NxFont12}" Foreground="{StaticResource ColorDangerBrush}"/>
           </Border>
 
-          <ScrollViewer Padding="16">
-            <StackPanel Spacing="16" MaxWidth="740">
+          <ScrollViewer>
+            <StackPanel Spacing="16" MaxWidth="740" Margin="16">
 
               <!-- ── Identity ──────────────────────────────────────────── -->
               <Border Padding="16"

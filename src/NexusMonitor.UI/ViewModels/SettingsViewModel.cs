@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
@@ -64,6 +65,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     /// <summary>All preset names plus "(Custom)" as the final entry.</summary>
     public System.Collections.ObjectModel.ObservableCollection<string> PresetNames { get; } = new();
 
+    /// <summary>Dynamic surface swatch palette for dark mode — updated when the active preset changes.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<SwatchColor> DarkSurfaceSwatches { get; } = new();
+
     private IReadOnlyList<NexusMonitor.Core.Models.ThemePreset> _availablePresets = Array.Empty<NexusMonitor.Core.Models.ThemePreset>();
 
     /// <summary>True when the selected theme mode resolves to dark (for AXAML surface swatch visibility).</summary>
@@ -98,6 +102,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ["Poppins"]         = "avares://NexusMonitor/Assets/Fonts/Poppins-Regular.ttf#Poppins",
         ["Fira Code"]       = "avares://NexusMonitor/Assets/Fonts/FiraCode-Regular.ttf#Fira Code",
         ["Source Code Pro"] = "avares://NexusMonitor/Assets/Fonts/SourceCodePro-Regular.ttf#Source Code Pro",
+        ["Zen Maru Gothic"] = "avares://NexusMonitor/Assets/Fonts/ZenMaruGothic-Regular.ttf#Zen Maru Gothic",
     };
 
     // ── Crystal Glass ──────────────────────────────────────────────────────────
@@ -346,6 +351,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ApplyAccentColor(_accentColorHex);
         ApplyTextAccent(_accentColorHex, _textAccentColorHex);
         ApplyFont(_fontFamily, _fontSizeMultiplier);
+        UpdateSurfaceSwatches();
     }
 
     private void RebuildPresetNames()
@@ -355,6 +361,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         foreach (var p in _availablePresets)
             PresetNames.Add(p.Name);
         PresetNames.Add("(Custom)");
+    }
+
+    private void UpdateSurfaceSwatches()
+    {
+        var presetId = _settings.Current.ActiveThemePresetId;
+        var palette  = SurfaceSwatchPalettes.GetPalette(presetId, IsDarkActive);
+        DarkSurfaceSwatches.Clear();
+        foreach (var s in palette) DarkSurfaceSwatches.Add(s);
     }
 
     // ── Partial callbacks ─────────────────────────────────────────────────────
@@ -370,6 +384,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             MarkCustomPreset();
             ApplyAllVisuals();
             OnPropertyChanged(nameof(IsDarkActive));
+            UpdateSurfaceSwatches();
         }
     }
 
@@ -757,6 +772,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Save();
 
         ApplyAllVisuals();
+        UpdateSurfaceSwatches();
     }
 
     /// <summary>
@@ -822,6 +838,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             SelectedPresetIndex = customIndex;
             _suppressPresetCallback = false;
         }
+        UpdateSurfaceSwatches();
     }
 
     // ── Preset commands ───────────────────────────────────────────────────────

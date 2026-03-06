@@ -22,6 +22,7 @@
   <FontFamily x:Key="FontPoppins">avares://NexusMonitor/Assets/Fonts/Poppins-Regular.ttf#Poppins</FontFamily>
   <FontFamily x:Key="FontFiraCode">avares://NexusMonitor/Assets/Fonts/FiraCode-Regular.ttf#Fira Code</FontFamily>
   <FontFamily x:Key="FontSourceCodePro">avares://NexusMonitor/Assets/Fonts/SourceCodePro-Regular.ttf#Source Code Pro</FontFamily>
+  <FontFamily x:Key="FontZenMaruGothic">avares://NexusMonitor/Assets/Fonts/ZenMaruGothic-Regular.ttf#Zen Maru Gothic</FontFamily>
 
   <!-- ===== STATIC FONT SIZE SCALE =====
        Base: 14px body — comfortable for modern displays.
