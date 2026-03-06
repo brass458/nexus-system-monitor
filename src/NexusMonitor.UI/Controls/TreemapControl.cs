@@ -53,6 +53,7 @@ public class TreemapControl : Control
     private List<TreemapRect>? _cachedLayout;
     private DiskNode?          _cachedRoot;
     private Size               _cachedSize;
+    private DiskNode?          _hoveredNode;
 
     static TreemapControl()
     {
@@ -86,7 +87,7 @@ public class TreemapControl : Control
                 new SKRect(0, 0, (float)Bounds.Width, (float)Bounds.Height));
         }
 
-        context.Custom(new TreemapDrawOp(bounds, _cachedLayout));
+        context.Custom(new TreemapDrawOp(bounds, _cachedLayout, _hoveredNode));
     }
 
     // ── Hit testing ───────────────────────────────────────────────────────────
@@ -122,8 +123,25 @@ public class TreemapControl : Control
         base.OnPointerMoved(e);
         var pos = e.GetPosition(this);
         var hit = HitTest((float)pos.X, (float)pos.Y);
+
         ToolTip.SetTip(this, hit is null ? null
             : $"{hit.Name}\n{hit.SizeDisplay} ({hit.PercentOfParent:F1}%)");
+
+        if (hit != _hoveredNode)
+        {
+            _hoveredNode = hit;
+            InvalidateVisual();
+        }
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_hoveredNode is not null)
+        {
+            _hoveredNode = null;
+            InvalidateVisual();
+        }
     }
 
     // ── Custom draw operation ─────────────────────────────────────────────────
@@ -132,11 +150,13 @@ public class TreemapControl : Control
     {
         private readonly Rect              _bounds;
         private readonly List<TreemapRect> _rects;
+        private readonly DiskNode?         _hoveredNode;
 
-        public TreemapDrawOp(Rect bounds, List<TreemapRect> rects)
+        public TreemapDrawOp(Rect bounds, List<TreemapRect> rects, DiskNode? hoveredNode)
         {
-            _bounds = bounds;
-            _rects  = rects;
+            _bounds      = bounds;
+            _rects       = rects;
+            _hoveredNode = hoveredNode;
         }
 
         public Rect Bounds => _bounds;
@@ -153,12 +173,12 @@ public class TreemapControl : Control
             canvas.Save();
             canvas.ClipRect(new SKRect(0, 0, (float)_bounds.Width, (float)_bounds.Height));
 
-            using var fillPaint = new SKPaint { IsAntialias = false };
+            using var fillPaint = new SKPaint { IsAntialias = true };
             using var borderPaint = new SKPaint
             {
-                IsAntialias = false,
+                IsAntialias = true,
                 Style       = SKPaintStyle.Stroke,
-                Color       = new SKColor(0, 0, 0, 80),
+                Color       = new SKColor(0, 0, 0, 60),
                 StrokeWidth = 1f,
             };
             using var textPaint = new SKPaint
@@ -168,6 +188,8 @@ public class TreemapControl : Control
                 TextSize    = 11f,
             };
 
+            const float CornerRadius = 2f;
+
             foreach (var item in _rects)
             {
                 var r   = item.Bounds;
@@ -176,26 +198,38 @@ public class TreemapControl : Control
                     : FileTypeClassifier.GetCategoryColor(
                           FileTypeClassifier.Classify(item.Node.Extension));
 
-                fillPaint.Color = new SKColor(c);
-                canvas.DrawRect(r, fillPaint);
+                var color = new SKColor(c);
+
+                // Brighten hovered rect by blending toward white
+                if (item.Node == _hoveredNode)
+                    color = new SKColor(
+                        (byte)Math.Min(255, color.Red   + 45),
+                        (byte)Math.Min(255, color.Green + 45),
+                        (byte)Math.Min(255, color.Blue  + 45),
+                        color.Alpha);
+
+                fillPaint.Color = color;
+
+                var roundRect = new SKRoundRect(r, CornerRadius, CornerRadius);
+                canvas.DrawRoundRect(roundRect, fillPaint);
 
                 if (r.Width > 6 && r.Height > 6)
-                    canvas.DrawRect(r, borderPaint);
+                    canvas.DrawRoundRect(roundRect, borderPaint);
 
-                // Draw label only if rect is large enough
+                // Draw label only if rect is large enough to be readable
                 if (r.Width > 40 && r.Height > 16)
                 {
                     textPaint.TextSize = Math.Clamp(Math.Min(r.Width / 6f, 13f), 8f, 13f);
                     var label = item.Node.Name;
                     float textW = textPaint.MeasureText(label);
-                    if (textW > r.Width - 4)
+                    if (textW > r.Width - 6)
                     {
                         // Truncate to fit
-                        while (label.Length > 1 && textPaint.MeasureText(label + "\u2026") > r.Width - 4)
+                        while (label.Length > 1 && textPaint.MeasureText(label + "\u2026") > r.Width - 6)
                             label = label[..^1];
                         label += "\u2026";
                     }
-                    canvas.DrawText(label, r.Left + 2, r.Top + textPaint.TextSize + 2, textPaint);
+                    canvas.DrawText(label, r.Left + 3, r.Top + textPaint.TextSize + 3, textPaint);
                 }
             }
 

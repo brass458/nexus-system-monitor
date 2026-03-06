@@ -80,9 +80,13 @@ public sealed class MftScanner : IDiskScanner
             };
         }
         catch (OperationCanceledException) { throw; }
-        catch
+        catch (Exception ex)
         {
-            // Any native failure → graceful fallback
+            // Log the native failure before falling back so the user can see what happened
+            progress?.Report(new ScanProgress
+            {
+                CurrentPath = $"MFT scan failed ({ex.GetType().Name}: {ex.Message}); falling back to directory scan…",
+            });
             return await new RecursiveScanner().ScanAsync(path, options, progress, ct);
         }
     }
@@ -132,7 +136,7 @@ public sealed class MftScanner : IDiskScanner
             nint bufPtr = Marshal.AllocHGlobal(CHUNK_SIZE);
             try
             {
-                var entries = new List<MftEntry>((int)(mftLength / recSize + 1));
+                var entries = new List<MftEntry>((int)Math.Min(mftLength / recSize + 1, 16_000_000));
                 long bytesProcessed = 0;
                 long filesFound     = 0;
 
@@ -204,6 +208,9 @@ public sealed class MftScanner : IDiskScanner
         //  22  : flags (WORD): 0x01=InUse, 0x02=IsDirectory
         //  24  : bytes in use (DWORD)
 
+        // Minimum header size: 28 bytes to read all required header fields
+        if (recSize < 28) return null;
+
         ushort flags     = *(ushort*)(rec + 22);
         if ((flags & 0x01) == 0) return null;   // record not in use
 
@@ -238,71 +245,87 @@ public sealed class MftScanner : IDiskScanner
             if (attrType == 0x30 && nonResident == 0)
             {
                 // Resident attribute: value offset at rec+attrOff+20 (WORD)
-                ushort valOff = *(ushort*)(rec + attrOff + 20);
-                byte*  fn     = rec + attrOff + valOff;
-
-                // $FILE_NAME layout:
-                //   0  : Parent FRN (ULONGLONG)
-                //   8  : Creation time (FILETIME)
-                //  16  : Modified time (FILETIME)
-                //  24  : MFT-modified time (FILETIME)
-                //  32  : Access time (FILETIME)
-                //  40  : Allocated size (ULONGLONG)
-                //  48  : Real (data) size (ULONGLONG)
-                //  56  : File attributes (DWORD)
-                //  60  : EA/reparse (DWORD)
-                //  64  : File name length in chars (BYTE)
-                //  65  : Namespace (BYTE): 0=POSIX,1=Win32,2=DOS,3=Win32+DOS
-                //  66  : UTF-16 file name
-
-                ulong parentRef   = *(ulong*)fn;
-                long  mftModTicks = *(long*)(fn + 16);
-                ulong allocSz     = *(ulong*)(fn + 40);
-                ulong dataSz      = *(ulong*)(fn + 48);
-                uint  attribs     = *(uint*)(fn + 56);
-                byte  nameLen     = fn[64];
-                byte  nameNs      = fn[65];  // namespace
-
-                // Prefer Win32 (1) or Win32+DOS (3) over POSIX (0) or DOS-only (2)
-                bool isWin32 = nameNs == 1 || nameNs == 3;
-                if (name == null || (isWin32 && !gotWin32))
+                // Need attrOff+22 to be within record
+                if ((uint)(attrOff + 22) <= (uint)recSize)
                 {
-                    name       = new string((char*)(fn + 66), 0, nameLen);
-                    parentFrn  = parentRef & 0x0000FFFFFFFFFFFF; // lower 48 bits
-                    fileAttribs = attribs;
-                    gotWin32   = isWin32;
+                    ushort valOff = *(ushort*)(rec + attrOff + 20);
+                    long fnStart  = (long)attrOff + valOff;
 
-                    // Use FILETIME (100-nanosecond intervals since Jan 1, 1601)
-                    try { lastMod = DateTime.FromFileTimeUtc(mftModTicks); } catch { lastMod = default; }
+                    // $FILE_NAME layout:
+                    //   0  : Parent FRN (ULONGLONG)
+                    //  16  : Modified time (FILETIME)
+                    //  40  : Allocated size (ULONGLONG)
+                    //  48  : Real (data) size (ULONGLONG)
+                    //  56  : File attributes (DWORD)
+                    //  64  : File name length in chars (BYTE)
+                    //  65  : Namespace (BYTE): 0=POSIX,1=Win32,2=DOS,3=Win32+DOS
+                    //  66  : UTF-16 file name
+                    if (fnStart >= 0 && fnStart + 66 <= recSize)
+                    {
+                        byte* fn      = rec + fnStart;
+                        byte  nameLen = fn[64];
+                        byte  nameNs  = fn[65]; // namespace
 
-                    // File size from $FILE_NAME (resident in the attribute)
-                    if (dataSz > 0 && (long)dataSz < 0x00FFFFFFFFFFFFFF)
-                        size = (long)dataSz;
-                    if (allocSz > 0 && (long)allocSz < 0x00FFFFFFFFFFFFFF)
-                        allocSize = (long)allocSz;
+                        if (fnStart + 66 + nameLen * 2 <= recSize)
+                        {
+                            ulong parentRef   = *(ulong*)fn;
+                            long  mftModTicks = *(long*)(fn + 16);
+                            ulong allocSz     = *(ulong*)(fn + 40);
+                            ulong dataSz      = *(ulong*)(fn + 48);
+                            uint  attribs     = *(uint*)(fn + 56);
+
+                            // Prefer Win32 (1) or Win32+DOS (3) over POSIX (0) or DOS-only (2)
+                            bool isWin32 = nameNs == 1 || nameNs == 3;
+                            if (name == null || (isWin32 && !gotWin32))
+                            {
+                                name        = new string((char*)(fn + 66), 0, nameLen);
+                                parentFrn   = parentRef & 0x0000FFFFFFFFFFFF; // lower 48 bits
+                                fileAttribs = attribs;
+                                gotWin32    = isWin32;
+
+                                // Use FILETIME (100-nanosecond intervals since Jan 1, 1601)
+                                try { lastMod = DateTime.FromFileTimeUtc(mftModTicks); } catch { lastMod = default; }
+
+                                // File size from $FILE_NAME (resident in the attribute)
+                                if (dataSz > 0 && (long)dataSz < 0x00FFFFFFFFFFFFFF)
+                                    size = (long)dataSz;
+                                if (allocSz > 0 && (long)allocSz < 0x00FFFFFFFFFFFFFF)
+                                    allocSize = (long)allocSz;
+                            }
+                        }
+                    }
                 }
             }
             // ── $DATA (0x80) — prefer this over $FILE_NAME for accurate size ──
             else if (attrType == 0x80 && !isDir)
             {
                 // Only the unnamed $DATA stream (NameLength byte at offset 9)
-                byte dataNameLen = rec[attrOff + 9];
-                if (dataNameLen == 0)
+                if ((uint)(attrOff + 10) <= (uint)recSize)
                 {
-                    if (nonResident == 0)
+                    byte dataNameLen = rec[attrOff + 9];
+                    if (dataNameLen == 0)
                     {
-                        // Resident: ValueLength at offset 16 from attribute start
-                        uint valLen = *(uint*)(rec + attrOff + 16);
-                        size      = (int)valLen;
-                        allocSize = (int)valLen;
-                    }
-                    else
-                    {
-                        // Non-resident: AllocatedSize at +40, DataSize at +48 from attr start
-                        long allSz  = *(long*)(rec + attrOff + 40);
-                        long dataSz = *(long*)(rec + attrOff + 48);
-                        if (dataSz >= 0 && dataSz < 0x00FFFFFFFFFFFFFF) size      = dataSz;
-                        if (allSz  >= 0 && allSz  < 0x00FFFFFFFFFFFFFF) allocSize = allSz;
+                        if (nonResident == 0)
+                        {
+                            // Resident: ValueLength at offset 16 from attribute start
+                            if ((uint)(attrOff + 20) <= (uint)recSize)
+                            {
+                                uint valLen = *(uint*)(rec + attrOff + 16);
+                                size      = (int)valLen;
+                                allocSize = (int)valLen;
+                            }
+                        }
+                        else
+                        {
+                            // Non-resident: AllocatedSize at +40, DataSize at +48 from attr start
+                            if ((uint)(attrOff + 56) <= (uint)recSize)
+                            {
+                                long allSz  = *(long*)(rec + attrOff + 40);
+                                long dataSz = *(long*)(rec + attrOff + 48);
+                                if (dataSz >= 0 && dataSz < 0x00FFFFFFFFFFFFFF) size      = dataSz;
+                                if (allSz  >= 0 && allSz  < 0x00FFFFFFFFFFFFFF) allocSize = allSz;
+                            }
+                        }
                     }
                 }
             }
@@ -327,6 +350,7 @@ public sealed class MftScanner : IDiskScanner
     private static unsafe void ApplyFixup(byte* rec, long recSize, ushort seqOff, ushort seqSize)
     {
         if (seqOff < 1 || seqSize < 2) return;
+        if (seqOff + (long)seqSize * 2 > recSize) return;  // sequence array out of bounds
         ushort* seq = (ushort*)(rec + seqOff);
         ushort  check = seq[0];
         for (int i = 1; i < seqSize; i++)
@@ -398,71 +422,80 @@ public sealed class MftScanner : IDiskScanner
             targetFrn = currentFrn;
         }
 
-        // Build the DiskNode tree recursively from the target FRN
-        var rootNode = BuildNode(
-            targetFrn, frnMap, childrenOf, null, driveRoot, requestedPath, options, ct);
-
-        return rootNode;
-    }
-
-    private static DiskNode BuildNode(
-        ulong frn,
-        Dictionary<ulong, MftEntry> frnMap,
-        Dictionary<ulong, List<ulong>> childrenOf,
-        DiskNode? parent,
-        string driveRoot,
-        string nodePath,
-        ScanOptions options,
-        CancellationToken ct)
-    {
-        bool hasEntry = frnMap.TryGetValue(frn, out var entry);
-
-        var node = new DiskNode
+        // ── Iterative DFS tree build — avoids stack overflow on deep hierarchies ──
+        bool hasRootEntry = frnMap.TryGetValue(targetFrn, out var rootEntry);
+        var rootNode = new DiskNode
         {
-            Name         = hasEntry ? entry.Name : Path.GetFileName(nodePath.TrimEnd('\\')) ?? nodePath,
-            FullPath     = nodePath,
-            IsDirectory  = !hasEntry || entry.IsDirectory,
-            LastModified = hasEntry ? entry.LastModified : default,
-            Parent       = parent,
+            Name         = hasRootEntry ? rootEntry.Name
+                                        : Path.GetFileName(requestedPath.TrimEnd('\\')) ?? requestedPath,
+            FullPath     = requestedPath,
+            IsDirectory  = !hasRootEntry || rootEntry.IsDirectory,
+            LastModified = hasRootEntry ? rootEntry.LastModified : default,
         };
 
-        if (!node.IsDirectory)
-        {
-            node.Size          = hasEntry ? entry.Size      : 0;
-            node.AllocatedSize = hasEntry ? entry.AllocatedSize : 0;
-            return node;
-        }
+        var stack           = new Stack<(ulong Frn, DiskNode Node)>(256);
+        var visitOrder      = new List<DiskNode>(entries.Count); // pre-order; reversed → post-order
+        var expandedDirFrns = new HashSet<ulong>();              // prevents cycles (root FRN==parentFRN, hard links, etc.)
+        stack.Push((targetFrn, rootNode));
 
-        if (!childrenOf.TryGetValue(frn, out var childFrns))
-            return node; // empty directory
-
-        foreach (ulong childFrn in childFrns)
+        while (stack.Count > 0)
         {
             ct.ThrowIfCancellationRequested();
-            if (!frnMap.TryGetValue(childFrn, out var childEntry)) continue;
+            var (nodeFrn, node) = stack.Pop();
+            visitOrder.Add(node);
 
-            string childPath = Path.Combine(nodePath, childEntry.Name);
+            if (!node.IsDirectory) continue;
+            if (!expandedDirFrns.Add(nodeFrn)) continue;        // already expanded — skip to prevent cycles
+            if (!childrenOf.TryGetValue(nodeFrn, out var childFrns)) continue;
 
-            // Respect excluded paths
-            if (options.ExcludedPaths.Contains(childPath)) continue;
+            foreach (ulong childFrn in childFrns)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!frnMap.TryGetValue(childFrn, out var childEntry)) continue;
 
-            // Respect min file size filter (directories exempt)
-            if (!childEntry.IsDirectory && childEntry.Size < options.MinFileSizeBytes) continue;
+                string childPath = Path.Combine(node.FullPath, childEntry.Name);
+                if (options.ExcludedPaths.Contains(childPath)) continue;
+                if (!childEntry.IsDirectory && childEntry.Size < options.MinFileSizeBytes) continue;
 
-            // Respect FollowSymlinks = false (already handled since MFT records
-            // for reparse points have FILE_ATTRIBUTE_REPARSE_POINT = 0x400)
-
-            var childNode = BuildNode(childFrn, frnMap, childrenOf, node, driveRoot, childPath, options, ct);
-            node.Children.Add(childNode);
-            node.Size          += childNode.Size;
-            node.AllocatedSize += childNode.AllocatedSize;
-            node.FileCount     += childNode.IsDirectory ? childNode.FileCount : 1;
-            node.FolderCount   += childNode.IsDirectory ? childNode.FolderCount + 1 : 0;
+                var childNode = new DiskNode
+                {
+                    Name          = childEntry.Name,
+                    FullPath      = childPath,
+                    IsDirectory   = childEntry.IsDirectory,
+                    LastModified  = childEntry.LastModified,
+                    Parent        = node,
+                    Size          = childEntry.IsDirectory ? 0 : childEntry.Size,
+                    AllocatedSize = childEntry.IsDirectory ? 0 : childEntry.AllocatedSize,
+                };
+                node.Children.Add(childNode);
+                stack.Push((childFrn, childNode));
+            }
         }
 
-        // Sort by size descending for treemap layout
-        node.Children.Sort((a, b) => b.Size.CompareTo(a.Size));
-        return node;
+        // Post-order pass: accumulate sizes bottom-up then sort children by size descending.
+        // Processing visitOrder in reverse guarantees each child is processed before its parent.
+        for (int i = visitOrder.Count - 1; i >= 0; i--)
+        {
+            var node = visitOrder[i];
+            if (node.Children.Count > 1)
+                node.Children.Sort((a, b) => b.Size.CompareTo(a.Size));
+
+            if (node.Parent is null) continue;
+            var p = node.Parent;
+            p.Size          += node.Size;
+            p.AllocatedSize += node.AllocatedSize;
+            if (node.IsDirectory)
+            {
+                p.FileCount   += node.FileCount;
+                p.FolderCount += node.FolderCount + 1;
+            }
+            else
+            {
+                p.FileCount += 1;
+            }
+        }
+
+        return rootNode;
     }
 
     // ── Native interop ────────────────────────────────────────────────────────

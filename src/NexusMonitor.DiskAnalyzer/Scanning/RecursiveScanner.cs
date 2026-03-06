@@ -60,96 +60,112 @@ public sealed class RecursiveScanner : IDiskScanner
     }
 
     private static void ScanDirectory(
-        DiskNode node,
+        DiskNode root,
         ScanOptions options,
         IProgress<ScanProgress>? progress,
         ref long filesScanned,
         ref long bytesCounted,
         CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
+        // Iterative DFS — avoids stack overflow on deep directory trees (e.g. node_modules).
+        // visitOrder contains only directories in DFS pre-order; reversed = post-order for
+        // bottom-up size accumulation.
+        const int MaxDepth = 256;
 
-        if (options.ExcludedPaths.Contains(node.FullPath)) return;
+        var stack      = new Stack<(DiskNode Node, int Depth)>(64);
+        var visitOrder = new List<DiskNode>(128);
+        stack.Push((root, 0));
 
-        // Enumerate entries
-        IEnumerable<FileSystemInfo> entries;
-        try
-        {
-            var di = new DirectoryInfo(node.FullPath);
-            entries = di.EnumerateFileSystemInfos("*", new EnumerationOptions
-            {
-                IgnoreInaccessible = true,
-                RecurseSubdirectories = false,
-                AttributesToSkip = FileAttributes.ReparsePoint, // skip junctions/symlinks by default
-            });
-        }
-        catch { return; }
-
-        var subdirs = new List<DiskNode>();
-
-        foreach (var entry in entries)
+        while (stack.Count > 0)
         {
             ct.ThrowIfCancellationRequested();
+            var (node, depth) = stack.Pop();
+
+            if (options.ExcludedPaths.Contains(node.FullPath)) continue;
+            visitOrder.Add(node);
+
+            IEnumerable<FileSystemInfo> entries;
             try
             {
-                if (entry is DirectoryInfo dir)
+                var di = new DirectoryInfo(node.FullPath);
+                entries = di.EnumerateFileSystemInfos("*", new EnumerationOptions
                 {
-                    var child = new DiskNode
-                    {
-                        Name = dir.Name,
-                        FullPath = dir.FullName,
-                        IsDirectory = true,
-                        LastModified = dir.LastWriteTimeUtc,
-                        LastAccessed = dir.LastAccessTimeUtc,
-                        Created = dir.CreationTimeUtc,
-                        Parent = node,
-                    };
-                    node.Children.Add(child);
-                    subdirs.Add(child);
-                    node.FolderCount++;
-                }
-                else if (entry is FileInfo file)
-                {
-                    if (file.Length < options.MinFileSizeBytes) continue;
-                    var child = new DiskNode
-                    {
-                        Name = file.Name,
-                        FullPath = file.FullName,
-                        IsDirectory = false,
-                        Size = file.Length,
-                        AllocatedSize = GetAllocatedSize(file.FullName, file.Length),
-                        LastModified = file.LastWriteTimeUtc,
-                        LastAccessed = file.LastAccessTimeUtc,
-                        Created = file.CreationTimeUtc,
-                        Parent = node,
-                    };
-                    node.Children.Add(child);
-                    node.Size += child.Size;
-                    node.FileCount++;
-                    Interlocked.Increment(ref filesScanned);
-                    Interlocked.Add(ref bytesCounted, child.Size);
-                    progress?.Report(new ScanProgress
-                    {
-                        FilesScanned = filesScanned,
-                        BytesCounted = bytesCounted,
-                        CurrentPath = file.FullName,
-                    });
-                }
+                    IgnoreInaccessible    = true,
+                    RecurseSubdirectories = false,
+                    AttributesToSkip      = FileAttributes.ReparsePoint,
+                }).ToList(); // materialise so enumeration errors surface here, not lazily
             }
-            catch { /* skip inaccessible entries */ }
+            catch { continue; }
+
+            foreach (var entry in entries)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    if (entry is DirectoryInfo dir)
+                    {
+                        var child = new DiskNode
+                        {
+                            Name         = dir.Name,
+                            FullPath     = dir.FullName,
+                            IsDirectory  = true,
+                            LastModified = dir.LastWriteTimeUtc,
+                            LastAccessed = dir.LastAccessTimeUtc,
+                            Created      = dir.CreationTimeUtc,
+                            Parent       = node,
+                        };
+                        node.Children.Add(child);
+                        if (depth < MaxDepth)
+                            stack.Push((child, depth + 1));
+                    }
+                    else if (entry is FileInfo file)
+                    {
+                        if (file.Length < options.MinFileSizeBytes) continue;
+                        long allocSz = GetAllocatedSize(file.FullName, file.Length);
+                        var child = new DiskNode
+                        {
+                            Name          = file.Name,
+                            FullPath      = file.FullName,
+                            IsDirectory   = false,
+                            Size          = file.Length,
+                            AllocatedSize = allocSz,
+                            LastModified  = file.LastWriteTimeUtc,
+                            LastAccessed  = file.LastAccessTimeUtc,
+                            Created       = file.CreationTimeUtc,
+                            Parent        = node,
+                        };
+                        node.Children.Add(child);
+                        // Accumulate file contributions into parent immediately
+                        node.Size          += file.Length;
+                        node.AllocatedSize += allocSz;
+                        node.FileCount++;
+                        Interlocked.Increment(ref filesScanned);
+                        Interlocked.Add(ref bytesCounted, file.Length);
+                        progress?.Report(new ScanProgress
+                        {
+                            FilesScanned = filesScanned,
+                            BytesCounted = bytesCounted,
+                            CurrentPath  = file.FullName,
+                        });
+                    }
+                }
+                catch { /* skip inaccessible entries */ }
+            }
         }
 
-        // Recurse into subdirectories
-        foreach (var subdir in subdirs)
+        // Post-order: propagate directory totals to parents, then sort children by size.
+        // Processing in reverse guarantees every child directory is handled before its parent.
+        for (int i = visitOrder.Count - 1; i >= 0; i--)
         {
-            ScanDirectory(subdir, options, progress, ref filesScanned, ref bytesCounted, ct);
-            node.Size       += subdir.Size;
-            node.FileCount  += subdir.FileCount;
-            node.FolderCount += subdir.FolderCount + 1;
+            var node = visitOrder[i];
+            node.Children.Sort((a, b) => b.Size.CompareTo(a.Size));
+            if (node.Parent is null) continue;
+            var p = node.Parent;
+            p.Size          += node.Size;
+            p.AllocatedSize += node.AllocatedSize;
+            p.FileCount     += node.FileCount;
+            p.FolderCount   += node.FolderCount + 1;
         }
-
-        // Sort children by size descending for treemap
-        node.Children.Sort((a, b) => b.Size.CompareTo(a.Size));
     }
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]

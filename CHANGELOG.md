@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-03-06
+
+### Added
+- **Platform capability gating:** `IPlatformCapabilities` extended with `SupportsRegistry`,
+  `SupportsEfficiencyMode`, `SupportsHandles`, `SupportsMemoryMap`, `SupportsPowerPlan`, and
+  `OpenLocationMenuLabel`. All 3 platform implementations and `MockPlatformCapabilities` updated.
+- **Cross-platform UI correctness (Apple Design Philosophy pass):** 14 UI elements now hidden or
+  relabelled on platforms where they have no effect:
+  - RulesView editor: CPU Set IDs, I/O Priority, Memory Priority, Efficiency Mode (EcoQoS),
+    CPU Affinity Mask hidden on macOS/Linux
+  - AutomationView: EcoQoS checkbox hidden on macOS/Linux; SmartTrim, CPU Limiter, and
+    Instance Balancer cards hidden on platforms without affinity/trim support
+  - ProcessesView: Handles and Memory Map detail sections hidden on macOS/Linux
+  - PerformanceProfilesView: Power Plan rows and Efficiency Mode column hidden on macOS
+  - StartupView: "Open Registry Key" menu item hidden on non-Windows
+  - Context menus: "Open File Location" → "Reveal in Finder" (macOS) / "Show in Files" (Linux)
+  - SettingsView: Removed Windows-specific backdrop blur mode hint text
+
+### Fixed
+- **[Critical] `MacOSSleepPreventionProvider`:** Replaced broken `IOPMAssertionCreateWithName`
+  P/Invoke (which silently failed due to incorrect `CFStringRef` marshalling) with a
+  `caffeinate -di` subprocess, matching the Linux `systemd-inhibit` pattern
+- **`MacOSHardwareInfoProvider` storage size:** `spstorage_volume_size` now parses string values
+  (`"499.96 GB"`) in addition to numeric byte values; storage capacity no longer shows 0 on
+  modern macOS versions
+- **`RunCommand` deadlock:** `ReadToEnd()` replaced with `ReadToEndAsync()` + `WaitForExit`
+  timeout in `MacOSHardwareInfoProvider`, `MacOSSystemMetricsProvider`, and
+  `LinuxSystemMetricsProvider` (nvidia-smi). Hung processes are now killed after timeout
+- **Thread safety:** `_metricsLock` added to `MacOSSystemMetricsProvider` and
+  `LinuxSystemMetricsProvider`; `BuildMetrics()` body wrapped in lock to prevent concurrent
+  mutation of delta-tracking dictionaries from the `Observable.Timer` thread
+- **Shell context menu process leak:** `MacOSShellContextMenuService` and
+  `LinuxShellContextMenuService` now use `using var p = Process.Start(...)` for proper disposal
+- **Path injection in shell helpers:** Both context menu services now use `ArgumentList` instead
+  of string interpolation, eliminating potential injection via paths containing spaces or quotes
+- **`IDisposable`** added to `MacOSSleepPreventionProvider` and `LinuxSleepPreventionProvider`
+  so held processes are released on DI container teardown
+- **`MftScanner` fallback:** Native failure now reports the exception type and message via
+  `IProgress<ScanProgress>` before falling back to the recursive scanner
+- **`RecursiveScanner` stack overflow:** Recursive `ScanDirectory` replaced with iterative DFS
+  (`Stack<>` + post-order list) to prevent stack overflow on deep trees (e.g. `node_modules`)
+- **Treemap hover highlight:** `TreemapControl` now tracks the hovered node and passes it to
+  the draw operation for visual hit feedback
+
 ## [0.1.6] - 2026-03-05
 
 ### Added
@@ -241,7 +285,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **macOS 12+ (Intel + Apple Silicon):** Full support. Unsigned — see README for Gatekeeper bypass.
 - **Linux (x64, ARM64):** Full support. Best tested on Ubuntu 22.04+.
 
-[Unreleased]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.6...v0.1.7
+[0.1.6]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.5.1...v0.1.6
+[0.1.5.1]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.5...v0.1.5.1
 [0.1.5]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.3.1...v0.1.4
 [0.1.3.1]: https://github.com/brass458/nexus-system-monitor/compare/v0.1.3...v0.1.3.1

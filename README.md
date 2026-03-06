@@ -103,10 +103,24 @@ This isn't a lowest-common-denominator approach. Nexus aims for the **union** of
 - Draggable, transparent, and minimal (230 x 168 px)
 - Toggle on/off from settings
 
+### System Health Dashboard
+- Composite health score (0–100) across CPU, Memory, Disk, GPU, and Thermal
+- 4 subsystem cards with at-a-glance status and top-5 process consumers
+- Bottleneck Detection: identifies the performance-limiting component for Gaming, Streaming, Video Editing, 3D Rendering, and CAD workloads
+- Plain-English contextual recommendations
+
+### LAN Scanner
+- Nmap-based network scan for hosts, open ports, OS detection, and latency
+- Real-time scan progress with host tree and port detail sidebar
+
 ### Appearance & Theming
-- Dark glass theme inspired by iOS 26 Crystal Glass
-- 8 accent color presets with runtime switching
-- Aero Glass toggle with adjustable opacity
+- Crystal Glass theme with opt-in backdrop blur (configurable blur modes)
+- 18 built-in theme presets (Nexus Default, Deep Dark, Neon, Dracula, Nord, Dark Sakura, and more)
+- Dynamic surface swatch palettes: 8 curated color swatches per UI surface, per preset
+- Custom accent and surface colors via color picker with live preview
+- Font size multiplier: 0.8–1.5× slider scales all UI text
+- Dark / Light / System theme mode (System follows OS preference at runtime)
+- Grouped sidebar navigation (Pinned / Monitor / Tools / System) with drag-reorder within groups
 - All theme changes apply instantly across the entire UI
 
 ---
@@ -285,6 +299,8 @@ Adding support for a new platform means implementing these interfaces against na
 Early-access testing on macOS and Linux is open. See **[TESTING.md](TESTING.md)** for a step-by-step setup guide, a per-tab test checklist, known limitations, and instructions for filing issues.
 
 Report bugs and feedback at: https://github.com/brass458/nexus-system-monitor/issues
+
+For detailed project documentation — feature inventory, architecture, gap analysis, and roadmap — see [`docs/`](docs/index.md).
 
 ---
 
