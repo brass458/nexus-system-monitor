@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,6 +8,37 @@ using NexusMonitor.DiskAnalyzer.Models;
 using NexusMonitor.DiskAnalyzer.Scanning;
 
 namespace NexusMonitor.UI.ViewModels;
+
+/// <summary>
+/// A single visible row in the flat-list folder tree.
+/// Wraps a DiskNode with depth + expand/collapse state.
+/// </summary>
+public sealed class FolderTreeRow(DiskNode node, int depth, bool isExpanded = false)
+    : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+{
+    public DiskNode Node     { get; } = node;
+    public int      Depth    { get; } = depth;
+
+    private bool _isExpanded = isExpanded;
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetProperty(ref _isExpanded, value);
+    }
+
+    public bool HasChildren => Node.IsDirectory && Node.Children.Count > 0;
+
+    // Indentation: 16 px per depth level, +4 for spacing
+    public Thickness NameMargin => new(Depth * 16 + 4, 0, 0, 0);
+
+    // Column display values forwarded from Node
+    public string PercentDisplay   => $"{Node.PercentOfParent:F1}%";
+    public string SizeDisplay      => Node.SizeDisplay;
+    public string AllocatedDisplay => Node.AllocatedDisplay;
+    public string FileCount        => Node.FileCountDisplay;
+    public string FolderCount      => Node.FolderCountDisplay;
+    public string Modified         => Node.LastModified.ToString("yyyy-MM-dd");
+}
 
 /// <summary>Per-extension aggregated stats for the File Types panel.</summary>
 public record FileTypeStatRow(string Extension, long SizeBytes, long FileCount, double Percent)
@@ -33,7 +65,11 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private DiskNode? _selectedFile;   // selected row in file list
     [ObservableProperty] private string _summaryText = string.Empty;
 
-    // Folder view: flat view of SelectedNode's children sorted by size
+    // Folder view: flat-list tree (expand/collapse in-place via depth-indented rows)
+    [ObservableProperty] private ObservableCollection<FolderTreeRow> _treeRows = [];
+    [ObservableProperty] private FolderTreeRow? _selectedRow;
+
+    // Folder view: flat view of SelectedNode's children sorted by size (kept for nav commands)
     [ObservableProperty] private ObservableCollection<DiskNode> _fileRows = [];
 
     // Breadcrumb navigation
@@ -42,6 +78,7 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     // ── Tab state ────────────────────────────────────────────────────────────
     [ObservableProperty] private bool _isFolderViewActive = true;
     [ObservableProperty] private bool _isFileViewActive;
+    [ObservableProperty] private bool _isDuplicateViewActive;
 
     // ── Volume stats ─────────────────────────────────────────────────────────
     [ObservableProperty] private string _volumeTotalDisplay = string.Empty;
@@ -66,6 +103,25 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private ObservableCollection<DuplicateGroup> _duplicates = [];
     [ObservableProperty] private string _duplicateSummary = string.Empty;
 
+    // ── Duplicate result flag ─────────────────────────────────────────────────
+    [ObservableProperty] private bool _hasDuplicates;
+
+    // ── Empty state ───────────────────────────────────────────────────────────
+    public bool ShowEmptyState => !HasScanResult && !IsScanning;
+    partial void OnHasScanResultChanged(bool value) => OnPropertyChanged(nameof(ShowEmptyState));
+    partial void OnIsScanningChanged(bool value)    => OnPropertyChanged(nameof(ShowEmptyState));
+
+    partial void OnSelectedRowChanged(FolderTreeRow? value)
+    {
+        if (value is null) return;
+        SelectedFile = value.Node;
+        if (value.Node.IsDirectory)
+        {
+            SelectedNode = value.Node;
+            BuildBreadcrumb(value.Node);
+        }
+    }
+
     // Available drives
     public IReadOnlyList<string> AvailableDrives { get; } = GetAvailableDrives();
 
@@ -76,15 +132,25 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void SelectFolderView()
     {
-        IsFolderViewActive = true;
-        IsFileViewActive   = false;
+        IsFolderViewActive    = true;
+        IsFileViewActive      = false;
+        IsDuplicateViewActive = false;
     }
 
     [RelayCommand]
     private void SelectFileView()
     {
-        IsFolderViewActive = false;
-        IsFileViewActive   = true;
+        IsFolderViewActive    = false;
+        IsFileViewActive      = true;
+        IsDuplicateViewActive = false;
+    }
+
+    [RelayCommand]
+    private void SelectDuplicateView()
+    {
+        IsFolderViewActive    = false;
+        IsFileViewActive      = false;
+        IsDuplicateViewActive = true;
     }
 
     // ── Scan ─────────────────────────────────────────────────────────────────
@@ -123,7 +189,7 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
             SelectedNode  = result.Root;
             HasScanResult = true;
             BuildBreadcrumb(result.Root);
-            UpdateFileRows(result.Root);
+            BuildTreeRows(result.Root);
             SummaryText = $"{result.TotalFiles:N0} files, {result.TotalFolders:N0} folders \u2014 " +
                           $"{DiskNode.FormatSize(result.TotalSize)} in {result.Duration.TotalSeconds:F1}s";
             ScanStatus  = SummaryText;
@@ -214,6 +280,49 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         SelectedFile = null;
     }
 
+    // ── Flat-list tree (expand/collapse in-place) ─────────────────────────────
+
+    private void BuildTreeRows(DiskNode root)
+    {
+        TreeRows.Clear();
+        var rootRow = new FolderTreeRow(root, depth: 0, isExpanded: true);
+        TreeRows.Add(rootRow);
+        InsertChildren(rootRow, afterIndex: 0);
+    }
+
+    [RelayCommand]
+    private void ToggleRow(FolderTreeRow? row)
+    {
+        if (row is null || !row.HasChildren) return;
+        int idx = TreeRows.IndexOf(row);
+        if (idx < 0) return;
+
+        if (row.IsExpanded)
+        {
+            row.IsExpanded = false;
+            CollapseDescendants(idx);
+        }
+        else
+        {
+            row.IsExpanded = true;
+            InsertChildren(row, idx);
+        }
+    }
+
+    private void InsertChildren(FolderTreeRow parent, int afterIndex)
+    {
+        int at = afterIndex + 1;
+        foreach (var child in parent.Node.Children.OrderByDescending(c => c.Size))
+            TreeRows.Insert(at++, new FolderTreeRow(child, parent.Depth + 1));
+    }
+
+    private void CollapseDescendants(int parentIdx)
+    {
+        int depth = TreeRows[parentIdx].Depth;
+        while (parentIdx + 1 < TreeRows.Count && TreeRows[parentIdx + 1].Depth > depth)
+            TreeRows.RemoveAt(parentIdx + 1);
+    }
+
     // ── Treemap node click ────────────────────────────────────────────────────
 
     [RelayCommand]
@@ -240,6 +349,7 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
             var dupes  = await finder.FindDuplicatesAsync(RootNode, null, _cts.Token);
             foreach (var g in dupes) Duplicates.Add(g);
             long wasted = dupes.Sum(g => g.WastedBytes);
+            HasDuplicates    = dupes.Count > 0;
             DuplicateSummary = dupes.Count == 0
                 ? "No duplicates found."
                 : $"Found {dupes.Count} duplicate group{(dupes.Count == 1 ? "" : "s")} \u2014 {DiskNode.FormatSize(wasted)} wasted";
@@ -324,14 +434,18 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         Avalonia.Threading.Dispatcher.UIThread.Post(FilterFiles);
     }
 
-    private static void CollectFiles(DiskNode node, List<DiskNode> files)
+    private static void CollectFiles(DiskNode root, List<DiskNode> files)
     {
-        foreach (var child in node.Children)
+        var stack = new Stack<DiskNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
         {
-            if (!child.IsDirectory)
-                files.Add(child);
-            else
-                CollectFiles(child, files);
+            var node = stack.Pop();
+            foreach (var child in node.Children)
+            {
+                if (!child.IsDirectory) files.Add(child);
+                else                    stack.Push(child);
+            }
         }
     }
 
@@ -359,19 +473,25 @@ public partial class DiskAnalyzerViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private static void AccumulateExtensions(DiskNode node, Dictionary<string, (long Size, long Count)> dict)
+    private static void AccumulateExtensions(DiskNode root, Dictionary<string, (long Size, long Count)> dict)
     {
-        foreach (var child in node.Children)
+        var stack = new Stack<DiskNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
         {
-            if (!child.IsDirectory)
+            var node = stack.Pop();
+            foreach (var child in node.Children)
             {
-                var ext = child.Extension;
-                dict.TryGetValue(ext, out var curr);
-                dict[ext] = (curr.Size + child.Size, curr.Count + 1);
-            }
-            else
-            {
-                AccumulateExtensions(child, dict);
+                if (!child.IsDirectory)
+                {
+                    var ext = child.Extension;
+                    dict.TryGetValue(ext, out var curr);
+                    dict[ext] = (curr.Size + child.Size, curr.Count + 1);
+                }
+                else
+                {
+                    stack.Push(child);
+                }
             }
         }
     }

@@ -27,6 +27,7 @@ using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
+using NexusMonitor.Platform.Windows.Shell;
 #elif MACOS
 using NexusMonitor.Platform.MacOS;
 #elif LINUX
@@ -339,6 +340,7 @@ public class App : Application
         services.AddSingleton<INotificationService,         WindowsNotificationService>();
         services.AddSingleton<IWallpaperService,            WindowsWallpaperService>();
         services.AddSingleton<ISleepPreventionProvider,     WindowsSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     WindowsShellContextMenuService>();
         services.AddSingleton<WindowsHardwareInfoProvider>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
@@ -351,6 +353,7 @@ public class App : Application
         services.AddSingleton<INotificationService,         MacOSNotificationService>();
         services.AddSingleton<IWallpaperService,            MacOSWallpaperService>();
         services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -362,6 +365,7 @@ public class App : Application
         services.AddSingleton<INotificationService,         LinuxNotificationService>();
         services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
         services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
         services.AddSingleton<LinuxHardwareInfoProvider>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
@@ -374,6 +378,7 @@ public class App : Application
         services.AddSingleton<INotificationService,         NullNotificationService>();
         services.AddSingleton<IWallpaperService,            NullWallpaperService>();
         services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
 #endif
 
         // -- Core services --

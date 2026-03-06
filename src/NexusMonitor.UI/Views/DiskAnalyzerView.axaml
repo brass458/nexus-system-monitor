@@ -195,6 +195,25 @@
                     IsVisible="{Binding IsFileViewActive}"/>
           </Panel>
         </Button>
+        <Button Command="{Binding SelectDuplicateViewCommand}" Padding="16,9" CornerRadius="0">
+          <Button.Styles>
+            <Style Selector="Button">
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="BorderThickness" Value="0"/>
+            </Style>
+            <Style Selector="Button:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
+            </Style>
+          </Button.Styles>
+          <Panel>
+            <TextBlock Text="Duplicates"
+                       FontSize="{DynamicResource NxFont12}" FontWeight="Medium"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <Border Height="2" VerticalAlignment="Bottom"
+                    Background="{DynamicResource AccentBlueBrush}"
+                    IsVisible="{Binding IsDuplicateViewActive}"/>
+          </Panel>
+        </Button>
       </StackPanel>
     </Border>
 
@@ -252,26 +271,53 @@
             </StackPanel>
           </Border>
 
-          <!-- Folder / file tree -->
+          <!-- Folder tree: flat-list with depth-indented rows + in-place expand/collapse -->
           <DataGrid Grid.Row="1"
-                    ItemsSource="{Binding FileRows}"
-                    SelectedItem="{Binding SelectedFile}"
+                    x:Name="FolderTree"
+                    ItemsSource="{Binding TreeRows}"
+                    SelectedItem="{Binding SelectedRow}"
                     IsReadOnly="True"
                     GridLinesVisibility="Horizontal"
-                    CanUserSortColumns="True"
+                    CanUserSortColumns="False"
                     CanUserResizeColumns="True"
                     FontSize="{DynamicResource NxFont12}"
                     Background="{DynamicResource BgPrimaryBrush}">
             <DataGrid.Columns>
-              <DataGridTemplateColumn Header="Name" Width="2.5*" MinWidth="120" SortMemberPath="Name">
+              <!-- Name column: indented + expander button + icon -->
+              <DataGridTemplateColumn Header="Name" Width="2.5*" MinWidth="120">
                 <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate DataType="models:DiskNode">
-                    <StackPanel Orientation="Horizontal" Spacing="5" Margin="4,0">
-                      <TextBlock Text="&#x1F4C1;"
-                                 FontSize="11"
-                                 VerticalAlignment="Center"
-                                 IsVisible="{Binding IsDirectory}"/>
-                      <TextBlock Text="{Binding Name}"
+                  <DataTemplate DataType="vm:FolderTreeRow">
+                    <StackPanel Orientation="Horizontal" Spacing="2"
+                                Margin="{Binding NameMargin}"
+                                VerticalAlignment="Center">
+                      <!-- Expander toggle (▶/▼) for directories with children -->
+                      <Button IsVisible="{Binding HasChildren}"
+                              Command="{Binding $parent[UserControl].DataContext.ToggleRowCommand}"
+                              CommandParameter="{Binding}"
+                              Width="16" Height="16" Padding="0"
+                              VerticalAlignment="Center"
+                              VerticalContentAlignment="Center"
+                              HorizontalContentAlignment="Center">
+                        <Button.Styles>
+                          <Style Selector="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="FontSize" Value="9"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                          </Style>
+                        </Button.Styles>
+                        <Panel>
+                          <TextBlock Text="▶" IsVisible="{Binding !IsExpanded}" FontSize="9" VerticalAlignment="Center"/>
+                          <TextBlock Text="▼" IsVisible="{Binding IsExpanded}"  FontSize="9" VerticalAlignment="Center"/>
+                        </Panel>
+                      </Button>
+                      <!-- Placeholder spacer for files (no expander) -->
+                      <Border Width="16" IsVisible="{Binding !HasChildren}"/>
+                      <!-- Icon -->
+                      <TextBlock Text="&#x1F4C1;" FontSize="11" VerticalAlignment="Center"
+                                 IsVisible="{Binding Node.IsDirectory}"/>
+                      <!-- Name -->
+                      <TextBlock Text="{Binding Node.Name}"
                                  FontSize="{DynamicResource NxFont12}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  VerticalAlignment="Center"
@@ -280,28 +326,13 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTextColumn Header="%"         Binding="{Binding PercentOfParent, StringFormat='{}{0:F1}%'}" Width="0.55*" MinWidth="50"  IsReadOnly="True"/>
-              <DataGridTextColumn Header="Size"      Binding="{Binding SizeDisplay}"        Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
-              <DataGridTextColumn Header="Allocated" Binding="{Binding AllocatedDisplay}"   Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
-              <DataGridTextColumn Header="Files"     Binding="{Binding FileCountDisplay}"   Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
-              <DataGridTextColumn Header="Folders"   Binding="{Binding FolderCountDisplay}" Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
-              <DataGridTextColumn Header="Modified"  Binding="{Binding LastModified, StringFormat='yyyy-MM-dd'}" Width="0.9*" MinWidth="75" IsReadOnly="True"/>
+              <DataGridTextColumn Header="%"         Binding="{Binding PercentDisplay}"   Width="0.55*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Size"      Binding="{Binding SizeDisplay}"      Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Allocated" Binding="{Binding AllocatedDisplay}" Width="0.8*"  MinWidth="60"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Files"     Binding="{Binding FileCount}"        Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Folders"   Binding="{Binding FolderCount}"      Width="0.65*" MinWidth="50"  IsReadOnly="True"/>
+              <DataGridTextColumn Header="Modified"  Binding="{Binding Modified}"         Width="0.9*"  MinWidth="75"  IsReadOnly="True"/>
             </DataGrid.Columns>
-            <DataGrid.ContextMenu>
-              <ContextMenu>
-                <MenuItem Header="Navigate Into"
-                          Command="{Binding $parent[UserControl].DataContext.NavigateIntoCommand}"
-                          CommandParameter="{Binding}"
-                          IsEnabled="{Binding IsDirectory}"/>
-                <Separator/>
-                <MenuItem Header="Open Location"
-                          Command="{Binding $parent[UserControl].DataContext.OpenFileLocationCommand}"
-                          CommandParameter="{Binding}"/>
-                <MenuItem Header="Copy Path"
-                          Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}"
-                          CommandParameter="{Binding}"/>
-              </ContextMenu>
-            </DataGrid.ContextMenu>
           </DataGrid>
         </Grid>
 
@@ -309,8 +340,8 @@
         <GridSplitter Grid.Column="1" Width="4" VerticalAlignment="Stretch"
                       Background="{DynamicResource BorderSubtleBrush}"/>
 
-        <!-- Right panel: File Types + Selected File + Duplicates -->
-        <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
+        <!-- Right panel: File Types + Selected File -->
+        <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
 
           <!-- File Types header -->
           <Border Grid.Row="0" Padding="12,10"
@@ -387,80 +418,6 @@
             </StackPanel>
           </Border>
 
-          <!-- Duplicates panel -->
-          <Grid Grid.Row="3" RowDefinitions="Auto,180">
-            <Border Grid.Row="0" Padding="12,8"
-                    Background="{DynamicResource BgPrimaryBrush}"
-                    BorderBrush="{DynamicResource BorderSubtleBrush}"
-                    BorderThickness="0,0,0,1">
-              <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="DUPLICATE FILES"
-                           FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                           LetterSpacing="0.8"
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           VerticalAlignment="Center"/>
-                <Button DockPanel.Dock="Right"
-                        Content="Find"
-                        Command="{Binding FindDuplicatesCommand}"
-                        IsEnabled="{Binding HasScanResult}"
-                        Padding="8,3" CornerRadius="6"
-                        FontSize="{DynamicResource NxFont11}">
-                  <Button.Styles>
-                    <Style Selector="Button">
-                      <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
-                      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                    </Style>
-                  </Button.Styles>
-                </Button>
-                <TextBlock Text="{Binding DuplicateSummary}"
-                           FontSize="{DynamicResource NxFont10}"
-                           Foreground="{DynamicResource TextTertiaryBrush}"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"
-                           Margin="8,0"
-                           IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-              </DockPanel>
-            </Border>
-            <ScrollViewer Grid.Row="1">
-              <ItemsControl ItemsSource="{Binding Duplicates}" Padding="8">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate DataType="models:DuplicateGroup">
-                    <Border Margin="0,0,0,6" Padding="8"
-                            CornerRadius="8"
-                            Background="{DynamicResource BgHoverBrush}"
-                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                            BorderThickness="1">
-                      <StackPanel Spacing="3">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                          <TextBlock Text="{Binding WastedDisplay}"
-                                     FontWeight="SemiBold"
-                                     Foreground="{StaticResource ColorWarningBrush}"
-                                     FontSize="{DynamicResource NxFont11}"/>
-                          <TextBlock Text="wasted"
-                                     Foreground="{DynamicResource TextTertiaryBrush}"
-                                     FontSize="{DynamicResource NxFont11}"/>
-                          <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
-                                     Foreground="{DynamicResource TextTertiaryBrush}"
-                                     FontSize="{DynamicResource NxFont11}"/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding Files}">
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="models:DiskNode">
-                              <TextBlock Text="{Binding FullPath}"
-                                         FontSize="{DynamicResource NxFont10}"
-                                         Foreground="{DynamicResource TextTertiaryBrush}"
-                                         TextTrimming="CharacterEllipsis"/>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
-          </Grid>
-
         </Grid><!-- end right panel -->
       </Grid><!-- end folder view -->
 
@@ -515,16 +472,135 @@
           <DataGrid.ContextMenu>
             <ContextMenu>
               <MenuItem Header="Open Location"
-                        Command="{Binding $parent[UserControl].DataContext.OpenFileLocationCommand}"
-                        CommandParameter="{Binding}"/>
+                        Command="{Binding $parent[ContextMenu].PlacementTarget.DataContext.OpenFileLocationCommand}"
+                        CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.SelectedItem}"/>
               <MenuItem Header="Copy Path"
-                        Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}"
-                        CommandParameter="{Binding}"/>
+                        Command="{Binding $parent[ContextMenu].PlacementTarget.DataContext.CopyPathCommand}"
+                        CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.SelectedItem}"/>
             </ContextMenu>
           </DataGrid.ContextMenu>
         </DataGrid>
 
       </Grid><!-- end file view -->
+
+      <!-- ═══════ DUPLICATES VIEW ═══════ -->
+      <Grid IsVisible="{Binding IsDuplicateViewActive}" RowDefinitions="Auto,*">
+
+        <!-- Header: Find button + summary + progress -->
+        <Border Grid.Row="0" Padding="16,10"
+                Background="{DynamicResource BgSecondaryBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1">
+          <DockPanel>
+            <Button DockPanel.Dock="Left"
+                    Content="Find Duplicates"
+                    Command="{Binding FindDuplicatesCommand}"
+                    IsEnabled="{Binding HasScanResult}"
+                    Padding="14,7" CornerRadius="8"
+                    FontSize="{DynamicResource NxFont12}">
+              <Button.Styles>
+                <Style Selector="Button">
+                  <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
+                  <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                </Style>
+              </Button.Styles>
+            </Button>
+            <ProgressBar DockPanel.Dock="Right"
+                         IsVisible="{Binding IsDuplicateScanning}"
+                         IsIndeterminate="True"
+                         Width="100" Height="3"
+                         Foreground="{DynamicResource AccentBlueBrush}"
+                         Background="Transparent"
+                         VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding DuplicateSummary}"
+                       FontSize="{DynamicResource NxFont13}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       VerticalAlignment="Center"
+                       Margin="14,0,0,0"
+                       IsVisible="{Binding DuplicateSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </DockPanel>
+        </Border>
+
+        <!-- Body: prompt or results -->
+        <Panel Grid.Row="1">
+          <!-- Prompt: no scan result yet -->
+          <TextBlock Text="Run a scan first, then click 'Find Duplicates' to locate duplicate files."
+                     FontSize="{DynamicResource NxFont14}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     IsVisible="{Binding !HasScanResult}"/>
+
+          <!-- Prompt: scanned but not yet searched -->
+          <TextBlock Text="Click 'Find Duplicates' above to scan for duplicate files."
+                     FontSize="{DynamicResource NxFont14}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     IsVisible="{Binding !HasDuplicates}"/>
+
+          <!-- Results -->
+          <ScrollViewer IsVisible="{Binding HasDuplicates}">
+            <ItemsControl ItemsSource="{Binding Duplicates}" Padding="16">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:DuplicateGroup">
+                  <Border Margin="0,0,0,8" Padding="14"
+                          CornerRadius="10"
+                          Background="{DynamicResource BgElevatedBrush}"
+                          BorderBrush="{DynamicResource BorderSubtleBrush}"
+                          BorderThickness="1">
+                    <StackPanel Spacing="6">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding WastedDisplay}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource ColorWarningBrush}"
+                                   FontSize="{DynamicResource NxFont13}"/>
+                        <TextBlock Text="wasted"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   FontSize="{DynamicResource NxFont13}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Files.Count, StringFormat='({0} copies)'}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   FontSize="{DynamicResource NxFont12}"
+                                   VerticalAlignment="Center"/>
+                      </StackPanel>
+                      <ItemsControl ItemsSource="{Binding Files}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="models:DiskNode">
+                            <TextBlock Text="{Binding FullPath}"
+                                       FontSize="{DynamicResource NxFont11}"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,1"/>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Panel>
+
+      </Grid><!-- end duplicates view -->
+
+      <!-- ═══════ EMPTY STATE OVERLAY ═══════ (renders on top when no scan) -->
+      <Border Background="{DynamicResource BgBaseBrush}"
+              IsVisible="{Binding ShowEmptyState}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <TextBlock Text="&#x1F4BE;"
+                     FontSize="56"
+                     HorizontalAlignment="Center"
+                     Opacity="0.35"/>
+          <TextBlock Text="Select a drive above and click Scan to analyze disk usage"
+                     FontSize="{DynamicResource NxFont16}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Text="Supports NTFS (MFT direct read) and all other file systems"
+                     FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
 
     </Panel><!-- end body Panel -->
 
