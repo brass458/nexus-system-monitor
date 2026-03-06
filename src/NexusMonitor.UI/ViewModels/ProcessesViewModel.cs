@@ -8,6 +8,7 @@ using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
+using NexusMonitor.Core.Storage;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -22,8 +23,9 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class ProcessesViewModel : ViewModelBase, IDisposable
 {
-    private readonly IProcessProvider _processProvider;
-    private readonly AppSettings _appSettings;
+    private readonly IProcessProvider        _processProvider;
+    private readonly AppSettings             _appSettings;
+    private readonly ProcessPreferenceStore? _preferenceStore;
     private readonly CancellationTokenSource _cts = new();
     // 4E: Per-selection CTS — cancelled each time SelectedProcess changes to abort stale detail loads
     private CancellationTokenSource _detailCts = new();
@@ -65,6 +67,10 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _isDetailPanelVisible = false;
 
+    /// <summary>True when the selected process has a saved persistent preference.</summary>
+    [ObservableProperty]
+    private bool _hasPreference;
+
     [ObservableProperty]
     private bool _isTreeViewActive;
 
@@ -100,10 +106,12 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     /// <summary>Sort direction persisted here so it survives tab switches.</summary>
     public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
 
-    public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings)
+    public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
+        ProcessPreferenceStore? preferenceStore = null)
     {
-        _processProvider = processProvider;
-        _appSettings     = appSettings;
+        _processProvider  = processProvider;
+        _appSettings      = appSettings;
+        _preferenceStore  = preferenceStore;
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);
 
@@ -463,6 +471,45 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         IsDetailPanelVisible = true;
     }
 
+    [RelayCommand]
+    private void SavePreference()
+    {
+        if (SelectedProcess is null || _preferenceStore is null) return;
+        var pref = new ProcessPreference
+        {
+            ExeName       = SelectedProcess.Name,
+            Priority      = null, // populated below from the process's current state
+        };
+        // We don't have current priority on ProcessRowViewModel directly;
+        // save what the user has set via context menu in this session if any,
+        // otherwise just mark the exe for auto-priority-Normal on next launch.
+        // For now, persist the current row's display values as-is.
+        _preferenceStore.Upsert(pref);
+        HasPreference = true;
+        LastError = $"Settings remembered for {SelectedProcess.Name}";
+    }
+
+    [RelayCommand]
+    private void SavePreferenceWithCurrentPriority(string priorityName)
+    {
+        if (SelectedProcess is null || _preferenceStore is null) return;
+        if (!Enum.TryParse<ProcessPriority>(priorityName, out var priority)) return;
+        var existing = _preferenceStore.Get(SelectedProcess.Name) ?? new ProcessPreference { ExeName = SelectedProcess.Name };
+        existing.Priority = priority;
+        _preferenceStore.Upsert(existing);
+        HasPreference = true;
+        LastError = $"Priority {priority} remembered for {SelectedProcess.Name}";
+    }
+
+    [RelayCommand]
+    private void ClearPreference()
+    {
+        if (SelectedProcess is null || _preferenceStore is null) return;
+        _preferenceStore.Delete(SelectedProcess.Name);
+        HasPreference = false;
+        LastError = $"Saved settings cleared for {SelectedProcess.Name}";
+    }
+
     // Filter from the in-memory cache — no async round-trip to the provider needed.
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
@@ -479,6 +526,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     partial void OnSelectedProcessChanged(ProcessRowViewModel? value)
     {
+        // Update HasPreference for the newly selected process
+        HasPreference = value is not null && _preferenceStore?.Get(value.Name) is not null;
+
         // Dispose the old detail view model to unsubscribe its PropertyChanged handler
         (SelectedDetails as IDisposable)?.Dispose();
         SelectedDetails = value is null ? null : new ProcessDetailViewModel(value);

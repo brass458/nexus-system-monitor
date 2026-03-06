@@ -85,6 +85,10 @@ public class AppSettings
     // Theme Presets
     public string ActiveThemePresetId { get; set; } = "";  // "" = custom/none
 
+    // Performance Profiles (Phase 17)
+    public List<PerformanceProfile> PerformanceProfiles { get; set; } = new();
+    public Guid? ActiveProfileId { get; set; }
+
     // Anomaly Detection (Phase 13)
     public bool   AnomalyDetectionEnabled     { get; set; } = false;
     /// <summary>"Low", "Medium", or "High" — maps to sigma preset in AnomalyDetectionConfig.</summary>

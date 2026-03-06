@@ -104,6 +104,15 @@
                      VerticalAlignment="Center"/>
         </Grid>
 
+        <!-- Active Profile label (shown only when a profile is active) -->
+        <TextBlock Text="{Binding ActiveProfileName, StringFormat='⚡ {0}'}"
+                   FontSize="{DynamicResource NxFont09}"
+                   FontWeight="Medium"
+                   Foreground="{DynamicResource AccentBrush}"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding HasActiveProfile}"
+                   Margin="0,2,0,0"/>
+
       </StackPanel>
     </Border>
 

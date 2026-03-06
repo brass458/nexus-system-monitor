@@ -212,6 +212,21 @@
             </MenuItem>
             <MenuItem Header="Set CPU Affinity…" Command="{Binding SetAffinityCommand}"/>
             <Separator/>
+            <MenuItem Header="Remember Current Priority"
+                      IsVisible="{Binding !HasPreference}"
+                      ToolTip.Tip="Auto-apply this process's current priority every time it launches">
+              <MenuItem Header="Idle"         Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="Idle"/>
+              <MenuItem Header="Below Normal" Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="BelowNormal"/>
+              <MenuItem Header="Normal"       Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="Normal"/>
+              <MenuItem Header="Above Normal" Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="AboveNormal"/>
+              <MenuItem Header="High"         Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="High"/>
+              <MenuItem Header="Real Time"    Command="{Binding SavePreferenceWithCurrentPriorityCommand}" CommandParameter="RealTime"/>
+            </MenuItem>
+            <MenuItem Header="Forget Saved Settings"
+                      Command="{Binding ClearPreferenceCommand}"
+                      IsVisible="{Binding HasPreference}"
+                      ToolTip.Tip="Stop auto-applying saved settings for this process"/>
+            <Separator/>
             <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
             <MenuItem Header="Search Online"      Command="{Binding SearchOnlineCommand}"/>
             <Separator/>

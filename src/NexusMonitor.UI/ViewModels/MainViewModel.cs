@@ -44,10 +44,12 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("Startup",      "\uF678", () => services.GetRequiredService<StartupViewModel>(),      NavGroup.Monitor,  eager: false),
             new NavItem("System Info",  "\uF35A", () => services.GetRequiredService<SystemInfoViewModel>(),   NavGroup.Monitor,  eager: false),
             // Tools — alphabetical
-            new NavItem("Gaming Mode",  "\uF451", () => services.GetRequiredService<GamingModeViewModel>(),   NavGroup.Tools,    eager: false),
-            new NavItem("LAN Scanner",  "\uEA5D", () => services.GetRequiredService<LanScannerViewModel>(),   NavGroup.Tools,    eager: false),
-            new NavItem("Optimization", "\uE619", () => services.GetRequiredService<OptimizationViewModel>(), NavGroup.Tools,    eager: false),
-            new NavItem("ProBalance",   "\uEA51", () => services.GetRequiredService<ProBalanceViewModel>(),   NavGroup.Tools,    eager: false),
+            new NavItem("Disk Analyzer","\uF1C9", () => services.GetRequiredService<DiskAnalyzerViewModel>(),           NavGroup.Tools,    eager: false),
+            new NavItem("Gaming Mode",  "\uF451", () => services.GetRequiredService<GamingModeViewModel>(),             NavGroup.Tools,    eager: false),
+            new NavItem("LAN Scanner",  "\uEA5D", () => services.GetRequiredService<LanScannerViewModel>(),             NavGroup.Tools,    eager: false),
+            new NavItem("Optimization", "\uE619", () => services.GetRequiredService<OptimizationViewModel>(),           NavGroup.Tools,    eager: false),
+            new NavItem("Profiles",     "\uF63E", () => services.GetRequiredService<PerformanceProfilesViewModel>(),    NavGroup.Tools,    eager: false),
+            new NavItem("ProBalance",   "\uEA51", () => services.GetRequiredService<ProBalanceViewModel>(),             NavGroup.Tools,    eager: false),
             // System — alphabetical
             new NavItem("Alerts",       "\uF115", () => services.GetRequiredService<AlertsViewModel>(),       NavGroup.System,   eager: false),
             new NavItem("History",      "\uF47F", () => services.GetRequiredService<HistoryViewModel>(),      NavGroup.System,   eager: false),

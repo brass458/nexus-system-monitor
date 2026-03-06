@@ -1,17 +1,21 @@
 using System.Reactive.Linq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.Storage;
 
 namespace NexusMonitor.Core.Rules;
 
 /// <summary>
 /// Background service that applies persistent ProcessRules to newly-launched
 /// processes and evaluates watchdog conditions on every process snapshot.
+/// Also applies ProcessPreference settings to new processes (preferences are
+/// lower priority than explicit rules — rules win when both match).
 /// </summary>
 public sealed class RulesEngine : IDisposable
 {
-    private readonly IProcessProvider _processProvider;
-    private readonly AppSettings _settings;
+    private readonly IProcessProvider        _processProvider;
+    private readonly AppSettings             _settings;
+    private readonly ProcessPreferenceStore? _preferenceStore;
     private readonly HashSet<int> _seenPids = new();
     // watchdog tracking: (pid, ruleId) → first-seen-over-threshold time
     private readonly Dictionary<(int pid, Guid ruleId), DateTime> _conditionFirstSeen = new();
@@ -21,10 +25,12 @@ public sealed class RulesEngine : IDisposable
     private List<ProcessRule>? _cachedRules;
     private IReadOnlyList<ProcessRule>? _cachedRulesSource;
 
-    public RulesEngine(IProcessProvider processProvider, AppSettings settings)
+    public RulesEngine(IProcessProvider processProvider, AppSettings settings,
+        ProcessPreferenceStore? preferenceStore = null)
     {
-        _processProvider = processProvider;
-        _settings = settings;
+        _processProvider  = processProvider;
+        _settings         = settings;
+        _preferenceStore  = preferenceStore;
     }
 
     public void Start()
@@ -54,6 +60,7 @@ public sealed class RulesEngine : IDisposable
         foreach (var proc in processes)
         {
             bool isNew = _seenPids.Add(proc.Pid);
+            bool ruleMatched = false;
             foreach (var rule in rules.Where(r => r.Matches(proc.Name)))
             {
                 // ── Disallowed: terminate immediately ─────────────────────
@@ -66,6 +73,7 @@ public sealed class RulesEngine : IDisposable
                 // ── Persistent actions on new process ─────────────────────
                 if (isNew)
                 {
+                    ruleMatched = true;
                     if (rule.Priority.HasValue)
                         try { await _processProvider.SetPriorityAsync(proc.Pid, rule.Priority.Value); } catch { }
                     if (rule.AffinityMask.HasValue)
@@ -81,6 +89,25 @@ public sealed class RulesEngine : IDisposable
                 // ── Watchdog conditions ────────────────────────────────────
                 if (rule.WatchdogAction != WatchdogAction.None && rule.Condition is not null)
                     await EvaluateWatchdog(proc, rule);
+            }
+
+            // ── Apply saved preferences if no explicit rule matched ────────
+            if (isNew && !ruleMatched && _preferenceStore is not null)
+            {
+                var pref = _preferenceStore.Get(proc.Name);
+                if (pref is not null)
+                {
+                    if (pref.Priority.HasValue)
+                        try { await _processProvider.SetPriorityAsync(proc.Pid, pref.Priority.Value); } catch { }
+                    if (pref.AffinityMask.HasValue)
+                        try { await _processProvider.SetAffinityAsync(proc.Pid, pref.AffinityMask.Value); } catch { }
+                    if (pref.IoPriority.HasValue)
+                        try { await _processProvider.SetIoPriorityAsync(proc.Pid, pref.IoPriority.Value); } catch { }
+                    if (pref.MemoryPriority.HasValue)
+                        try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, pref.MemoryPriority.Value); } catch { }
+                    if (pref.EfficiencyMode.HasValue)
+                        try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, pref.EfficiencyMode.Value); } catch { }
+                }
             }
         }
 

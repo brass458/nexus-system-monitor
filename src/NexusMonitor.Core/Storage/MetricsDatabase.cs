@@ -180,6 +180,18 @@ CREATE TABLE IF NOT EXISTS rollups_1h (
     sample_count    INTEGER
 );
 
+-- Persistent per-exe process settings (Phase 17)
+CREATE TABLE IF NOT EXISTS process_preferences (
+    exe_name        TEXT    PRIMARY KEY,
+    priority        INTEGER,
+    affinity_mask   INTEGER,
+    io_priority     INTEGER,
+    memory_priority INTEGER,
+    efficiency_mode INTEGER,
+    created_utc     TEXT    NOT NULL,
+    modified_utc    TEXT    NOT NULL
+);
+
 INSERT OR IGNORE INTO meta (key, value) VALUES
     ('schema_version',    '1'),
     ('last_rollup_1m_ts', '0'),

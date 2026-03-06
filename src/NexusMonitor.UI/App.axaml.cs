@@ -100,7 +100,9 @@ public class App : Application
             if (saved.Current.ProBalanceEnabled)
                 Services.GetRequiredService<ProBalanceService>().Start();
 
-            if (saved.Current.Rules.Count > 0)
+            // Start rules engine if rules exist OR there are saved process preferences
+            var prefStore = Services.GetRequiredService<ProcessPreferenceStore>();
+            if (saved.Current.Rules.Count > 0 || prefStore.GetAll().Count > 0)
                 Services.GetRequiredService<RulesEngine>().Start();
             if (saved.Current.AlertRules.Count > 0)
                 Services.GetRequiredService<AlertsService>().Start();
@@ -118,6 +120,11 @@ public class App : Application
             var anomalyService = Services.GetRequiredService<AnomalyDetectionService>();
             if (saved.Current.AnomalyDetectionEnabled)
                 anomalyService.Start();
+
+            // Restore active performance profile if one was saved
+            if (saved.Current.ActiveProfileId.HasValue)
+                Services.GetRequiredService<PerformanceProfileService>()
+                    .ActivateProfile(saved.Current.ActiveProfileId.Value);
 
             // Start smart glass adaptive service if enabled
             if (saved.Current.SmartTintEnabled)
@@ -418,10 +425,14 @@ public class App : Application
         // -- Smart glass adaptive service --
         services.AddSingleton<GlassAdaptiveService>();
 
+        // -- Process preferences store --
+        services.AddSingleton<ProcessPreferenceStore>();
+
         // -- Automation services --
         services.AddSingleton<ProBalanceService>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<RulesPersistence>();
+        services.AddSingleton<PerformanceProfileService>();
 
         // -- Gaming and Alerts services --
         services.AddSingleton<GamingModeService>();
@@ -452,6 +463,7 @@ public class App : Application
         services.AddSingleton<HistoryViewModel>();
         services.AddSingleton<OverlayViewModel>();
         services.AddSingleton<LanScannerViewModel>();
+        services.AddSingleton<PerformanceProfilesViewModel>();
 
         return services.BuildServiceProvider();
     }

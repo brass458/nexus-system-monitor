@@ -7,6 +7,7 @@ using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.Messages;
@@ -24,8 +25,10 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
     [ObservableProperty] private double _memPercent     = 0;
     [ObservableProperty] private string _netSendDisplay = "↑ 0 B/s";
     [ObservableProperty] private string _netRecvDisplay = "↓ 0 B/s";
-    [ObservableProperty] private string _gpuDisplay     = "0%";
+    [ObservableProperty] private string _gpuDisplay          = "0%";
     [ObservableProperty] private bool   _hasGpu;
+    [ObservableProperty] private string _activeProfileName   = "";
+    public bool HasActiveProfile => !string.IsNullOrEmpty(ActiveProfileName);
 
     public ObservableCollection<ObservableValue> CpuHistory { get; } =
         new(Enumerable.Range(0, 30).Select(_ => new ObservableValue(0)));
@@ -36,11 +39,25 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
 
     private readonly ISystemMetricsProvider _provider;
     private IDisposable? _sub;
+    private IDisposable? _profileSub;
     private int _cpuRingIdx;
 
-    public OverlayViewModel(ISystemMetricsProvider provider, SettingsService settings)
+    public OverlayViewModel(ISystemMetricsProvider provider, SettingsService settings,
+        PerformanceProfileService? profileService = null)
     {
         _provider = provider;
+
+        if (profileService is not null)
+        {
+            ActiveProfileName = profileService.ActiveProfileName;
+            _profileSub = profileService.ProfileChanged
+                .ObserveOn(RxApp.MainThreadScheduler)
+                .Subscribe(name =>
+                {
+                    ActiveProfileName = name ?? "";
+                    OnPropertyChanged(nameof(HasActiveProfile));
+                });
+        }
 
         CpuSeries =
         [
@@ -98,10 +115,14 @@ public partial class OverlayViewModel : ObservableObject, IDisposable
         _cpuRingIdx++;
     }
 
+    partial void OnActiveProfileNameChanged(string value) =>
+        OnPropertyChanged(nameof(HasActiveProfile));
+
     public void Dispose()
     {
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _sub?.Dispose();
+        _profileSub?.Dispose();
     }
 
     private static string FmtRate(long bps) => bps switch

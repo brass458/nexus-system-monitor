@@ -1202,6 +1202,67 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== SAVED PROCESS PREFERENCES ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Saved Process Preferences"
+                   FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <TextBlock Text="These settings are applied automatically each time the process launches. Right-click a process to remember its priority."
+                   FontSize="{DynamicResource NxFont10}"
+                   Foreground="{DynamicResource TextTertiaryBrush}"/>
+        <Separator/>
+
+        <DataGrid ItemsSource="{Binding SavedPreferences}"
+                  AutoGenerateColumns="False"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  MinHeight="80"
+                  MaxHeight="280"
+                  Background="Transparent"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderSubtleBrush}">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Process" Binding="{Binding ExeName}" Width="*" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100" IsReadOnly="True"/>
+            <DataGridTextColumn Header="IO Priority" Binding="{Binding IoPriority}" Width="90" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Efficiency" Binding="{Binding EfficiencyMode}" Width="80" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedUtc, StringFormat='{}{0:yyyy-MM-dd}'}" Width="90" IsReadOnly="True"/>
+            <DataGridTemplateColumn Width="36" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Classes="nx-btn-icon"
+                          Command="{Binding $parent[UserControl].DataContext.DeletePreferenceCommand}"
+                          CommandParameter="{Binding}"
+                          ToolTip.Tip="Remove this preference">
+                    <TextBlock Text="✕" Foreground="{DynamicResource ColorDangerBrush}"
+                               FontSize="{DynamicResource NxFont11}"/>
+                  </Button>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="nx-btn"
+                  Command="{Binding RefreshPreferencesCommand}">
+            <TextBlock Text="↻ Refresh" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+          <Button Classes="nx-btn-danger"
+                  Command="{Binding ClearAllPreferencesCommand}"
+                  IsEnabled="{Binding SavedPreferences.Count, Converter={x:Static ObjectConverters.IsNotNull}}"
+                  ToolTip.Tip="Remove all saved process preferences">
+            <TextBlock Text="Clear All" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <!-- ===== ABOUT ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

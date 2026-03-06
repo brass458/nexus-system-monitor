@@ -349,6 +349,9 @@
             <DataTemplate DataType="vm:SettingsViewModel">
               <views:SettingsView />
             </DataTemplate>
+            <DataTemplate DataType="vm:PerformanceProfilesViewModel">
+              <views:PerformanceProfilesView />
+            </DataTemplate>
           </TransitioningContentControl.DataTemplates>
           </TransitioningContentControl>
 

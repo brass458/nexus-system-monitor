@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
+using System.Collections.ObjectModel;
 using NexusMonitor.Core.Telemetry;
 using NexusMonitor.Core.Themes;
 using NexusMonitor.UI.Messages;
@@ -27,6 +28,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly AnomalyDetectionConfig  _anomalyConfig;
     private readonly GlassAdaptiveService    _glassAdaptive;
     private readonly ThemePresetService      _presetService;
+    private readonly ProcessPreferenceStore? _preferenceStore;
+
+    // ── Saved Process Preferences ────────────────────────────────────────────
+    public ObservableCollection<ProcessPreference> SavedPreferences { get; } = new();
 
     // Luminance-derived min alpha floor (0x80–0xE0); null = feature disabled
     private byte? _luminanceMinAlpha;
@@ -263,15 +268,22 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         AnomalyDetectionService anomalyService,
         AnomalyDetectionConfig  anomalyConfig,
         GlassAdaptiveService    glassAdaptive,
-        ThemePresetService      presetService)
+        ThemePresetService      presetService,
+        ProcessPreferenceStore? preferenceStore = null)
     {
-        Title           = "Settings";
-        _settings       = settings;
-        _exporter       = exporter;
-        _anomalyService = anomalyService;
-        _anomalyConfig  = anomalyConfig;
-        _glassAdaptive  = glassAdaptive;
-        _presetService  = presetService;
+        Title             = "Settings";
+        _settings         = settings;
+        _exporter         = exporter;
+        _anomalyService   = anomalyService;
+        _anomalyConfig    = anomalyConfig;
+        _glassAdaptive    = glassAdaptive;
+        _presetService    = presetService;
+        _preferenceStore  = preferenceStore;
+
+        // Load saved preferences
+        if (preferenceStore is not null)
+            foreach (var p in preferenceStore.GetAll())
+                SavedPreferences.Add(p);
 
         // Subscribe to luminance changes from GlassAdaptiveService
         _glassAdaptive.LuminanceChanged += OnLuminanceChanged;
@@ -1145,6 +1157,34 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         if (Application.Current is null) return;
         Application.Current.Resources[key] =
             new SolidColorBrush(new Color(alpha, baseColor.R, baseColor.G, baseColor.B));
+    }
+
+    // ── Process Preferences commands ─────────────────────────────────────────
+
+    [RelayCommand]
+    private void DeletePreference(ProcessPreference pref)
+    {
+        if (_preferenceStore is null) return;
+        _preferenceStore.Delete(pref.ExeName);
+        SavedPreferences.Remove(pref);
+    }
+
+    [RelayCommand]
+    private void ClearAllPreferences()
+    {
+        if (_preferenceStore is null) return;
+        foreach (var p in SavedPreferences.ToList())
+            _preferenceStore.Delete(p.ExeName);
+        SavedPreferences.Clear();
+    }
+
+    [RelayCommand]
+    private void RefreshPreferences()
+    {
+        if (_preferenceStore is null) return;
+        SavedPreferences.Clear();
+        foreach (var p in _preferenceStore.GetAll())
+            SavedPreferences.Add(p);
     }
 
     public void Dispose()
