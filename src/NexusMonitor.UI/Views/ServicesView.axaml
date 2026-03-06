@@ -115,6 +115,14 @@
               <MenuItem Header="Stop"    Command="{Binding StopServiceCommand}"/>
               <MenuItem Header="Restart" Command="{Binding RestartServiceCommand}"/>
               <Separator/>
+              <MenuItem Header="Set Startup Type"
+                        IsVisible="{Binding Platform.SupportsServiceStartupType}">
+                <MenuItem Header="Automatic"         Command="{Binding SetStartupTypeCommand}" CommandParameter="Automatic"/>
+                <MenuItem Header="Automatic (Delayed)" Command="{Binding SetStartupTypeCommand}" CommandParameter="AutomaticDelayed"/>
+                <MenuItem Header="Manual"            Command="{Binding SetStartupTypeCommand}" CommandParameter="Manual"/>
+                <MenuItem Header="Disabled"          Command="{Binding SetStartupTypeCommand}" CommandParameter="Disabled"/>
+              </MenuItem>
+              <Separator/>
               <MenuItem Header="Go to Process"      Command="{Binding GoToProcessCommand}"/>
               <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"/>
             </ContextMenu>

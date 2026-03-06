@@ -78,6 +78,7 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _gpuMemGb;
     [ObservableProperty] private double _gpuMemTotalGb;
     [ObservableProperty] private string _gpuName = string.Empty;
+    [ObservableProperty] private bool   _hasGpuData;
 
     // ── Device sidebar ────────────────────────────────────────────────────────────
     public ObservableCollection<PerfDeviceViewModel> Devices { get; } = new();
@@ -287,6 +288,7 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
         _ringIdx++;
 
         // GPU
+        HasGpuData = m.Gpus.Count > 0;
         if (m.Gpus.Count > 0)
         {
             GpuPercent    = Math.Round(m.Gpus[0].UsagePercent, 1);

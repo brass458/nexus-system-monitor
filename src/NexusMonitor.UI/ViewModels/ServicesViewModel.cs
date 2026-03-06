@@ -15,6 +15,9 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
     private readonly IServicesProvider _servicesProvider;
     private readonly CancellationTokenSource _cts = new();
 
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
+
     // Master list: all services from last successful load, unfiltered.
     private IReadOnlyList<ServiceInfo> _allServices = [];
 
@@ -35,9 +38,11 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
     /// <summary>True when detail sidebar should be shown (has selection AND toggle is on).</summary>
     public bool IsServiceDetailShown => SelectedService is not null && IsDetailPanelVisible;
 
-    public ServicesViewModel(IServicesProvider servicesProvider)
+    public ServicesViewModel(IServicesProvider servicesProvider,
+        IPlatformCapabilities? platformCapabilities = null)
     {
         _servicesProvider = servicesProvider;
+        Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Services";
         _ = LoadServicesAsync();
     }
@@ -138,6 +143,21 @@ public partial class ServicesViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { LastError = $"Restart failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task SetStartupType(string typeName)
+    {
+        if (SelectedService is null) return;
+        if (!Enum.TryParse<ServiceStartType>(typeName, out var startType)) return;
+        try
+        {
+            LastError = string.Empty;
+            await _servicesProvider.SetStartTypeAsync(SelectedService.Name, startType, _cts.Token);
+            await LoadServicesAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { LastError = $"Set startup type failed: {ex.Message}"; }
     }
 
     [RelayCommand]

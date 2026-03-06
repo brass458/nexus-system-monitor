@@ -63,6 +63,11 @@ public partial class MainWindow : Window
             SetupNavDrag();
             // Shimmer timer is started only if glass is enabled (via SetGlassActive).
             // SettingsViewModel.ApplyBackdropMode calls SetGlassActive after settings load.
+
+            // On macOS, add left padding to the titlebar content so it clears the
+            // native traffic light buttons (~80px wide including their left inset).
+            if (OperatingSystem.IsMacOS())
+                ApplyMacOSTitleBarPadding();
         };
 
         // Pause shimmer when minimized, resume when restored
@@ -99,7 +104,8 @@ public partial class MainWindow : Window
         var vm = DataContext as MainViewModel;
         if (vm is null) return;
 
-        bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
+        var platformMod = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        bool ctrl = (e.KeyModifiers & platformMod) != 0;
 
         switch (e.Key)
         {
@@ -169,6 +175,24 @@ public partial class MainWindow : Window
             }
         }
         return null;
+    }
+
+    // ── macOS: traffic light clearance ──────────────────────────────────────
+
+    /// <summary>
+    /// Adds left padding to the titlebar content grid so it doesn't overlap
+    /// the macOS traffic light buttons (close/minimize/maximize, ~80px wide).
+    /// </summary>
+    private void ApplyMacOSTitleBarPadding()
+    {
+        // The titlebar content is a Panel inside a Border. The inner Grid has Margin="18,0".
+        // We need to find it and bump the left margin to 86px (80 traffic lights + 6 gap).
+        var grid = FindDescendant<Grid>(this, "TitleBarGrid");
+        if (grid is not null)
+        {
+            var m = grid.Margin;
+            grid.Margin = new Thickness(86, m.Top, m.Right, m.Bottom);
+        }
     }
 
     // ── Crystal Glass: pointer-tracked specular + prismatic shimmer ─────────

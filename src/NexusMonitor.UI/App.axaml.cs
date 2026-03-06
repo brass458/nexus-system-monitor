@@ -342,6 +342,7 @@ public class App : Application
         services.AddSingleton<ISleepPreventionProvider,     WindowsSleepPreventionProvider>();
         services.AddSingleton<IShellContextMenuService,     WindowsShellContextMenuService>();
         services.AddSingleton<WindowsHardwareInfoProvider>();
+        services.AddSingleton<IPlatformCapabilities,        WindowsPlatformCapabilities>();
 #elif MACOS
         services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
@@ -352,8 +353,10 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           MacOSPowerPlanProvider>();
         services.AddSingleton<INotificationService,         MacOSNotificationService>();
         services.AddSingleton<IWallpaperService,            MacOSWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
+        services.AddSingleton<ISleepPreventionProvider,     MacOSSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     MacOSShellContextMenuService>();
+        services.AddSingleton<MacOSHardwareInfoProvider>();
+        services.AddSingleton<IPlatformCapabilities,        MacOSPlatformCapabilities>();
 #elif LINUX
         services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
@@ -364,9 +367,10 @@ public class App : Application
         services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
         services.AddSingleton<INotificationService,         LinuxNotificationService>();
         services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
+        services.AddSingleton<ISleepPreventionProvider,     LinuxSleepPreventionProvider>();
+        services.AddSingleton<IShellContextMenuService,     LinuxShellContextMenuService>();
         services.AddSingleton<LinuxHardwareInfoProvider>();
+        services.AddSingleton<IPlatformCapabilities,        LinuxPlatformCapabilities>();
 #else
         services.AddSingleton<IProcessProvider,             MockProcessProvider>();
         services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
@@ -379,6 +383,7 @@ public class App : Application
         services.AddSingleton<IWallpaperService,            NullWallpaperService>();
         services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
         services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
+        services.AddSingleton<IPlatformCapabilities>(_ => new MockPlatformCapabilities());
 #endif
 
         // -- Core services --

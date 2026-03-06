@@ -9,10 +9,30 @@ internal static class ShellHelper
         if (string.IsNullOrEmpty(path)) return;
         try
         {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+            if (OperatingSystem.IsWindows())
             {
-                UseShellExecute = true
-            });
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                {
+                    UseShellExecute = true
+                });
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start(new ProcessStartInfo("open", $"-R \"{path}\"")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow  = true,
+                });
+            }
+            else
+            {
+                var dir = Path.GetDirectoryName(path) ?? path;
+                Process.Start(new ProcessStartInfo("xdg-open", $"\"{dir}\"")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow  = true,
+                });
+            }
         }
         catch { }
     }

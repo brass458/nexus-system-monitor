@@ -1,3 +1,5 @@
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using NexusMonitor.Core.Abstractions;
@@ -42,6 +44,8 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     private readonly Dictionary<int, long[]> _prevCoreFields = new();
 
     private readonly Dictionary<string, (long readSectors, long writeSectors)> _prevDisk = new();
+    // io_ticks: field 12 (0-indexed) in /proc/diskstats — milliseconds device was active
+    private readonly Dictionary<string, long> _prevDiskIoTicks = new();
     private DateTime _prevDiskTime = DateTime.MinValue;
 
     private readonly Dictionary<string, (long rxBytes, long txBytes)> _prevNet = new();
@@ -51,6 +55,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     private Dictionary<string, string?> _mountsCache = new(); // devName → mountPoint
     private DateTime _mountsCacheTime = DateTime.MinValue;
     private static readonly TimeSpan MountsCacheDuration = TimeSpan.FromSeconds(30);
+
+    // NVIDIA detection — checked once at startup
+    private static readonly bool _hasNvidiaSmi = File.Exists("/usr/bin/nvidia-smi") || File.Exists("/usr/local/bin/nvidia-smi");
 
     public LinuxSystemMetricsProvider()
     {
@@ -278,6 +285,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
 
                 if (!long.TryParse(parts[5],  out var readSectors))  continue;
                 if (!long.TryParse(parts[9],  out var writeSectors)) continue;
+                long ioTicks = parts.Length > 12 && long.TryParse(parts[12], out var iot) ? iot : 0;
 
                 long readRate = 0, writeRate = 0;
                 if (_prevDisk.TryGetValue(devName, out var prev))
@@ -288,6 +296,15 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     writeRate = (long)Math.Max(0, writeDelta * 512L / elapsed);
                 }
                 _prevDisk[devName] = (readSectors, writeSectors);
+
+                double activePercent = 0;
+                if (_prevDiskIoTicks.TryGetValue(devName, out var prevIoTicks) && ioTicks >= prevIoTicks)
+                {
+                    var deltaMs    = ioTicks - prevIoTicks;
+                    var elapsedMs  = elapsed * 1000.0;
+                    activePercent  = Math.Min(100.0, elapsedMs > 0 ? deltaMs / elapsedMs * 100.0 : 0);
+                }
+                _prevDiskIoTicks[devName] = ioTicks;
 
                 // Capacity via statvfs on typical mount point
                 long totalBytes = 0, freeBytes = 0;
@@ -312,7 +329,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     AllDriveLetters  = mount ?? string.Empty,
                     ReadBytesPerSec  = readRate,
                     WriteBytesPerSec = writeRate,
-                    ActivePercent    = 0,
+                    ActivePercent    = activePercent,
                     TotalBytes       = totalBytes,
                     FreeBytes        = freeBytes,
                 });
@@ -406,7 +423,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         return end < devLeaf.Length ? devLeaf[..end] : devLeaf;
     }
 
-    // ── Network (/proc/net/dev) ────────────────────────────────────────────────
+    // ── Network (/proc/net/dev + .NET NetworkInterface + sysfs) ──────────────
     private IReadOnlyList<NetworkAdapterMetrics> ReadNetwork()
     {
         var result  = new List<NetworkAdapterMetrics>();
@@ -414,6 +431,15 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         var elapsed = _prevNetTime == DateTime.MinValue
             ? 1.0
             : Math.Max(0.01, (now - _prevNetTime).TotalSeconds);
+
+        // Build a name → NetworkInterface map for IP/speed/type enrichment
+        var nicMap = new Dictionary<string, NetworkInterface>(StringComparer.Ordinal);
+        try
+        {
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                nicMap[nic.Name] = nic;
+        }
+        catch { }
 
         try
         {
@@ -443,6 +469,40 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 }
                 _prevNet[name] = (rxBytes, txBytes);
 
+                // Enrich with IP, speed, and adapter type from NetworkInterface + sysfs
+                string ipv4 = string.Empty, ipv6 = string.Empty, adapterType = "Ethernet";
+                long linkSpeedBps = 0;
+                bool isConnected  = true;
+
+                if (nicMap.TryGetValue(name, out var nic))
+                {
+                    isConnected = nic.OperationalStatus == OperationalStatus.Up;
+                    try
+                    {
+                        foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                        {
+                            if (ua.Address.AddressFamily == AddressFamily.InterNetwork)
+                                ipv4 = ua.Address.ToString();
+                            else if (ua.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                                ipv6 = ua.Address.ToString();
+                        }
+                    }
+                    catch { }
+                }
+
+                // Speed from /sys/class/net/{name}/speed (in Mbps, -1 if unavailable)
+                try
+                {
+                    var speedPath = $"/sys/class/net/{name}/speed";
+                    if (File.Exists(speedPath) && long.TryParse(File.ReadAllText(speedPath).Trim(), out var mbps) && mbps > 0)
+                        linkSpeedBps = mbps * 1_000_000L;
+                }
+                catch { }
+
+                // Type: wireless if /sys/class/net/{name}/wireless exists
+                if (Directory.Exists($"/sys/class/net/{name}/wireless"))
+                    adapterType = "WiFi";
+
                 result.Add(new NetworkAdapterMetrics
                 {
                     Name             = name,
@@ -451,12 +511,12 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     RecvBytesPerSec  = rxRate,
                     TotalSendBytes   = txBytes,
                     TotalRecvBytes   = rxBytes,
-                    IsConnected      = true,
-                    IpAddress        = string.Empty,
-                    IPv4Address      = string.Empty,
-                    IPv6Address      = string.Empty,
-                    LinkSpeedBps     = 0,
-                    AdapterType      = "Unknown",
+                    IsConnected      = isConnected,
+                    IpAddress        = ipv4,
+                    IPv4Address      = ipv4,
+                    IPv6Address      = ipv6,
+                    LinkSpeedBps     = linkSpeedBps,
+                    AdapterType      = adapterType,
                 });
             }
         }
@@ -466,8 +526,69 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         return result;
     }
 
-    // ── GPU (sysfs DRM) ────────────────────────────────────────────────────────
+    // ── GPU (NVIDIA via nvidia-smi; AMD via sysfs DRM) ────────────────────────
     private static IReadOnlyList<GpuMetrics> ReadGpu()
+    {
+        // Prefer NVIDIA if nvidia-smi is available
+        if (_hasNvidiaSmi)
+        {
+            var nvResult = ReadNvidiaGpu();
+            if (nvResult.Count > 0) return nvResult;
+        }
+
+        // Fall back to AMD sysfs
+        return ReadAmdGpu();
+    }
+
+    private static IReadOnlyList<GpuMetrics> ReadNvidiaGpu()
+    {
+        try
+        {
+            var smiBin = File.Exists("/usr/bin/nvidia-smi") ? "/usr/bin/nvidia-smi" : "/usr/local/bin/nvidia-smi";
+            using var proc = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo(
+                    smiBin,
+                    "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,name --format=csv,noheader,nounits")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            proc.Start();
+            var output = proc.StandardOutput.ReadToEnd();
+            proc.WaitForExit(3000);
+
+            var result = new List<GpuMetrics>();
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = line.Split(',');
+                if (parts.Length < 5) continue;
+
+                double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var usage);
+                long.TryParse(parts[1].Trim(), out var memUsedMb);
+                long.TryParse(parts[2].Trim(), out var memTotalMb);
+                double.TryParse(parts[3].Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var temp);
+                var gpuName = parts[4].Trim();
+
+                result.Add(new GpuMetrics
+                {
+                    Name                      = gpuName,
+                    UsagePercent              = Math.Clamp(usage, 0, 100),
+                    DedicatedMemoryUsedBytes  = memUsedMb  * 1_048_576L,
+                    DedicatedMemoryTotalBytes = memTotalMb * 1_048_576L,
+                    TemperatureCelsius        = temp,
+                });
+            }
+            return result;
+        }
+        catch { return []; }
+    }
+
+    private static IReadOnlyList<GpuMetrics> ReadAmdGpu()
     {
         try
         {

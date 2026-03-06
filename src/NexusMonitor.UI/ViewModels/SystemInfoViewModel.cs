@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using NexusMonitor.Core.Models;
 #if WINDOWS
 using NexusMonitor.Platform.Windows;
+#elif MACOS
+using NexusMonitor.Platform.MacOS;
 #elif LINUX
 using NexusMonitor.Platform.Linux;
 #endif
@@ -21,6 +23,16 @@ public partial class SystemInfoViewModel : ViewModelBase
         => _ = LoadAsync(provider);
 
     private async Task LoadAsync(WindowsHardwareInfoProvider provider)
+    {
+        try   { Info = await provider.QueryAsync(); }
+        catch (Exception ex) { LoadError = $"Failed to read hardware info: {ex.Message}"; }
+        finally { IsLoading = false; }
+    }
+#elif MACOS
+    public SystemInfoViewModel(MacOSHardwareInfoProvider provider)
+        => _ = LoadMacOSAsync(provider);
+
+    private async Task LoadMacOSAsync(MacOSHardwareInfoProvider provider)
     {
         try   { Info = await provider.QueryAsync(); }
         catch (Exception ex) { LoadError = $"Failed to read hardware info: {ex.Message}"; }

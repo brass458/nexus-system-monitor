@@ -88,6 +88,7 @@
                 Classes="nx-btn"
                 Margin="0,0,4,0"
                 Command="{Binding FindWindowCommand}"
+                IsVisible="{Binding Platform.SupportsFindWindow}"
                 ToolTip.Tip="Click on any window to identify its process">
           <StackPanel Orientation="Horizontal" Spacing="4">
             <TextBlock Text="⊕" FontSize="{DynamicResource NxFont13}"/>
@@ -210,7 +211,11 @@
               <MenuItem Header="High"         Command="{Binding SetPriorityCommand}" CommandParameter="High"/>
               <MenuItem Header="Real Time"    Command="{Binding SetPriorityCommand}" CommandParameter="RealTime"/>
             </MenuItem>
-            <MenuItem Header="Set CPU Affinity…" Command="{Binding SetAffinityCommand}"/>
+            <MenuItem Header="Set CPU Affinity…" Command="{Binding SetAffinityCommand}"
+                      IsVisible="{Binding Platform.SupportsCpuAffinity}"/>
+            <MenuItem Header="Trim Memory"       Command="{Binding TrimMemoryCommand}"
+                      IsVisible="{Binding Platform.SupportsTrimMemory}"
+                      ToolTip.Tip="Release unused memory pages back to the system"/>
             <Separator/>
             <MenuItem Header="Remember Current Priority"
                       IsVisible="{Binding !HasPreference}"
@@ -231,7 +236,8 @@
             <MenuItem Header="Search Online"      Command="{Binding SearchOnlineCommand}"/>
             <Separator/>
             <MenuItem Header="Properties"         Command="{Binding ShowPropertiesCommand}"/>
-            <MenuItem Header="Create Dump File…"  Command="{Binding CreateDumpFileCommand}"/>
+            <MenuItem Header="Create Dump File…"  Command="{Binding CreateDumpFileCommand}"
+                      IsVisible="{Binding Platform.SupportsCreateDump}"/>
           </ContextMenu>
         </DataGrid.ContextMenu>
 

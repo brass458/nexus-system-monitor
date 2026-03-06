@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using System.Text.Json;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -120,6 +121,8 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
     private readonly int    _logicalCores;
     private readonly long   _totalMemBytes;
     private readonly int    _pageSize;
+    // GPU identity from system_profiler — cached at startup; utilization unavailable on macOS
+    private readonly IReadOnlyList<GpuMetrics> _staticGpuInfo;
 
     // ── Delta tracking for CPU, disk, and network rates ───────────────────────
     private long[]   _prevCpuTimes = [];
@@ -148,6 +151,54 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
 
         if (_physicalCores <= 0) _physicalCores = _logicalCores;
         if (_pageSize <= 0)      _pageSize      = 4096;
+
+        _staticGpuInfo = ReadGpuIdentityFromSystemProfiler();
+    }
+
+    /// <summary>
+    /// Reads GPU name and VRAM from system_profiler at startup.
+    /// Utilization is not available via any public macOS API.
+    /// </summary>
+    private static IReadOnlyList<GpuMetrics> ReadGpuIdentityFromSystemProfiler()
+    {
+        var result = new List<GpuMetrics>();
+        try
+        {
+            var json = RunCommand("system_profiler", "SPDisplaysDataType -json");
+            if (string.IsNullOrEmpty(json)) return result;
+
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("SPDisplaysDataType", out var displays))
+                return result;
+
+            foreach (var gpu in displays.EnumerateArray())
+            {
+                var name    = gpu.TryGetProperty("sppci_model",  out var n) ? n.GetString() ?? "" : "";
+                var vramStr = gpu.TryGetProperty("sppci_vram",   out var v) ? v.GetString() ?? "" : "";
+                long vramBytes = ParseVramString(vramStr);
+
+                result.Add(new GpuMetrics
+                {
+                    Name                      = name,
+                    UsagePercent              = 0,   // no public API on macOS
+                    DedicatedMemoryUsedBytes  = 0,
+                    DedicatedMemoryTotalBytes = vramBytes,
+                    TemperatureCelsius        = 0,
+                });
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    private static long ParseVramString(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return 0;
+        var parts = s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !long.TryParse(parts[0], out var value)) return 0;
+        return parts[1].Equals("GB", StringComparison.OrdinalIgnoreCase) ? value * 1_073_741_824L
+             : parts[1].Equals("MB", StringComparison.OrdinalIgnoreCase) ? value * 1_048_576L
+             : 0;
     }
 
     // Shared multicast observable
@@ -189,7 +240,7 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
             Memory          = memory,
             Disks           = disks,
             NetworkAdapters = nets,
-            Gpus            = [],
+            Gpus            = _staticGpuInfo,
             Timestamp       = DateTime.UtcNow,
         };
     }

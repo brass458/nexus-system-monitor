@@ -27,6 +27,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private readonly AppSettings             _appSettings;
     private readonly ProcessPreferenceStore? _preferenceStore;
     private readonly CancellationTokenSource _cts = new();
+
+    /// <summary>Exposes platform capability flags for binding in the View.</summary>
+    public IPlatformCapabilities Platform { get; }
     // 4E: Per-selection CTS — cancelled each time SelectedProcess changes to abort stale detail loads
     private CancellationTokenSource _detailCts = new();
     private IDisposable? _subscription;
@@ -107,11 +110,13 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
 
     public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
+        IPlatformCapabilities? platformCapabilities = null,
         ProcessPreferenceStore? preferenceStore = null)
     {
         _processProvider  = processProvider;
         _appSettings      = appSettings;
         _preferenceStore  = preferenceStore;
+        Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);
 
@@ -369,9 +374,24 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task TrimMemory()
+    {
+        if (SelectedProcess is null) return;
+        try
+        {
+            LastError = string.Empty;
+            await _processProvider.TrimWorkingSetAsync(SelectedProcess.Pid, _cts.Token);
+            LastError = $"Working set trimmed for {SelectedProcess.Name}";
+        }
+        catch (Exception ex) { LastError = $"Trim failed: {ex.Message}"; }
+    }
+
+    [RelayCommand]
     private void OpenFileLocation()
     {
-        ShellHelper.OpenFileLocation(SelectedProcess?.ImagePath ?? string.Empty);
+        var path = SelectedProcess?.ImagePath ?? string.Empty;
+        if (string.IsNullOrEmpty(path)) return;
+        ShellHelper.OpenFileLocation(path);
     }
 
     [RelayCommand]
