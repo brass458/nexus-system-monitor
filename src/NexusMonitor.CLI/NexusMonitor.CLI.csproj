@@ -14,6 +14,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0-macos'))">
     <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+    <ApplicationId>com.brass458.nexus-monitor-cli</ApplicationId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'
     AND !$([MSBuild]::IsOSPlatform('windows'))
