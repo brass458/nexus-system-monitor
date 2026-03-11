@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reactive.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NexusMonitor.Core.Abstractions;
@@ -6,6 +7,7 @@ using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
+using ReactiveUI;
 
 namespace NexusMonitor.UI.ViewModels;
 
@@ -60,6 +62,7 @@ public partial class PerformanceProfilesViewModel : ViewModelBase, IDisposable
         // Track active profile name
         ActiveProfileName = profileService.ActiveProfileName;
         _statusSub = profileService.ProfileChanged
+            .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(name => ActiveProfileName = name ?? "");
 
         // Load available power plans

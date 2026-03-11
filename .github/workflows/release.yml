@@ -82,6 +82,18 @@ jobs:
           -p:PublishProfile=win-arm64
           -p:Version=${{ steps.ver.outputs.VERSION }}
 
+      - name: Publish CLI win-x64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-win-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish CLI win-arm64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-win-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
       - name: Create portable ZIP archives
         shell: pwsh
         run: |
@@ -91,6 +103,10 @@ jobs:
             -DestinationPath "dist/NexusMonitor-$v-win-x64.zip"
           Compress-Archive -Path src/NexusMonitor.UI/publish/win-arm64/* `
             -DestinationPath "dist/NexusMonitor-$v-win-arm64.zip"
+          Compress-Archive -Path src/NexusMonitor.CLI/publish/cli-win-x64/* `
+            -DestinationPath "dist/NexusCLI-$v-win-x64.zip"
+          Compress-Archive -Path src/NexusMonitor.CLI/publish/cli-win-arm64/* `
+            -DestinationPath "dist/NexusCLI-$v-win-arm64.zip"
 
       - name: Build installers (Inno Setup)
         shell: pwsh
@@ -160,6 +176,18 @@ jobs:
           -p:PublishProfile=osx-x64
           -p:Version=${{ steps.ver.outputs.VERSION }}
 
+      - name: Publish CLI osx-arm64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-osx-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish CLI osx-x64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-osx-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
       - name: Install create-dmg
         run: brew install create-dmg
 
@@ -173,6 +201,11 @@ jobs:
           mkdir -p dist
           bash installer/macos/create-app-bundle.sh osx-arm64 ${{ steps.ver.outputs.VERSION }} dist
           bash installer/macos/create-app-bundle.sh osx-x64 ${{ steps.ver.outputs.VERSION }} dist
+          V="${{ steps.ver.outputs.VERSION }}"
+          tar -czf "dist/NexusCLI-${V}-osx-arm64.tar.gz" \
+            -C src/NexusMonitor.CLI/publish/cli-osx-arm64 .
+          tar -czf "dist/NexusCLI-${V}-osx-x64.tar.gz" \
+            -C src/NexusMonitor.CLI/publish/cli-osx-x64 .
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -211,6 +244,18 @@ jobs:
           -p:PublishProfile=linux-arm64
           -p:Version=${{ steps.ver.outputs.VERSION }}
 
+      - name: Publish CLI linux-x64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-linux-x64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
+      - name: Publish CLI linux-arm64
+        run: >
+          dotnet publish src/NexusMonitor.CLI/NexusMonitor.CLI.csproj
+          -p:PublishProfile=cli-linux-arm64
+          -p:Version=${{ steps.ver.outputs.VERSION }}
+
       - name: Create portable tar.gz archives
         run: |
           V="${{ steps.ver.outputs.VERSION }}"
@@ -219,6 +264,10 @@ jobs:
             -C src/NexusMonitor.UI/publish/linux-x64 .
           tar -czf "dist/NexusMonitor-${V}-linux-arm64.tar.gz" \
             -C src/NexusMonitor.UI/publish/linux-arm64 .
+          tar -czf "dist/NexusCLI-${V}-linux-x64.tar.gz" \
+            -C src/NexusMonitor.CLI/publish/cli-linux-x64 .
+          tar -czf "dist/NexusCLI-${V}-linux-arm64.tar.gz" \
+            -C src/NexusMonitor.CLI/publish/cli-linux-arm64 .
 
       - name: Build AppImage (x64)
         run: bash installer/linux/create-appimage.sh ${{ steps.ver.outputs.VERSION }} dist

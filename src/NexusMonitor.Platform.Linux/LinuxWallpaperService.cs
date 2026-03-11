@@ -93,11 +93,11 @@ public sealed class LinuxWallpaperService : IWallpaperService, IDisposable
             RedirectStandardOutput = true,
             CreateNoWindow         = true,
         };
-        var proc = System.Diagnostics.Process.Start(psi);
+        using var proc = System.Diagnostics.Process.Start(psi);
         if (proc is null) return null;
-        var output = proc.StandardOutput.ReadToEnd();
-        proc.WaitForExit(2000);
-        return output;
+        var outputTask = proc.StandardOutput.ReadToEndAsync();
+        if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+        return outputTask.Result;
     }
 
     private void CheckForChange()

@@ -68,6 +68,17 @@ public partial class MainWindow : Window
             // native traffic light buttons (~80px wide including their left inset).
             if (OperatingSystem.IsMacOS())
                 ApplyMacOSTitleBarPadding();
+
+            // On Linux, some compositors (e.g. wlroots/Sway, KWin on X11) do not honour
+            // ExtendClientAreaChromeHints=NoChrome and lose resize handling entirely.
+            // Keep SystemDecorations=Full to retain native resize grips, but hide the
+            // built-in title bar so our custom chrome remains the only visible title bar.
+            if (OperatingSystem.IsLinux())
+            {
+                ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.SystemChrome;
+                // Avalonia's system chrome gives native resize grips; our overlay custom
+                // title bar stays on top via ZIndex so the native title bar is hidden.
+            }
         };
 
         // Pause shimmer when minimized, resume when restored

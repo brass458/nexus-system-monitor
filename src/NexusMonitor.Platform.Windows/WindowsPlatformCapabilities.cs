@@ -20,4 +20,5 @@ public sealed class WindowsPlatformCapabilities : IPlatformCapabilities
     public bool SupportsMemoryMap          => true;
     public bool SupportsPowerPlan          => true;
     public string OpenLocationMenuLabel    => "Open File Location";
+    public bool SupportsDirectX            => true;
 }

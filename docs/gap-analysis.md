@@ -9,7 +9,7 @@ tags: [nexus, gap-analysis, roadmap, process-lasso, wiztree]
 
 Feature-by-feature comparison of Nexus System Monitor against **Process Lasso** (~51 features) and **WizTree** (~20 features).
 
-**Summary:** 42 of 51 Process Lasso features implemented · 18 of 20 WizTree features implemented · Updated v0.1.7
+**Summary:** 44 of 51 Process Lasso features implemented · 18 of 20 WizTree features implemented · Updated v0.1.7
 
 > [!tip] Priority legend
 > `P1` = High (core user value, implement next) · `P2` = Medium · `P3` = Low / niche
@@ -97,7 +97,7 @@ Feature-by-feature comparison of Nexus System Monitor against **Process Lasso** 
 |------------|-------------|---------|-------|
 | Service list with status | ✅ Implemented | — | |
 | Start / stop / restart | ✅ Implemented | — | |
-| Change startup type | ❌ Missing | P2 | Automatic/Manual/Disabled toggling |
+| Change startup type | ✅ Implemented | — | `SetStartupTypeCommand(string)` in `ServicesViewModel` → `SetStartTypeAsync`; submenu: Automatic/AutomaticDelayed/Manual/Disabled (v0.1.7) |
 | Navigate to host process | ✅ Implemented | — | |
 
 ### H. UI & Workflow
@@ -130,7 +130,7 @@ Feature-by-feature comparison of Nexus System Monitor against **Process Lasso** 
 | PL Feature | Nexus Status | Priority | Notes |
 |------------|-------------|---------|-------|
 | Startup items | ✅ Implemented | — | |
-| Change service startup type | ❌ Missing | P2 | |
+| Change service startup type | ✅ Implemented | — | See row G above (v0.1.7) |
 | CLI automation interface | ❌ Missing | P3 | `nexus.exe --set-priority notepad.exe High` |
 | Scripting API | ❌ Missing | P3 | Plugin/script extensibility |
 | Portable mode | ✅ Partial | P2 | Self-contained publish exists; no config portability |

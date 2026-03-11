@@ -294,6 +294,31 @@ public sealed class NmapScannerService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Validates that the target is a safe IPv4, IPv6, CIDR, or hostname — no embedded flags.
+    /// Allows: single IPs, CIDR ranges (192.168.1.0/24), hostnames, nmap range syntax (10.0.0.1-10),
+    /// and space-separated combinations of the above.
+    /// </summary>
+    private static readonly Regex _targetTokenPattern = new(
+        @"^[A-Za-z0-9.\-:/\[\]]{1,253}$",
+        RegexOptions.Compiled);
+
+    private static string SanitizeTarget(string target)
+    {
+        if (string.IsNullOrWhiteSpace(target))
+            throw new ArgumentException("Scan target must not be empty.");
+
+        // Split on whitespace — nmap accepts multiple targets separated by spaces
+        var tokens = target.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var token in tokens)
+        {
+            if (!_targetTokenPattern.IsMatch(token))
+                throw new ArgumentException($"Invalid scan target token: '{token}'. Only IPs, CIDR ranges, and hostnames are allowed.");
+        }
+
+        return string.Join(' ', tokens);
+    }
+
     private static string BuildArgs(NmapScanOptions o)
     {
         var sb = new System.Text.StringBuilder();
@@ -328,8 +353,8 @@ public sealed class NmapScannerService : IDisposable
         if (o.OsDetection    && o.ScanType != NmapScanType.OsDetection)    sb.Append("-O ");
         if (o.ServiceVersion && o.ScanType != NmapScanType.ServiceDetection) sb.Append("-sV ");
 
-        // Target last
-        sb.Append(o.Target);
+        // Target last — validated to prevent flag injection
+        sb.Append(SanitizeTarget(o.Target));
 
         return sb.ToString().Trim();
     }

@@ -2,17 +2,20 @@ using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
+using NexusMonitor.UI.Messages;
 using ReactiveUI;
 
 namespace NexusMonitor.UI.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase, IDisposable
 {
-    private readonly SystemHealthService _healthService;
-    private readonly AppSettings         _settings;
-    private IDisposable?                 _subscription;
+    private readonly SystemHealthService        _healthService;
+    private readonly MemoryLeakDetectionService _leakService;
+    private readonly AppSettings                _settings;
+    private IDisposable?                        _subscription;
 
     // ── Overall health ────────────────────────────────────────────────────────
 
@@ -46,14 +49,21 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<RecommendationViewModel> Recommendations { get; } = new();
 
-    public DashboardViewModel(SystemHealthService healthService, AppSettings settings)
+    public DashboardViewModel(SystemHealthService healthService, MemoryLeakDetectionService leakService, AppSettings settings)
     {
         _healthService = healthService;
+        _leakService   = leakService;
         _settings      = settings;
 
         _subscription = _healthService.HealthStream
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(ApplySnapshot);
+
+        // Restart health service when the user changes the metrics polling interval
+        WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
+        {
+            _healthService.Start(msg.Interval);
+        });
     }
 
     private void ApplySnapshot(SystemHealthSnapshot snapshot)
@@ -74,10 +84,16 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         UpdateCard(DiskCard,   snapshot.Disk);
         UpdateCard(GpuCard,    snapshot.Gpu);
 
-        // Top consumers
-        TopConsumers.Clear();
-        foreach (var c in snapshot.TopConsumers)
-            TopConsumers.Add(new ProcessImpactViewModel(c));
+        // Top consumers — rebuild only when process set changes (avoids per-tick flicker)
+        var newConsumers = snapshot.TopConsumers;
+        bool consumersChanged = TopConsumers.Count != newConsumers.Count ||
+            newConsumers.Where((c, i) => i < TopConsumers.Count && TopConsumers[i].Name != c.Name).Any();
+        if (consumersChanged)
+        {
+            TopConsumers.Clear();
+            foreach (var c in newConsumers)
+                TopConsumers.Add(new ProcessImpactViewModel(c));
+        }
 
         // Automation status
         ActiveAutomations = snapshot.ActiveAutomations;
@@ -89,11 +105,16 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         if (snapshot.Bottleneck is not null)
             BottleneckCard.Apply(snapshot.Bottleneck);
 
-        // Recommendations
-        var recs = RecommendationEngine.Evaluate(snapshot, _settings);
-        Recommendations.Clear();
-        foreach (var r in recs)
-            Recommendations.Add(new RecommendationViewModel(r));
+        // Recommendations — only rebuild when content changes (recommendations are stable tick-to-tick)
+        var recs = RecommendationEngine.Evaluate(snapshot, _settings, _leakService.CurrentSuspects);
+        bool recsChanged = Recommendations.Count != recs.Count ||
+            recs.Where((r, i) => i < Recommendations.Count && Recommendations[i].Title != r.Title).Any();
+        if (recsChanged)
+        {
+            Recommendations.Clear();
+            foreach (var r in recs)
+                Recommendations.Add(new RecommendationViewModel(r));
+        }
     }
 
     private static void UpdateCard(SubsystemCardViewModel card, SubsystemHealth health)
@@ -121,18 +142,26 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         _                     => string.Empty,
     };
 
+    // Static brush cache — avoids allocating new SolidColorBrush objects every tick
+    private static readonly IBrush _brushExcellent = new SolidColorBrush(Color.Parse("#30D158"));
+    private static readonly IBrush _brushGood      = new SolidColorBrush(Color.Parse("#34C759"));
+    private static readonly IBrush _brushFair      = new SolidColorBrush(Color.Parse("#FF9F0A"));
+    private static readonly IBrush _brushPoor      = new SolidColorBrush(Color.Parse("#FF6B35"));
+    private static readonly IBrush _brushCritical  = new SolidColorBrush(Color.Parse("#FF3B30"));
+
     private static IBrush HealthLevelToBrush(HealthLevel level) => level switch
     {
-        HealthLevel.Excellent => new SolidColorBrush(Color.Parse("#30D158")), // Apple Green
-        HealthLevel.Good      => new SolidColorBrush(Color.Parse("#34C759")),
-        HealthLevel.Fair      => new SolidColorBrush(Color.Parse("#FF9F0A")), // Apple Orange
-        HealthLevel.Poor      => new SolidColorBrush(Color.Parse("#FF6B35")),
-        HealthLevel.Critical  => new SolidColorBrush(Color.Parse("#FF3B30")), // Apple Red
+        HealthLevel.Excellent => _brushExcellent,
+        HealthLevel.Good      => _brushGood,
+        HealthLevel.Fair      => _brushFair,
+        HealthLevel.Poor      => _brushPoor,
+        HealthLevel.Critical  => _brushCritical,
         _                     => Brushes.Gray,
     };
 
     public void Dispose()
     {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         _subscription?.Dispose();
         _subscription = null;
     }
@@ -189,6 +218,13 @@ public sealed class ProcessImpactViewModel
 /// </summary>
 public partial class BottleneckCardViewModel : ObservableObject
 {
+    // Static brush cache — avoids allocating new brushes every tick
+    private static readonly IBrush _severityIdle     = new SolidColorBrush(Color.Parse("#8E8E93"));
+    private static readonly IBrush _severityBalanced = new SolidColorBrush(Color.Parse("#30D158"));
+    private static readonly IBrush _severityMild     = new SolidColorBrush(Color.Parse("#FF9F0A"));
+    private static readonly IBrush _severityModerate = new SolidColorBrush(Color.Parse("#FF6B35"));
+    private static readonly IBrush _severitySevere   = new SolidColorBrush(Color.Parse("#FF3B30"));
+
     [ObservableProperty] private string _headline       = "Gathering data…";
     [ObservableProperty] private string _explanation    = string.Empty;
     [ObservableProperty] private string _upgradeAdvice  = string.Empty;
@@ -221,13 +257,13 @@ public partial class BottleneckCardViewModel : ObservableObject
 
         SeverityBrush = r.Bottleneck switch
         {
-            BottleneckType.Idle     => new SolidColorBrush(Color.Parse("#8E8E93")),
-            BottleneckType.Balanced => new SolidColorBrush(Color.Parse("#30D158")),
+            BottleneckType.Idle     => _severityIdle,
+            BottleneckType.Balanced => _severityBalanced,
             _ => r.Severity switch
             {
-                BottleneckSeverity.Mild     => new SolidColorBrush(Color.Parse("#FF9F0A")),
-                BottleneckSeverity.Moderate => new SolidColorBrush(Color.Parse("#FF6B35")),
-                BottleneckSeverity.Severe   => new SolidColorBrush(Color.Parse("#FF3B30")),
+                BottleneckSeverity.Mild     => _severityMild,
+                BottleneckSeverity.Moderate => _severityModerate,
+                BottleneckSeverity.Severe   => _severitySevere,
                 _                           => Brushes.Gray,
             }
         };
@@ -258,6 +294,11 @@ public partial class BottleneckCardViewModel : ObservableObject
 
 public sealed class RecommendationViewModel
 {
+    // Static brush cache
+    private static readonly IBrush _recCriticalBrush = new SolidColorBrush(Color.Parse("#FF3B30"));
+    private static readonly IBrush _recWarningBrush  = new SolidColorBrush(Color.Parse("#FF9F0A"));
+    private static readonly IBrush _recInfoBrush     = new SolidColorBrush(Color.Parse("#30D158"));
+
     public string Title    { get; }
     public string Body     { get; }
     public IBrush IconBrush { get; }
@@ -269,9 +310,9 @@ public sealed class RecommendationViewModel
         Body     = rec.Body;
         (Icon, IconBrush) = rec.Severity switch
         {
-            RecommendationSeverity.Critical => ("\ue9b2", new SolidColorBrush(Color.Parse("#FF3B30"))),
-            RecommendationSeverity.Warning  => ("\ue9b1", new SolidColorBrush(Color.Parse("#FF9F0A"))),
-            _                               => ("\ue9b0", new SolidColorBrush(Color.Parse("#30D158"))),
+            RecommendationSeverity.Critical => ("\ue9b2", _recCriticalBrush),
+            RecommendationSeverity.Warning  => ("\ue9b1", _recWarningBrush),
+            _                               => ("\ue9b0", _recInfoBrush),
         };
     }
 }

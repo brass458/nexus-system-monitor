@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -12,14 +13,16 @@ namespace NexusMonitor.Core.Gaming;
 /// </summary>
 public sealed class GamingModeService : IDisposable
 {
-    private readonly IProcessProvider  _processProvider;
-    private readonly IPowerPlanProvider _powerPlanProvider;
-    private readonly AppSettings        _settings;
+    private readonly IProcessProvider     _processProvider;
+    private readonly IPowerPlanProvider   _powerPlanProvider;
+    private readonly AppSettings          _settings;
+    private readonly ILogger<GamingModeService> _logger;
 
     // pid → original priority saved before we touched it
     private readonly Dictionary<int, ProcessPriority> _throttled = new();
     private readonly Subject<string> _statusMessages = new();
     private IDisposable? _pollingSubscription;
+    private readonly SemaphoreSlim _stateLock = new(1, 1);
 
     private Guid _savedPowerPlan = Guid.Empty;
     private bool _active;
@@ -31,11 +34,13 @@ public sealed class GamingModeService : IDisposable
     public GamingModeService(
         IProcessProvider processProvider,
         IPowerPlanProvider powerPlanProvider,
-        AppSettings settings)
+        AppSettings settings,
+        ILogger<GamingModeService> logger)
     {
         _processProvider   = processProvider;
         _powerPlanProvider = powerPlanProvider;
         _settings          = settings;
+        _logger            = logger;
     }
 
     /// <summary>
@@ -130,6 +135,7 @@ public sealed class GamingModeService : IDisposable
     private async Task ThrottleBackgroundProcessesAsync(string? gameProcess, IReadOnlyList<ProcessInfo>? processes = null)
     {
         if (!_active) return;
+        await _stateLock.WaitAsync();
         try
         {
             processes  ??= await _processProvider.GetProcessesAsync();
@@ -152,9 +158,10 @@ public sealed class GamingModeService : IDisposable
                     await _processProvider.SetPriorityAsync(proc.Pid, ProcessPriority.BelowNormal);
                     _statusMessages.OnNext($"Throttled: {proc.Name} (PID {proc.Pid})");
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Access denied or process exited — remove from map
+                    _logger.LogDebug(ex, "Gaming mode: could not throttle {Name} (PID {Pid})", proc.Name, proc.Pid);
                     _throttled.Remove(proc.Pid);
                 }
             }
@@ -164,12 +171,14 @@ public sealed class GamingModeService : IDisposable
             foreach (var pid in _throttled.Keys.Where(k => !alive.Contains(k)).ToList())
                 _throttled.Remove(pid);
         }
-        catch { /* swallow — polling loop must not crash */ }
+        catch (Exception ex) { _logger.LogWarning(ex, "Gaming mode: throttle loop error"); }
+        finally { _stateLock.Release(); }
     }
 
     private async Task RestoreAllAsync()
     {
         if (_throttled.Count == 0) return;
+        await _stateLock.WaitAsync();
         try
         {
             var processes = await _processProvider.GetProcessesAsync();
@@ -181,13 +190,14 @@ public sealed class GamingModeService : IDisposable
                     var name = processes.FirstOrDefault(p => p.Pid == pid)?.Name ?? $"PID {pid}";
                     _statusMessages.OnNext($"Restored: {name} (PID {pid})");
                 }
-                catch { /* process exited — ignore */ }
+                catch (Exception ex) { _logger.LogDebug(ex, "Gaming mode: could not restore PID {Pid}", pid); }
             }
         }
-        catch { }
+        catch (Exception ex) { _logger.LogWarning(ex, "Gaming mode: RestoreAllAsync failed"); }
         finally
         {
             _throttled.Clear();
+            _stateLock.Release();
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Models;
@@ -16,6 +17,7 @@ public sealed class PerformanceProfileService : IDisposable
     private readonly IProcessProvider   _processProvider;
     private readonly IPowerPlanProvider _powerPlanProvider;
     private readonly AppSettings        _settings;
+    private readonly ILogger<PerformanceProfileService> _logger;
 
     // pid → rule that applied Priority (so we restore to Normal on deactivate)
     private readonly HashSet<int> _boostedPids = new();
@@ -25,6 +27,7 @@ public sealed class PerformanceProfileService : IDisposable
     private readonly Subject<string>  _statusMessages = new();
     private readonly Subject<string?> _profileChanged = new();
     private IDisposable? _pollingSubscription;
+    private readonly SemaphoreSlim _applyLock = new(1, 1);
 
     private Guid? _activePowerPlan; // power plan before profile was activated
     private Guid? _activeProfileId;
@@ -43,11 +46,13 @@ public sealed class PerformanceProfileService : IDisposable
     public PerformanceProfileService(
         IProcessProvider   processProvider,
         IPowerPlanProvider powerPlanProvider,
-        AppSettings        settings)
+        AppSettings        settings,
+        ILogger<PerformanceProfileService> logger)
     {
         _processProvider   = processProvider;
         _powerPlanProvider = powerPlanProvider;
         _settings          = settings;
+        _logger            = logger;
     }
 
     // ── Activate ──────────────────────────────────────────────────────────────
@@ -111,7 +116,7 @@ public sealed class PerformanceProfileService : IDisposable
         if (_activePowerPlan.HasValue)
         {
             try { _powerPlanProvider.SetActivePlan(_activePowerPlan.Value); }
-            catch { /* best-effort */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "PerformanceProfile: power plan restore failed"); }
             _activePowerPlan = null;
         }
 
@@ -128,6 +133,9 @@ public sealed class PerformanceProfileService : IDisposable
         PerformanceProfile profile,
         IReadOnlyList<ProcessInfo>? processes = null)
     {
+        if (!await _applyLock.WaitAsync(0)) return; // skip if previous apply still running
+        try
+        {
         processes ??= await _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(1))
             .FirstAsync()
@@ -138,26 +146,35 @@ public sealed class PerformanceProfileService : IDisposable
             foreach (var rule in profile.ProcessRules.Where(r => r.Matches(proc.Name)))
             {
                 if (rule.Priority.HasValue && _boostedPids.Add(proc.Pid))
-                    try { await _processProvider.SetPriorityAsync(proc.Pid, rule.Priority.Value); } catch { }
+                    try { await _processProvider.SetPriorityAsync(proc.Pid, rule.Priority.Value); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "PerformanceProfile: set priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
 
                 if (rule.EfficiencyMode.HasValue && _efficiencyPids.Add(proc.Pid))
-                    try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, rule.EfficiencyMode.Value); } catch { }
+                    try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, rule.EfficiencyMode.Value); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "PerformanceProfile: set efficiency mode on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
             }
         }
+        } // end try
+        finally { _applyLock.Release(); }
     }
 
     private async Task RestoreProcessesAsync()
     {
+        await _applyLock.WaitAsync(); // wait for any in-progress apply to finish
         foreach (var pid in _boostedPids.ToList())
-            try { await _processProvider.SetPriorityAsync(pid, ProcessPriority.Normal); } catch { }
+            try { await _processProvider.SetPriorityAsync(pid, ProcessPriority.Normal); }
+            catch (Exception ex) { _logger.LogDebug(ex, "PerformanceProfile: restore priority PID {Pid} failed", pid); }
         foreach (var pid in _efficiencyPids.ToList())
-            try { await _processProvider.SetEfficiencyModeAsync(pid, false); } catch { }
+            try { await _processProvider.SetEfficiencyModeAsync(pid, false); }
+            catch (Exception ex) { _logger.LogDebug(ex, "PerformanceProfile: restore efficiency mode PID {Pid} failed", pid); }
         _boostedPids.Clear();
         _efficiencyPids.Clear();
+        _applyLock.Release();
     }
 
     public void Dispose()
     {
+        DeactivateProfile();
         _pollingSubscription?.Dispose();
         _statusMessages.Dispose();
         _profileChanged.Dispose();

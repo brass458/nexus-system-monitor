@@ -20,4 +20,5 @@ public sealed class MacOSPlatformCapabilities : IPlatformCapabilities
     public bool SupportsMemoryMap          => false;
     public bool SupportsPowerPlan          => false;
     public string OpenLocationMenuLabel    => "Reveal in Finder";
+    public bool SupportsDirectX            => false;
 }

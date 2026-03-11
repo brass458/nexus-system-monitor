@@ -18,7 +18,7 @@ public sealed class LinuxNotificationService : INotificationService
         // Detect notify-send at construction time
         try
         {
-            var check = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            using var check = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName               = "which",
                 Arguments              = "notify-send",
@@ -63,7 +63,7 @@ public sealed class LinuxNotificationService : INotificationService
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName               = "notify-send",
                 ArgumentList           = { "-u", urgency, "--", title, body },

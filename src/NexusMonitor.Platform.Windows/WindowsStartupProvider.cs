@@ -108,8 +108,8 @@ public sealed class WindowsStartupProvider : IStartupProvider
             foreach (string name in key.GetValueNames())
             {
                 if (key.GetValue(name) is byte[] bytes && bytes.Length > 0)
-                    // Low bit clear (0x00, 0x02) = disabled; low bit set (0x01, 0x03) = enabled
-                    result[name] = (bytes[0] & 0x01) != 0;
+                    // Even first byte (0x02, 0x06) = enabled; odd first byte (0x03, 0x07) = disabled
+                    result[name] = (bytes[0] & 0x01) == 0;
             }
         }
         catch { }
@@ -186,9 +186,9 @@ public sealed class WindowsStartupProvider : IStartupProvider
             using var key = hive.CreateSubKey(approvedPath, writable: true);
             if (key is null) return;
 
-            // 8-byte binary: first byte 02 = disabled, 00 = enabled
-            var bytes = new byte[8];
-            bytes[0] = enabled ? (byte)0x00 : (byte)0x02;
+            // 12-byte binary: first byte 0x02 = enabled, 0x03 = disabled (Windows StartupApproved format)
+            var bytes = new byte[12];
+            bytes[0] = enabled ? (byte)0x02 : (byte)0x03;
             key.SetValue(item.Name, bytes, RegistryValueKind.Binary);
         }
         catch { }

@@ -45,7 +45,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("System Info",  "\uF35A", () => services.GetRequiredService<SystemInfoViewModel>(),   NavGroup.Monitor,  eager: false),
             // Tools — alphabetical
             new NavItem("Automation",   "\uE945", () => services.GetRequiredService<AutomationViewModel>(),             NavGroup.Tools,    eager: false),
-            new NavItem("Disk Analyzer","\uF1C9", () => services.GetRequiredService<DiskAnalyzerViewModel>(),           NavGroup.Tools,    eager: false),
+            new NavItem("Diagnostics",  "\uE9D8", () => services.GetRequiredService<DiagnosticsViewModel>(),            NavGroup.Tools,    eager: false),
+            new NavItem("Disk Analyzer","\uE9D7", () => services.GetRequiredService<DiskAnalyzerViewModel>(),           NavGroup.Tools,    eager: false),
             new NavItem("Gaming Mode",  "\uF451", () => services.GetRequiredService<GamingModeViewModel>(),             NavGroup.Tools,    eager: false),
             new NavItem("LAN Scanner",  "\uEA5D", () => services.GetRequiredService<LanScannerViewModel>(),             NavGroup.Tools,    eager: false),
             new NavItem("Optimization", "\uE619", () => services.GetRequiredService<OptimizationViewModel>(),           NavGroup.Tools,    eager: false),
@@ -88,7 +89,12 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         foreach (var item in BuildNavItemsWithSeparators(orderedItems))
             NavItems.Add(item);
 
-        _selectedNavItem = NavItems.First(n => !n.IsSeparator);
+        // Navigate to the user's configured default tab (or Dashboard if not set)
+        var defaultLabel = settings.Current.DefaultTab;
+        _selectedNavItem = (!string.IsNullOrEmpty(defaultLabel)
+            ? NavItems.FirstOrDefault(n => !n.IsSeparator && n.Label == defaultLabel)
+            : null)
+            ?? NavItems.First(n => !n.IsSeparator);
         _selectedNavItem.IsActive = true;
         _currentPage = _selectedNavItem.GetOrCreate();
         Title = "Nexus Monitor";

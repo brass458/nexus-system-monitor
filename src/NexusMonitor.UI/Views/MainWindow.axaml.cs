@@ -47,7 +47,7 @@ public partial class MainWindow : Window
 
         switch (settings.Current.CloseAction)
         {
-            case "Tray":
+            case "Tray" when settings.Current.MinimizeToTray:
                 e.Cancel = true;
                 Hide();
                 MaybeHideWidget(settings.Current.HideWidgetOnMinimize);

@@ -40,7 +40,9 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
 
     // Shared multicast observable — all callers share one timer + one Snapshot() call per tick
     private IObservable<IReadOnlyList<ProcessInfo>>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     private static readonly int s_processorCount = Math.Max(1, Environment.ProcessorCount);
     private static readonly int s_currentPid     = Environment.ProcessId;
@@ -51,17 +53,25 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
     {
         lock (_sharedLock)
         {
+            // Enforce 2-second minimum — ProBalance/GamingMode request 1s but sample
+            // downstream; we should not double the syscall rate for all subscribers.
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                // Enforce 2-second minimum — ProBalance/GamingMode request 1s but sample
-                // downstream; we should not double the syscall rate for all subscribers.
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
+                _sharedInterval = clampedInterval;
                 // One timer + one Snapshot() per tick, shared across all subscribers
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
-                                    .Publish()
-                                    .RefCount();
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -348,7 +358,14 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
             CurrentIoPriority     = ioPriority,
             CurrentMemoryPriority = memoryPriority,
             IsEfficiencyMode      = isEfficiencyMode,
+            BasePriority          = accessDenied ? 0 : SafeGetBasePriority(p),
         };
+    }
+
+    private static int SafeGetBasePriority(Process p)
+    {
+        try { return p.BasePriority; }
+        catch { return 0; }
     }
 
     // ─── Helper: parent PID ───────────────────────────────────────────────────
@@ -1203,6 +1220,7 @@ public sealed class WindowsProcessProvider : IProcessProvider, IDisposable
 
     public void Dispose()
     {
+        lock (_sharedLock) { _connection?.Dispose(); }
         _cpuSamples.Clear();
         _ioSamples.Clear();
         _userNameCache.Clear();

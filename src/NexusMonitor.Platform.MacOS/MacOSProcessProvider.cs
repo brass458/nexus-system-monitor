@@ -20,6 +20,9 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     private bool _disposed;
 
+    // Serializes concurrent Snapshot() calls (timer tick vs GetProcessesAsync)
+    private readonly object _snapshotLock = new();
+
     public MacOSProcessProvider()
     {
         _taskInfoSize = Marshal.SizeOf<proc_taskinfo>();
@@ -73,21 +76,31 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     // Shared multicast observable
     private IObservable<IReadOnlyList<ProcessInfo>>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     // ── Streaming ──────────────────────────────────────────────────────────────
     public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval)
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -99,6 +112,9 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
+        if (_disposed) return Array.Empty<ProcessInfo>();
+        lock (_snapshotLock)
+        {
         var now    = DateTime.UtcNow;
         var result = new List<ProcessInfo>(_lastProcessCount);
 
@@ -220,6 +236,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
 
         _lastProcessCount = Math.Max(result.Count, 64);
         return result;
+        } // end lock (_snapshotLock)
     }
 
     // Fallback to System.Diagnostics.Process if proc_listallpids fails
@@ -397,6 +414,7 @@ public sealed class MacOSProcessProvider : IProcessProvider, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        lock (_sharedLock) { _connection?.Dispose(); }
         _cpuSamples.Clear();
         if (_taskInfoPtr != IntPtr.Zero)
             Marshal.FreeHGlobal(_taskInfoPtr);

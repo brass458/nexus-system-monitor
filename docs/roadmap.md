@@ -27,6 +27,7 @@ Items are organized into three tiers. Within each tier, order reflects suggested
 - **Disk Analyzer UI integration** — `DiskAnalyzer` NavItem added to sidebar (was built but hidden)
 - **MFT-based scanning** — `MftScanner.cs` was already implemented in DiskAnalyzer
 - **Flat file list, duplicate detection, file type stats, scan progress** — all existed in DiskAnalyzer engine
+- **Service startup type editing** — `SetStartupTypeCommand(string)` in `ServicesViewModel` → `SetStartTypeAsync`; context menu submenu: Automatic/AutomaticDelayed/Manual/Disabled
 
 ---
 
@@ -67,10 +68,6 @@ Items are organized into three tiers. Within each tier, order reflects suggested
 ---
 
 ## Long-Term (6+ months)
-
-### Service startup type editing
-**Gap:** Can view services but not change Automatic/Manual/Disabled startup type.
-**Implementation:** `ChangeStartupType` in `IServicesProvider`. Requires admin. Standard dropdown in `ServicesView` context menu.
 
 ### Process token / security info
 **Gap:** System Informer parity — show elevation level, token groups, privileges.

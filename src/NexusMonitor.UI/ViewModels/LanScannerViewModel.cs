@@ -42,13 +42,18 @@ public partial class LanScannerViewModel : ViewModelBase, IDisposable
         Title    = "LAN Scanner";
         _scanner = scanner;
 
-        // Check nmap availability and package manager on background thread
+        // Check nmap availability and package manager on background thread, then marshal back to UI thread
         _ = Task.Run(() =>
         {
-            NmapAvailable       = NmapScannerService.IsAvailable();
-            PackageManagerName  = NmapScannerService.GetPackageManagerName();
-            if (!NmapAvailable)
-                StatusText = "nmap not found \u2014 install nmap to use this feature";
+            var available = NmapScannerService.IsAvailable();
+            var pkgMgr    = NmapScannerService.GetPackageManagerName();
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                NmapAvailable      = available;
+                PackageManagerName = pkgMgr;
+                if (!NmapAvailable)
+                    StatusText = "nmap not found \u2014 install nmap to use this feature";
+            });
         });
     }
 

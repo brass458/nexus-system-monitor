@@ -10,7 +10,8 @@ public static class RecommendationEngine
 {
     public static IReadOnlyList<Recommendation> Evaluate(
         SystemHealthSnapshot snapshot,
-        AppSettings settings)
+        AppSettings settings,
+        IReadOnlyList<MemoryLeakSuspect>? leakSuspects = null)
     {
         var results = new List<Recommendation>();
 
@@ -67,6 +68,27 @@ public static class RecommendationEngine
                     : RecommendationSeverity.Warning,
                 Action   = RecommendationAction.EnableSmartTrim,
             });
+        }
+
+        // ── Memory leak suspects ──────────────────────────────────────────────
+
+        if (leakSuspects is { Count: > 0 })
+        {
+            foreach (var suspect in leakSuspects)
+            {
+                double rateMb = suspect.LeakRateBytesPerHour / 1024.0 / 1024.0;
+                bool isCritical = suspect.Confidence > 0.8 && rateMb > settings.LeakRateThresholdMbPerHour * 2;
+
+                results.Add(new Recommendation
+                {
+                    Title       = isCritical
+                        ? $"Memory leak detected in {suspect.ProcessName}"
+                        : $"Possible memory leak in {suspect.ProcessName}",
+                    Body        = $"+{rateMb:F0} MB/hr (confidence {suspect.Confidence:P0})",
+                    Severity    = isCritical ? RecommendationSeverity.Critical : RecommendationSeverity.Warning,
+                    Action      = RecommendationAction.InvestigateMemoryLeak,
+                });
+            }
         }
 
         // ── Disk space ────────────────────────────────────────────────────────

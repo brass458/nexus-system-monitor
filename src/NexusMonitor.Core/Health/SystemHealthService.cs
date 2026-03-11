@@ -43,7 +43,8 @@ public sealed class SystemHealthService : IDisposable
 
     public void Start(TimeSpan interval)
     {
-        if (_subscription is not null) return;
+        // Dispose any previous subscription first so interval changes take effect
+        Stop();
 
         var metricsObs  = _metrics.GetMetricsStream(interval);
         var processObs  = _processes.GetProcessStream(interval);

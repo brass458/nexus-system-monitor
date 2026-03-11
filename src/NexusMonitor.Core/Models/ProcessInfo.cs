@@ -67,4 +67,7 @@ public record ProcessInfo
     public IoPriority CurrentIoPriority { get; init; }
     public MemoryPriority CurrentMemoryPriority { get; init; }
     public bool IsEfficiencyMode { get; init; }
+
+    // Priority / nice value (0 on Windows = Normal; on Linux = nice value -20..19)
+    public int BasePriority { get; init; }
 }

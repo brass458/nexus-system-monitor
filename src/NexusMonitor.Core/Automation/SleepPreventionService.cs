@@ -1,4 +1,6 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Rules;
@@ -11,36 +13,48 @@ namespace NexusMonitor.Core.Automation;
 /// </summary>
 public sealed class SleepPreventionService : IDisposable
 {
-    private readonly IProcessProvider       _processProvider;
+    private readonly IProcessProvider        _processProvider;
     private readonly ISleepPreventionProvider _sleepProvider;
-    private readonly AppSettings            _settings;
+    private readonly AppSettings             _settings;
+    private readonly ILogger<SleepPreventionService> _logger;
 
     private bool _currentlyPreventing;
+    private bool _running;
     private IDisposable? _subscription;
 
     // AppSettings is not a direct dependency here; we get rules via the engine's settings
     private readonly Func<IReadOnlyList<ProcessRule>> _rulesGetter;
 
     public SleepPreventionService(
-        IProcessProvider          processProvider,
-        ISleepPreventionProvider  sleepProvider,
-        AppSettings               settings)
+        IProcessProvider         processProvider,
+        ISleepPreventionProvider sleepProvider,
+        AppSettings              settings,
+        ILogger<SleepPreventionService>? logger = null)
     {
         _processProvider = processProvider;
         _sleepProvider   = sleepProvider;
         _settings        = settings;
+        _logger          = logger ?? NullLogger<SleepPreventionService>.Instance;
         _rulesGetter     = () => settings.Rules ?? [];
     }
 
     public void Start()
     {
+        if (_running) return;
+        _running = true;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, _ => { });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "SleepPreventionService stream faulted");
+                _running = false;
+            });
     }
 
     public void Stop()
     {
+        if (!_running) return;
+        _running = false;
         _subscription?.Dispose();
         _subscription = null;
         if (_currentlyPreventing)

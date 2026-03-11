@@ -98,6 +98,7 @@ public record NetworkAdapterMetrics
     // ── Extended detail ────────────────────────────────────────────────────────
     public string DnsSuffix { get; init; } = string.Empty;
     public string ConnectionType { get; init; } = string.Empty; // "Wi-Fi", "Ethernet", "Bluetooth"
+    public string MacAddress { get; init; } = string.Empty;
 }
 
 public record GpuMetrics

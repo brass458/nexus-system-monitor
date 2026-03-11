@@ -308,6 +308,15 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
+          <DataGridTemplateColumn Header="Leak" Width="90" SortMemberPath="LeakRateMbPerHour">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ProcessRowViewModel">
+                <TextBlock Text="{Binding LeakRateDisplay}" Foreground="{Binding LeakRateBrush}"
+                           FontSize="{DynamicResource NxFont10}" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
           <DataGridTemplateColumn Header="I/O" Width="78" SortMemberPath="IoReadBytesPerSec">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ProcessRowViewModel">
@@ -363,6 +372,11 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
+
+          <DataGridTextColumn Header="Priority"
+                              Binding="{Binding BasePriority}"
+                              Width="80"
+                              IsReadOnly="True"/>
 
           <DataGridTextColumn Header="Threads"
                               Binding="{Binding ThreadCount}"

@@ -43,17 +43,14 @@ internal sealed class SystemdBackend : ILinuxInitBackend
                     ? ServiceState.Running
                     : ServiceState.Stopped;
 
-                var startType = load.Equals("enabled", StringComparison.OrdinalIgnoreCase)
-                    ? ServiceStartType.Automatic
-                    : ServiceStartType.Manual;
-
-                // Fetch PID and binary path via systemctl show
+                // Fetch PID, binary path, and unit file state via systemctl show
                 int    pid        = 0;
                 string binaryPath = string.Empty;
+                var    startType  = ServiceStartType.Manual;
                 try
                 {
                     var showOut = RunCapture("systemctl",
-                        $"show {unitName}.service --property=MainPID,ExecStart --no-pager");
+                        $"show {unitName}.service --property=MainPID,ExecStart,UnitFileState --no-pager");
                     foreach (var showLine in showOut.Split('\n'))
                     {
                         if (showLine.StartsWith("MainPID=", StringComparison.Ordinal))
@@ -68,6 +65,13 @@ internal sealed class SystemdBackend : ILinuxInitBackend
                                 var end  = rest.IndexOfAny([' ', ';']);
                                 binaryPath = end >= 0 ? rest[..end] : rest;
                             }
+                        }
+                        else if (showLine.StartsWith("UnitFileState=", StringComparison.Ordinal))
+                        {
+                            var unitFileState = showLine[14..].Trim();
+                            startType = unitFileState.Equals("enabled", StringComparison.OrdinalIgnoreCase)
+                                ? ServiceStartType.Automatic
+                                : ServiceStartType.Manual;
                         }
                     }
                 }
@@ -132,9 +136,9 @@ internal sealed class SystemdBackend : ILinuxInitBackend
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch { return string.Empty; }
     }

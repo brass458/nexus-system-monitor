@@ -122,4 +122,16 @@ public class AppSettings
     // Instance Balancer (Phase 18)
     public bool                       InstanceBalancerEnabled { get; set; } = false;
     public List<InstanceBalancerRule> InstanceBalancerRules   { get; set; } = new();
+
+    // System tray / startup behaviour (Phase 20 feature request FR1/FR2)
+    /// <summary>When true, minimizing/closing goes to system tray. When false, no tray icon is shown.</summary>
+    public bool   MinimizeToTray { get; set; } = true;
+    /// <summary>Tab label to navigate to on launch. Empty string = default (Dashboard).</summary>
+    public string DefaultTab     { get; set; } = "";
+
+    // Memory Leak Detection
+    public bool   MemoryLeakDetectionEnabled   { get; set; } = false;
+    public int    LeakObservationWindowMinutes { get; set; } = 10;
+    public double LeakRateThresholdMbPerHour   { get; set; } = 50;
+    public double HandleLeakThresholdPerHour   { get; set; } = 100;
 }

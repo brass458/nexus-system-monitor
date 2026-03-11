@@ -1,4 +1,6 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -11,9 +13,10 @@ namespace NexusMonitor.Core.Automation;
 /// </summary>
 public sealed class InstanceBalancerService : IDisposable
 {
-    private readonly IProcessProvider _processProvider;
-    private readonly AppSettings      _settings;
+    private readonly IProcessProvider  _processProvider;
+    private readonly AppSettings       _settings;
     private readonly ProcessActionLock _actionLock;
+    private readonly ILogger<InstanceBalancerService> _logger;
 
     // ruleId → previous instance count (to detect when rebalance is needed)
     private readonly Dictionary<Guid, int> _prevInstanceCount = new();
@@ -21,16 +24,20 @@ public sealed class InstanceBalancerService : IDisposable
     private IDisposable? _subscription;
     private bool _running;
 
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
+
     private const string Owner = "InstanceBalancer";
 
     public InstanceBalancerService(
         IProcessProvider  processProvider,
         AppSettings       settings,
-        ProcessActionLock actionLock)
+        ProcessActionLock actionLock,
+        ILogger<InstanceBalancerService>? logger = null)
     {
         _processProvider = processProvider;
         _settings        = settings;
         _actionLock      = actionLock;
+        _logger          = logger ?? NullLogger<InstanceBalancerService>.Instance;
     }
 
     public void Start()
@@ -39,7 +46,11 @@ public sealed class InstanceBalancerService : IDisposable
         _running = true;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, _ => { });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "InstanceBalancerService stream faulted");
+                _running = false;
+            });
     }
 
     public void Stop()
@@ -48,67 +59,74 @@ public sealed class InstanceBalancerService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
+        // InstanceBalancer does not restore affinities — OS releases handles when process exits
     }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
-        if (!_settings.InstanceBalancerEnabled) return;
-
-        var rules = _settings.InstanceBalancerRules?.Where(r => r.IsEnabled).ToList();
-        if (rules is null || rules.Count == 0) return;
-
-        // Need system affinity mask — use first process with a valid mask
-        long sysMask = 0;
-        if (processes.Count > 0)
+        if (!await _tickLock.WaitAsync(0)) return;
+        try
         {
-            try { (_, sysMask) = await _processProvider.GetAffinityMasksAsync(processes[0].Pid); }
-            catch { return; }
-        }
-        if (sysMask == 0) return;
+            if (!_settings.InstanceBalancerEnabled) return;
 
-        int totalCores = CountBits(sysMask);
+            var rules = _settings.InstanceBalancerRules?.Where(r => r.IsEnabled).ToList();
+            if (rules is null || rules.Count == 0) return;
 
-        foreach (var rule in rules)
-        {
-            if (string.IsNullOrWhiteSpace(rule.ProcessNamePattern)) continue;
-
-            var matching = processes
-                .Where(p => p.Name.Contains(
-                    rule.ProcessNamePattern.TrimEnd('*').TrimStart('*'),
-                    StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p.Pid)
-                .ToList();
-
-            int count = matching.Count;
-            if (count == 0)
+            // Need system affinity mask — use first process with a valid mask
+            long sysMask = 0;
+            if (processes.Count > 0)
             {
-                _prevInstanceCount.Remove(rule.Id);
-                continue;
+                try { (_, sysMask) = await _processProvider.GetAffinityMasksAsync(processes[0].Pid); }
+                catch { return; }
             }
+            if (sysMask == 0) return;
 
-            // Only rebalance when count changes
-            if (_prevInstanceCount.TryGetValue(rule.Id, out var prev) && prev == count)
-                continue;
-            _prevInstanceCount[rule.Id] = count;
+            int totalCores = CountBits(sysMask);
 
-            // Build affinity masks for each instance
-            var masks = BuildMasks(rule, count, totalCores, sysMask);
-            for (int i = 0; i < matching.Count; i++)
+            foreach (var rule in rules)
             {
-                var proc = matching[i];
-                if (_actionLock.IsLocked(proc.Pid)) continue;
-                if (!_actionLock.TryLock(proc.Pid, Owner)) continue;
-                try
+                if (string.IsNullOrWhiteSpace(rule.ProcessNamePattern)) continue;
+
+                var matching = processes
+                    .Where(p => p.Name.Contains(
+                        rule.ProcessNamePattern.TrimEnd('*').TrimStart('*'),
+                        StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(p => p.Pid)
+                    .ToList();
+
+                int count = matching.Count;
+                if (count == 0)
                 {
-                    await _processProvider.SetAffinityAsync(proc.Pid, masks[i]);
+                    _prevInstanceCount.Remove(rule.Id);
+                    continue;
                 }
-                catch { }
-                finally
+
+                // Only rebalance when count changes
+                if (_prevInstanceCount.TryGetValue(rule.Id, out var prev) && prev == count)
+                    continue;
+                _prevInstanceCount[rule.Id] = count;
+
+                // Build affinity masks for each instance
+                var masks = BuildMasks(rule, count, totalCores, sysMask);
+                for (int i = 0; i < matching.Count; i++)
                 {
-                    _actionLock.Release(proc.Pid, Owner);
+                    var proc = matching[i];
+                    if (_actionLock.IsLocked(proc.Pid)) continue;
+                    if (!_actionLock.TryLock(proc.Pid, Owner)) continue;
+                    try
+                    {
+                        await _processProvider.SetAffinityAsync(proc.Pid, masks[i]);
+                    }
+                    catch { }
+                    finally
+                    {
+                        _actionLock.Release(proc.Pid, Owner);
+                    }
                 }
             }
         }
+        catch (Exception ex) { _logger.LogDebug(ex, "InstanceBalancerService OnTick error"); }
+        finally { _tickLock.Release(); }
     }
 
     private static List<long> BuildMasks(
@@ -134,7 +152,7 @@ public sealed class InstanceBalancerService : IDisposable
         }
         else // FixedCoreCount
         {
-            var coreBits = GetCoreBits(sysMask);
+            var coreBits  = GetCoreBits(sysMask);
             int coresEach = Math.Max(1, Math.Min(rule.CoresPerInstance, totalCores));
             int coreIndex = 0;
 

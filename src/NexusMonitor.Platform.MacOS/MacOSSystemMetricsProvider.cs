@@ -11,6 +11,8 @@ namespace NexusMonitor.Platform.MacOS;
 // P/Invoke wrapper for libSystem — must be partial for [LibraryImport] source generation
 internal static partial class LibSystem
 {
+    // Cache mach_host_self() — each call leaks a Mach port; 65536 limit would crash at 2s intervals
+    public static readonly int HostSelf = mach_host_self();
     [LibraryImport("libSystem.B.dylib", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int sysctlbyname(
         string name, [Out] byte[] oldp, ref nuint oldlenp, nint newp, nuint newlen);
@@ -32,29 +34,9 @@ internal static partial class LibSystem
     [DllImport("libSystem.B.dylib")]
     public static extern int vm_deallocate(int task, nint address, nint size);
 
-    [DllImport("libSystem.B.dylib", SetLastError = true)]
-    public static extern int statvfs(string path, out Statvfs buf);
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct Statvfs
-    {
-        public ulong f_bsize;
-        public ulong f_frsize;
-        public ulong f_blocks;
-        public ulong f_bfree;
-        public ulong f_bavail;
-        public ulong f_files;
-        public ulong f_ffree;
-        public ulong f_favail;
-        public ulong f_fsid;
-        public ulong f_flag;
-        public ulong f_namemax;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
-        public int[] Spare;
-    }
 }
 
-public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
+public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider, IDisposable
 {
     // PROCESSOR_CPU_LOAD_INFO flavor, CPU_STATE_MAX slots per CPU
     private const int ProcessorCpuLoadInfo = 2;
@@ -203,22 +185,32 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
 
     // Shared multicast observable
     private IObservable<SystemMetrics>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
     private readonly object _metricsLock = new();
+    private IDisposable? _connection;
 
     // ── ISystemMetricsProvider ─────────────────────────────────────────────────
     public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => BuildMetrics())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => BuildMetrics())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -226,6 +218,11 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
 
     public Task<SystemMetrics> GetMetricsAsync(CancellationToken ct = default) =>
         Task.FromResult(BuildMetrics());
+
+    public void Dispose()
+    {
+        lock (_sharedLock) { _connection?.Dispose(); }
+    }
 
     // ── Snapshot ───────────────────────────────────────────────────────────────
     private SystemMetrics BuildMetrics()
@@ -314,7 +311,7 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         totalPercent = 0;
         try
         {
-            var host   = LibSystem.mach_host_self();
+            var host   = LibSystem.HostSelf;
             var result = LibSystem.host_processor_info(
                 host,
                 ProcessorCpuLoadInfo,
@@ -448,17 +445,8 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
                 if (!drive.IsReady) continue;
 
                 var mountPoint = drive.RootDirectory.FullName;
-                long totalBytes, freeBytes;
-                if (LibSystem.statvfs(mountPoint, out var sv) == 0)
-                {
-                    totalBytes = (long)(sv.f_blocks * sv.f_frsize);
-                    freeBytes  = (long)(sv.f_bavail * sv.f_frsize);
-                }
-                else
-                {
-                    totalBytes = drive.TotalSize;
-                    freeBytes  = drive.TotalFreeSpace;
-                }
+                long totalBytes = drive.TotalSize;
+                long freeBytes  = drive.AvailableFreeSpace;
 
                 // Match ioreg entry for I/O rates (disk0, disk1, ...)
                 long readRate = 0, writeRate = 0;
@@ -491,6 +479,10 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         catch { }
 
         _prevDiskTime = now;
+        // Prune stale entries for removed/unmounted disks
+        var activeDisks = new HashSet<string>(result.Select(d => $"disk{d.DiskIndex}"));
+        foreach (var key in _prevDiskBytes.Keys.Where(k => !activeDisks.Contains(k)).ToList())
+            _prevDiskBytes.Remove(key);
         return result;
     }
 
@@ -501,11 +493,16 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         var name = devPath.StartsWith("/dev/", StringComparison.Ordinal)
             ? devPath[5..]
             : devPath;
-        // Strip partition suffix: "disk3s5" → "disk3"
-        var sIdx = name.IndexOf('s');
-        return sIdx > 0 && sIdx < name.Length - 1 && char.IsDigit(name[sIdx + 1])
-            ? name[..sIdx]
-            : name;
+        // Strip partition suffix: search from end for 's' preceded by a digit and followed by digits
+        // e.g. "disk3s5" → 's' at index 5, preceded by '3' (digit), followed by '5' (digit) → "disk3"
+        // Avoids matching the 's' in "disk" (index 1, not preceded by a digit)
+        for (int i = name.Length - 1; i > 0; i--)
+        {
+            if (name[i] == 's' && char.IsDigit(name[i - 1])
+                && i < name.Length - 1 && char.IsDigit(name[i + 1]))
+                return name[..i];
+        }
+        return name;
     }
 
     /// <summary>
@@ -626,6 +623,10 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider
         catch { }
 
         _prevNetTime = now;
+        // Prune stale entries for removed adapters
+        var activeNics = new HashSet<string>(result.Select(r => r.Name));
+        foreach (var key in _prevNetBytes.Keys.Where(k => !activeNics.Contains(k)).ToList())
+            _prevNetBytes.Remove(key);
         return result;
     }
 }

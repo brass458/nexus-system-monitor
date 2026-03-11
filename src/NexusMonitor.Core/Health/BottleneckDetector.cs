@@ -33,11 +33,14 @@ public static class BottleneckDetector
     private static readonly Queue<double> _vramSmooth = new(SmoothingSamples);
     private static readonly Queue<double> _memSmooth  = new(SmoothingSamples);
     private static readonly Queue<double> _diskSmooth = new(SmoothingSamples);
+    private static readonly object _smoothLock = new();
 
     public static BottleneckReport Analyse(
         SystemMetrics metrics,
         IReadOnlyList<ProcessInfo> processes)
     {
+        lock (_smoothLock)
+        {
         // ── Raw values ─────────────────────────────────────────────────────────
         var cpuRaw   = metrics.Cpu.TotalPercent;
         var gpuRaw   = metrics.Gpus.Count > 0 ? metrics.Gpus.Max(g => g.UsagePercent)      : 0;
@@ -205,6 +208,7 @@ public static class BottleneckDetector
                        + "Both components are being used efficiently and neither is sitting idle waiting for the other.",
             upgrade: string.Empty,
             cpu, gpu, vram, mem, disk, cpuTemp, gpuTemp, cpuThrottling);
+        } // end lock (_smoothLock)
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

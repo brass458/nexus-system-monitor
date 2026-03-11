@@ -1,4 +1,6 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -11,20 +13,23 @@ namespace NexusMonitor.Core.Automation;
 /// </summary>
 public sealed class IdleSaverService : IDisposable
 {
-    private readonly IProcessProvider         _processProvider;
+    private readonly IProcessProvider          _processProvider;
     private readonly IForegroundWindowProvider _foregroundWindow;
-    private readonly AppSettings              _settings;
-    private readonly ProcessActionLock        _actionLock;
+    private readonly AppSettings               _settings;
+    private readonly ProcessActionLock         _actionLock;
+    private readonly ILogger<IdleSaverService> _logger;
 
     // pid → consecutive idle tick count
-    private readonly Dictionary<int, int>             _idleTicks        = new();
+    private readonly Dictionary<int, int>             _idleTicks       = new();
     // pid → priority before we throttled it
-    private readonly Dictionary<int, ProcessPriority> _savedPriorities  = new();
+    private readonly Dictionary<int, ProcessPriority> _savedPriorities = new();
     // pid → whether we also enabled efficiency mode
-    private readonly HashSet<int>                     _efficiencyPids   = new();
+    private readonly HashSet<int>                     _efficiencyPids  = new();
 
     private IDisposable? _subscription;
     private bool _running;
+
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
 
     private const string Owner = "IdleSaver";
 
@@ -34,12 +39,14 @@ public sealed class IdleSaverService : IDisposable
         IProcessProvider          processProvider,
         IForegroundWindowProvider foregroundWindow,
         AppSettings               settings,
-        ProcessActionLock         actionLock)
+        ProcessActionLock         actionLock,
+        ILogger<IdleSaverService>? logger = null)
     {
         _processProvider  = processProvider;
         _foregroundWindow = foregroundWindow;
         _settings         = settings;
         _actionLock       = actionLock;
+        _logger           = logger ?? NullLogger<IdleSaverService>.Instance;
     }
 
     public void Start()
@@ -48,7 +55,11 @@ public sealed class IdleSaverService : IDisposable
         _running = true;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, _ => { });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "IdleSaverService stream faulted");
+                _running = false;
+            });
     }
 
     public void Stop()
@@ -57,85 +68,97 @@ public sealed class IdleSaverService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
-        _ = RestoreAllAsync();
+        _ = Task.Run(async () =>
+        {
+            await _tickLock.WaitAsync();
+            try { await RestoreAllAsync(); }
+            catch (Exception ex) { _logger.LogError(ex, "IdleSaverService restore failed during stop"); }
+            finally { _tickLock.Release(); }
+        });
     }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
-        if (!_settings.IdleSaverEnabled) return;
-
-        var fgPid      = _foregroundWindow.GetForegroundProcessId();
-        var exclusions = _settings.IdleSaverExclusions;
-        var threshold  = _settings.IdleSaverCpuThreshold;
-        var ticksReq   = _settings.IdleSaverIdleTicksRequired;
-        var useEco     = _settings.IdleSaverUseEfficiencyMode;
-        var alive      = new HashSet<int>(processes.Select(p => p.Pid));
-
-        // Evict dead PIDs
-        foreach (var pid in _idleTicks.Keys.Where(k => !alive.Contains(k)).ToList())
+        if (!await _tickLock.WaitAsync(0)) return;
+        try
         {
-            _idleTicks.Remove(pid);
-            _savedPriorities.Remove(pid);
-            _efficiencyPids.Remove(pid);
-            _actionLock.Release(pid, Owner);
-        }
+            if (!_settings.IdleSaverEnabled) return;
 
-        foreach (var proc in processes)
-        {
-            if (proc.Pid == fgPid) continue;
-            if (proc.Pid == Environment.ProcessId) continue;
-            if (proc.Category == ProcessCategory.SystemKernel) continue;
-            if (exclusions.Any(ex => proc.Name.Equals(ex, StringComparison.OrdinalIgnoreCase))) continue;
+            var fgPid      = _foregroundWindow.GetForegroundProcessId();
+            var exclusions = _settings.IdleSaverExclusions;
+            var threshold  = _settings.IdleSaverCpuThreshold;
+            var ticksReq   = _settings.IdleSaverIdleTicksRequired;
+            var useEco     = _settings.IdleSaverUseEfficiencyMode;
+            var alive      = new HashSet<int>(processes.Select(p => p.Pid));
 
-            bool isThrottled = _savedPriorities.ContainsKey(proc.Pid);
-
-            if (isThrottled)
+            // Evict dead PIDs
+            foreach (var pid in _idleTicks.Keys.Where(k => !alive.Contains(k)).ToList())
             {
-                // Check if process became active again (high CPU or became foreground)
-                bool restored = proc.CpuPercent > threshold * 2.0;
-                if (restored)
-                    await RestorePidAsync(proc.Pid);
-                else
-                    _idleTicks[proc.Pid] = 0; // stay throttled, reset counter
+                _idleTicks.Remove(pid);
+                _savedPriorities.Remove(pid);
+                _efficiencyPids.Remove(pid);
+                _actionLock.Release(pid, Owner);
             }
-            else
-            {
-                // Track idle ticks
-                if (proc.CpuPercent < threshold)
-                {
-                    _idleTicks.TryGetValue(proc.Pid, out var ticks);
-                    ticks++;
-                    _idleTicks[proc.Pid] = ticks;
 
-                    if (ticks >= ticksReq && !_actionLock.IsLocked(proc.Pid))
+            foreach (var proc in processes)
+            {
+                if (proc.Pid == fgPid) continue;
+                if (proc.Pid == Environment.ProcessId) continue;
+                if (proc.Category == ProcessCategory.SystemKernel) continue;
+                if (exclusions.Any(ex => proc.Name.Equals(ex, StringComparison.OrdinalIgnoreCase))) continue;
+
+                bool isThrottled = _savedPriorities.ContainsKey(proc.Pid);
+
+                if (isThrottled)
+                {
+                    // Check if process became active again (high CPU or became foreground)
+                    bool restored = proc.CpuPercent > threshold * 2.0;
+                    if (restored)
+                        await RestorePidAsync(proc.Pid);
+                    else
+                        _idleTicks[proc.Pid] = 0; // stay throttled, reset counter
+                }
+                else
+                {
+                    // Track idle ticks
+                    if (proc.CpuPercent < threshold)
                     {
-                        if (_actionLock.TryLock(proc.Pid, Owner))
+                        _idleTicks.TryGetValue(proc.Pid, out var ticks);
+                        ticks++;
+                        _idleTicks[proc.Pid] = ticks;
+
+                        if (ticks >= ticksReq && !_actionLock.IsLocked(proc.Pid))
                         {
-                            _savedPriorities[proc.Pid] = ProcessPriority.Normal;
-                            try
+                            if (_actionLock.TryLock(proc.Pid, Owner))
                             {
-                                await _processProvider.SetPriorityAsync(proc.Pid, ProcessPriority.BelowNormal);
-                                if (useEco)
+                                _savedPriorities[proc.Pid] = ProcessPriority.Normal;
+                                try
                                 {
-                                    await _processProvider.SetEfficiencyModeAsync(proc.Pid, true);
-                                    _efficiencyPids.Add(proc.Pid);
+                                    await _processProvider.SetPriorityAsync(proc.Pid, ProcessPriority.BelowNormal);
+                                    if (useEco)
+                                    {
+                                        await _processProvider.SetEfficiencyModeAsync(proc.Pid, true);
+                                        _efficiencyPids.Add(proc.Pid);
+                                    }
                                 }
-                            }
-                            catch
-                            {
-                                _savedPriorities.Remove(proc.Pid);
-                                _efficiencyPids.Remove(proc.Pid);
-                                _actionLock.Release(proc.Pid, Owner);
+                                catch
+                                {
+                                    _savedPriorities.Remove(proc.Pid);
+                                    _efficiencyPids.Remove(proc.Pid);
+                                    _actionLock.Release(proc.Pid, Owner);
+                                }
                             }
                         }
                     }
-                }
-                else
-                {
-                    _idleTicks.Remove(proc.Pid);
+                    else
+                    {
+                        _idleTicks.Remove(proc.Pid);
+                    }
                 }
             }
         }
+        catch (Exception ex) { _logger.LogDebug(ex, "IdleSaverService OnTick error"); }
+        finally { _tickLock.Release(); }
     }
 
     private async Task RestorePidAsync(int pid)

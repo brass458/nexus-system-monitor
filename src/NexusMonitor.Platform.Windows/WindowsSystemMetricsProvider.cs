@@ -96,7 +96,9 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     // Shared multicast observable — all callers share one timer + one Sample() call per tick
     private IObservable<SystemMetrics>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     // ─── ISystemMetricsProvider ───────────────────────────────────────────────
 
@@ -104,14 +106,22 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => Sample())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => Sample())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -956,6 +966,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
     public void Dispose()
     {
+        lock (_sharedLock) { _connection?.Dispose(); }
         _cpuTotal?.Dispose();
         foreach (var c in _cpuCores) c?.Dispose();
         foreach (var (_, r, w, a, ar) in _diskCounters) { r?.Dispose(); w?.Dispose(); a?.Dispose(); ar?.Dispose(); }

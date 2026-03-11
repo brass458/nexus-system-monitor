@@ -17,7 +17,7 @@ namespace NexusMonitor.Platform.Windows;
 /// EStats collection is enabled per-connection; failures (e.g. non-admin for
 /// foreign-process connections) are silently swallowed — rate shows "—".
 /// </summary>
-public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvider
+public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvider, IDisposable
 {
     private const int AF_INET  = 2;
     private const int AF_INET6 = 23;
@@ -47,6 +47,7 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
     // ── Shared multicast observable ────────────────────────────────────────────
     private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     // ── Public interface ───────────────────────────────────────────────────────
 
@@ -61,10 +62,11 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
             {
                 var sharedInterval = interval < TimeSpan.FromSeconds(2)
                     ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<NetworkConnection>)Snapshot())
-                                    .Publish()
-                                    .RefCount();
+                var connectable = Observable.Timer(TimeSpan.Zero, sharedInterval)
+                                            .Select(_ => (IReadOnlyList<NetworkConnection>)Snapshot())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -373,6 +375,11 @@ public sealed class WindowsNetworkConnectionsProvider : INetworkConnectionsProvi
 
     private static string Addr6(byte[]? a) =>
         a is null ? "::" : new IPAddress(a).ToString();
+
+    public void Dispose()
+    {
+        lock (_sharedLock) { _connection?.Dispose(); }
+    }
 
     private static TcpConnectionState TcpState(uint s) => s switch
     {

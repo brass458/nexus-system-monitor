@@ -9,16 +9,16 @@ namespace NexusMonitor.Platform.Linux;
 public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 {
     // ── P/Invoke declarations ──────────────────────────────────────────────────
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int kill(int pid, int sig);
 
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int setpriority(int which, uint who, int prio);
 
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong mask);
 
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int sched_getaffinity(int pid, IntPtr cpusetsize, out ulong mask);
 
     private const int PRIO_PROCESS = 0;
@@ -28,6 +28,8 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 
     // ── State ──────────────────────────────────────────────────────────────────
     private readonly Dictionary<int, (long cpuTicks, DateTime time)> _cpuSamples = new();
+    // Disk I/O delta tracking: pid → (cumReadBytes, cumWriteBytes, sampleTime)
+    private readonly Dictionary<int, (long readBytes, long writeBytes, DateTime time)> _ioSamples = new();
     private static readonly int s_processorCount = Math.Max(1, Environment.ProcessorCount);
     private static readonly int s_currentPid     = Environment.ProcessId;
     private static readonly long s_clockTick      = GetClockTicksPerSecond();
@@ -50,6 +52,9 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 
     private bool _disposed;
     private int _lastProcessCount = 200;
+
+    // Serializes concurrent Snapshot() calls (timer tick vs GetProcessesAsync)
+    private readonly object _snapshotLock = new();
 
     private static long GetClockTicksPerSecond()
     {
@@ -77,30 +82,40 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 }
             };
             p.Start();
-            var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(2000);
-            return output;
+            var outputTask = p.StandardOutput.ReadToEndAsync();
+            if (!p.WaitForExit(2000)) { try { p.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch { return string.Empty; }
     }
 
     // Shared multicast observable
     private IObservable<IReadOnlyList<ProcessInfo>>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     // ── Streaming ──────────────────────────────────────────────────────────────
     public IObservable<IReadOnlyList<ProcessInfo>> GetProcessStream(TimeSpan interval)
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => (IReadOnlyList<ProcessInfo>)Snapshot())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -112,6 +127,8 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     // ── Snapshot ───────────────────────────────────────────────────────────────
     private IReadOnlyList<ProcessInfo> Snapshot()
     {
+        lock (_snapshotLock)
+        {
         var now    = DateTime.UtcNow;
         var result = new List<ProcessInfo>(_lastProcessCount);
 
@@ -148,15 +165,18 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             catch { }
         }
 
-        // Evict stale CPU and static-field samples for dead PIDs
+        // Evict stale CPU, I/O, and static-field samples for dead PIDs
         var activePids = new HashSet<int>(result.Select(p => p.Pid));
         foreach (var key in _cpuSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
             _cpuSamples.Remove(key);
+        foreach (var key in _ioSamples.Keys.Where(k => !activePids.Contains(k)).ToList())
+            _ioSamples.Remove(key);
         foreach (var key in _staticCache.Keys.Where(k => !activePids.Contains(k)).ToList())
             _staticCache.Remove(key);
 
         _lastProcessCount = Math.Max(result.Count, 64);
         return result;
+        } // end lock (_snapshotLock)
     }
 
     private ProcessInfo? ReadProcessInfo(int pid, string procDir, DateTime now, DateTime bootTime)
@@ -181,13 +201,14 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         var rest  = statLine[(nameEnd + 2)..]; // skip ") "
         var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        // parts[0] = state, parts[1] = ppid, ... parts[11]=utime, parts[12]=stime, parts[19]=starttime
+        // parts[0] = state, parts[1] = ppid, ... parts[11]=utime, parts[12]=stime, parts[16]=nice, parts[19]=starttime
         if (parts.Length < 20) return null;
 
         var stateChar = parts[0].Length > 0 ? parts[0][0] : 'S';
-        _ = int.TryParse(parts[1], out var ppid);
+        _ = int.TryParse(parts[1],  out var ppid);
         _ = long.TryParse(parts[11], out var utime);
         _ = long.TryParse(parts[12], out var stime);
+        _ = int.TryParse(parts[16],  out var niceValue);
         _ = long.TryParse(parts[19], out var starttime);
 
         // CPU% delta
@@ -260,6 +281,41 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             };
         }
 
+        // Per-process disk I/O from /proc/[pid]/io (may fail with EPERM for other users' processes)
+        long ioReadRate = 0, ioWriteRate = 0;
+        try
+        {
+            var ioPath = Path.Combine(procDir, "io");
+            if (File.Exists(ioPath))
+            {
+                long cumRead = 0, cumWrite = 0;
+                foreach (var line in File.ReadAllLines(ioPath))
+                {
+                    if (line.StartsWith("read_bytes:", StringComparison.Ordinal))
+                    {
+                        var val = line.AsSpan(11).Trim();
+                        long.TryParse(val, out cumRead);
+                    }
+                    else if (line.StartsWith("write_bytes:", StringComparison.Ordinal))
+                    {
+                        var val = line.AsSpan(12).Trim();
+                        long.TryParse(val, out cumWrite);
+                    }
+                }
+                if (_ioSamples.TryGetValue(pid, out var prevIo))
+                {
+                    var elapsed = (now - prevIo.time).TotalSeconds;
+                    if (elapsed > 0)
+                    {
+                        ioReadRate  = (long)Math.Max(0, (cumRead  - prevIo.readBytes)  / elapsed);
+                        ioWriteRate = (long)Math.Max(0, (cumWrite - prevIo.writeBytes) / elapsed);
+                    }
+                }
+                _ioSamples[pid] = (cumRead, cumWrite, now);
+            }
+        }
+        catch { /* EPERM for processes owned by other users — silently skip */ }
+
         // Process state
         var procState = stateChar switch
         {
@@ -288,8 +344,8 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             PrivateBytesBytes      = 0,
             PagedPoolBytes         = vmSwap * 1024L,
             VirtualBytesBytes      = 0,
-            IoReadBytesPerSec      = 0,
-            IoWriteBytesPerSec     = 0,
+            IoReadBytesPerSec      = ioReadRate,
+            IoWriteBytesPerSec     = ioWriteRate,
             GpuPercent             = 0,
             NetworkSendBytesPerSec = 0,
             NetworkRecvBytesPerSec = 0,
@@ -300,6 +356,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             CurrentIoPriority      = IoPriority.Normal,
             CurrentMemoryPriority  = MemoryPriority.Normal,
             IsEfficiencyMode       = false,
+            BasePriority           = niceValue,
         };
     }
 
@@ -531,7 +588,9 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        lock (_sharedLock) { _connection?.Dispose(); }
         _cpuSamples.Clear();
+        _ioSamples.Clear();
         _uidCache.Clear();
         _staticCache.Clear();
     }

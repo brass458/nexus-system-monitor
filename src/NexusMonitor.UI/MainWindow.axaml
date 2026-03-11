@@ -308,6 +308,9 @@
             <DataTemplate DataType="vm:DashboardViewModel">
               <views:DashboardView />
             </DataTemplate>
+            <DataTemplate DataType="vm:DiagnosticsViewModel">
+              <views:DiagnosticsView />
+            </DataTemplate>
             <DataTemplate DataType="vm:ProcessesViewModel">
               <views:ProcessesView />
             </DataTemplate>

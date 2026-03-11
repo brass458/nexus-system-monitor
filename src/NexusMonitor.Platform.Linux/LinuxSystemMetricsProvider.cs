@@ -7,10 +7,10 @@ using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.Linux;
 
-public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
+public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider, IDisposable
 {
     // ── P/Invoke ───────────────────────────────────────────────────────────────
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int statvfs(string path, out Statvfs buf);
 
     [StructLayout(LayoutKind.Sequential)]
@@ -28,7 +28,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         public ulong f_flag;
         public ulong f_namemax;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
-        public int[] Spare;
+        public ulong[] Spare;
     }
 
     // ── Cached static data ─────────────────────────────────────────────────────
@@ -46,6 +46,10 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
     private readonly Dictionary<string, (long readSectors, long writeSectors)> _prevDisk = new();
     // io_ticks: field 12 (0-indexed) in /proc/diskstats — milliseconds device was active
     private readonly Dictionary<string, long> _prevDiskIoTicks = new();
+    // weighted_io_ticks (field 13) for average response time calculation
+    private readonly Dictionary<string, long> _prevWeightedIo  = new();
+    // total IO ops (reads + writes) for avg response time calculation
+    private readonly Dictionary<string, long> _prevIoOps       = new();
     private DateTime _prevDiskTime = DateTime.MinValue;
 
     private readonly Dictionary<string, (long rxBytes, long txBytes)> _prevNet = new();
@@ -69,25 +73,40 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
 
     // Shared multicast observable
     private IObservable<SystemMetrics>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
     private readonly object _metricsLock = new();
+    private IDisposable? _connection;
 
     // ── ISystemMetricsProvider ─────────────────────────────────────────────────
     public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            // Invalidate cached observable when interval changes
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => BuildMetrics())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => BuildMetrics())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
+    }
+
+    public void Dispose()
+    {
+        lock (_sharedLock) { _connection?.Dispose(); }
     }
 
     public Task<SystemMetrics> GetMetricsAsync(CancellationToken ct = default) =>
@@ -289,7 +308,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
 
                 if (!long.TryParse(parts[5],  out var readSectors))  continue;
                 if (!long.TryParse(parts[9],  out var writeSectors)) continue;
-                long ioTicks = parts.Length > 12 && long.TryParse(parts[12], out var iot) ? iot : 0;
+                long ioTicks    = parts.Length > 12 && long.TryParse(parts[12], out var iot) ? iot : 0;
+                // Weighted IO ticks (field 13) for avg response time calculation
+                long weightedIo = parts.Length > 13 && long.TryParse(parts[13], out var wio) ? wio : 0;
 
                 long readRate = 0, writeRate = 0;
                 if (_prevDisk.TryGetValue(devName, out var prev))
@@ -302,18 +323,34 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 _prevDisk[devName] = (readSectors, writeSectors);
 
                 double activePercent = 0;
+                double avgResponseMs = 0;
                 if (_prevDiskIoTicks.TryGetValue(devName, out var prevIoTicks) && ioTicks >= prevIoTicks)
                 {
                     var deltaMs    = ioTicks - prevIoTicks;
                     var elapsedMs  = elapsed * 1000.0;
                     activePercent  = Math.Min(100.0, elapsedMs > 0 ? deltaMs / elapsedMs * 100.0 : 0);
+
+                    // Average response time: weighted-IO delta / total-IO-ops delta
+                    if (_prevWeightedIo.TryGetValue(devName, out var prevWeighted))
+                    {
+                        var wDelta     = weightedIo - prevWeighted;
+                        long ioReads   = parts.Length > 3  && long.TryParse(parts[3],  out var r) ? r : 0;
+                        long ioWrites  = parts.Length > 7  && long.TryParse(parts[7],  out var w) ? w : 0;
+                        long totalOps  = ioReads + ioWrites;
+                        if (_prevIoOps.TryGetValue(devName, out var prevOps))
+                        {
+                            var opsDelta = totalOps - prevOps;
+                            if (opsDelta > 0)
+                                avgResponseMs = (double)wDelta / opsDelta;
+                        }
+                        _prevIoOps[devName] = totalOps;
+                    }
+                    _prevWeightedIo[devName] = weightedIo;
                 }
                 _prevDiskIoTicks[devName] = ioTicks;
 
                 // Capacity via statvfs on typical mount point
                 long totalBytes = 0, freeBytes = 0;
-                var mountPath   = $"/dev/{devName}";
-                // Try to find a mount point from /proc/mounts
                 var mount = FindMountPoint(devName);
                 if (mount != null)
                 {
@@ -323,6 +360,24 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                         freeBytes  = (long)(sv.f_bavail * sv.f_frsize);
                     }
                 }
+
+                // Media type from /sys/block/{devName}/queue/rotational
+                var diskType = "Unknown";
+                try
+                {
+                    var rotPath = $"/sys/block/{devName}/queue/rotational";
+                    if (File.Exists(rotPath))
+                    {
+                        var rot = File.ReadAllText(rotPath).Trim();
+                        diskType = rot == "0"
+                            ? (devName.StartsWith("nvme", StringComparison.Ordinal) ? "NVMe" : "SSD")
+                            : "HDD";
+                    }
+                }
+                catch { }
+
+                // Collect volume mount points for this disk
+                var volumes = BuildDiskVolumes(devName);
 
                 result.Add(new DiskMetrics
                 {
@@ -336,6 +391,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     ActivePercent    = activePercent,
                     TotalBytes       = totalBytes,
                     FreeBytes        = freeBytes,
+                    DiskType         = diskType,
+                    AverageResponseMs = avgResponseMs,
+                    Volumes          = volumes,
                 });
             }
         }
@@ -473,8 +531,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 }
                 _prevNet[name] = (rxBytes, txBytes);
 
-                // Enrich with IP, speed, and adapter type from NetworkInterface + sysfs
+                // Enrich with IP, speed, MAC, DNS, and adapter type from NetworkInterface + sysfs
                 string ipv4 = string.Empty, ipv6 = string.Empty, adapterType = "Ethernet";
+                string macAddress = string.Empty, dnsSuffix = string.Empty;
                 long linkSpeedBps = 0;
                 bool isConnected  = true;
 
@@ -483,13 +542,25 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     isConnected = nic.OperationalStatus == OperationalStatus.Up;
                     try
                     {
-                        foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                        var props = nic.GetIPProperties();
+                        foreach (var ua in props.UnicastAddresses)
                         {
                             if (ua.Address.AddressFamily == AddressFamily.InterNetwork)
                                 ipv4 = ua.Address.ToString();
                             else if (ua.Address.AddressFamily == AddressFamily.InterNetworkV6)
                                 ipv6 = ua.Address.ToString();
                         }
+                        if (!string.IsNullOrEmpty(props.DnsSuffix))
+                            dnsSuffix = props.DnsSuffix;
+                    }
+                    catch { }
+
+                    // MAC address
+                    try
+                    {
+                        var physAddr = nic.GetPhysicalAddress().GetAddressBytes();
+                        if (physAddr.Length == 6)
+                            macAddress = string.Join(":", physAddr.Select(b => b.ToString("X2")));
                     }
                     catch { }
                 }
@@ -503,9 +574,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 }
                 catch { }
 
-                // Type: wireless if /sys/class/net/{name}/wireless exists
-                if (Directory.Exists($"/sys/class/net/{name}/wireless"))
-                    adapterType = "WiFi";
+                // Connection type: wireless if /sys/class/net/{name}/wireless exists
+                var connType = Directory.Exists($"/sys/class/net/{name}/wireless") ? "Wi-Fi" : "Ethernet";
+                adapterType = connType;
 
                 result.Add(new NetworkAdapterMetrics
                 {
@@ -521,6 +592,9 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                     IPv6Address      = ipv6,
                     LinkSpeedBps     = linkSpeedBps,
                     AdapterType      = adapterType,
+                    MacAddress       = macAddress,
+                    DnsSuffix        = dnsSuffix,
+                    ConnectionType   = connType,
                 });
             }
         }
@@ -703,7 +777,14 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 var driverName = File.ReadAllText(namePath).Trim();
                 if (!preferred.Contains(driverName)) continue;
 
-                var temp = ReadFirstTempInput(hwmon);
+                // For k10temp / zenpower on AMD Zen CPUs, prefer Tccd (per-CCD die temps)
+                // over Tctl (which includes a hardware offset and may read high).
+                // Enumerate temp*_label files and pick TccdX entries; fall back to Tctl.
+                var temp = driverName.Equals("k10temp", StringComparison.OrdinalIgnoreCase)
+                        || driverName.Equals("zenpower", StringComparison.OrdinalIgnoreCase)
+                    ? ReadAmdZenTemperature(hwmon)
+                    : ReadFirstTempInput(hwmon);
+
                 if (temp > 0) return temp;
             }
 
@@ -732,6 +813,49 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
         return 0;
     }
 
+    /// <summary>
+    /// For AMD k10temp/zenpower: scan all temp*_label files, prefer the highest TccdX
+    /// (per-CCD die temperatures). Falls back to Tctl (temp1) if no Tccd entries found.
+    /// </summary>
+    private static double ReadAmdZenTemperature(string hwmonDir)
+    {
+        double maxTccd = 0;
+        double tctl    = 0;
+
+        for (int i = 1; i <= 32; i++)
+        {
+            var labelPath = Path.Combine(hwmonDir, $"temp{i}_label");
+            var inputPath = Path.Combine(hwmonDir, $"temp{i}_input");
+            if (!File.Exists(inputPath)) continue;
+
+            if (!long.TryParse(File.ReadAllText(inputPath).Trim(), out var mC) || mC <= 0)
+                continue;
+            var tempC = mC / 1000.0;
+
+            if (File.Exists(labelPath))
+            {
+                var label = File.ReadAllText(labelPath).Trim();
+                if (label.StartsWith("Tccd", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (tempC > maxTccd) maxTccd = tempC;
+                    continue;
+                }
+                if (label.Equals("Tctl", StringComparison.OrdinalIgnoreCase)
+                 || label.Equals("Tccd1", StringComparison.OrdinalIgnoreCase))
+                {
+                    tctl = tempC;
+                    continue;
+                }
+            }
+
+            // First unlabelled input is Tctl on older kernels
+            if (i == 1 && tctl == 0) tctl = tempC;
+        }
+
+        // Prefer highest Tccd (actual die temp), fall back to Tctl
+        return maxTccd > 0 ? maxTccd : tctl;
+    }
+
     private static double ReadFirstTempInput(string hwmonDir)
     {
         // Try temp1_input, temp2_input, ...
@@ -744,5 +868,55 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider
                 return mC / 1000.0;
         }
         return 0;
+    }
+
+    /// <summary>Returns volume info (mount points) for the given disk device.</summary>
+    private IReadOnlyList<VolumeInfo> BuildDiskVolumes(string devName)
+    {
+        var result = new List<VolumeInfo>();
+        // Refresh mounts cache (already done by FindMountPoint but call here too for safety)
+        var now = DateTime.UtcNow;
+        if ((now - _mountsCacheTime) >= MountsCacheDuration)
+        {
+            _mountsCache     = BuildMountsCache();
+            _mountsCacheTime = now;
+        }
+
+        try
+        {
+            foreach (var line in File.ReadLines("/proc/mounts"))
+            {
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 3) continue;
+                var dev = parts[0];
+                var mp  = parts[1];
+                var fs  = parts[2];
+
+                var lastSlash = dev.LastIndexOf('/');
+                var devLeaf   = lastSlash >= 0 ? dev[(lastSlash + 1)..] : dev;
+
+                // Match partition of this disk (e.g. sda1 → sda, nvme0n1p1 → nvme0n1)
+                if (!devLeaf.StartsWith(devName, StringComparison.Ordinal)) continue;
+                if (devLeaf.Length == devName.Length || char.IsDigit(devLeaf[devName.Length]) || devLeaf[devName.Length] == 'p')
+                {
+                    long volTotal = 0, volFree = 0;
+                    if (statvfs(mp, out var sv) == 0)
+                    {
+                        volTotal = (long)(sv.f_blocks * sv.f_frsize);
+                        volFree  = (long)(sv.f_bavail * sv.f_frsize);
+                    }
+                    result.Add(new VolumeInfo
+                    {
+                        DriveLetter = mp,
+                        Label       = devLeaf,
+                        FileSystem  = fs,
+                        TotalBytes  = volTotal,
+                        FreeBytes   = volFree,
+                    });
+                }
+            }
+        }
+        catch { }
+        return result;
     }
 }

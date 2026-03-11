@@ -39,6 +39,8 @@ public sealed class AnomalyDetectionService : IDisposable
 
     // ── Cooldown tracking: tuple key avoids string interpolation allocation per call ──
     private readonly Dictionary<(string EventType, string MetricName), DateTime> _lastFired = new();
+    private readonly object _cooldownLock = new();
+    private bool _running;
 
     // ── Subscriptions ──────────────────────────────────────────────────────
     private IDisposable? _metricsSub;
@@ -72,10 +74,12 @@ public sealed class AnomalyDetectionService : IDisposable
     public void Start()
     {
         if (!_config.Enabled) return;
+        if (_running) return;
+        _running = true;
 
         _metricsSub = _metricsProvider
             .GetMetricsStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnMetricsTick, _ => { });
+            .Subscribe(OnMetricsTick, _ => { _running = false; });
 
         _processSub = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
@@ -88,6 +92,7 @@ public sealed class AnomalyDetectionService : IDisposable
 
     public void Stop()
     {
+        _running = false;
         _metricsSub?.Dispose();
         _processSub?.Dispose();
         _networkSub?.Dispose();
@@ -265,11 +270,17 @@ public sealed class AnomalyDetectionService : IDisposable
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private bool IsCooldownElapsed(string eventType, string metricName)
-        => !_lastFired.TryGetValue((eventType, metricName), out var last)
-           || (DateTime.UtcNow - last).TotalSeconds >= _config.CooldownSeconds;
+    {
+        lock (_cooldownLock)
+            return !_lastFired.TryGetValue((eventType, metricName), out var last)
+                   || (DateTime.UtcNow - last).TotalSeconds >= _config.CooldownSeconds;
+    }
 
     private void MarkCooldown(string eventType, string metricName)
-        => _lastFired[(eventType, metricName)] = DateTime.UtcNow;
+    {
+        lock (_cooldownLock)
+            _lastFired[(eventType, metricName)] = DateTime.UtcNow;
+    }
 
     private async Task FireEvent(
         string  eventType, int     severity,

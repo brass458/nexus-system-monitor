@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-03-11
+
+### Added (Phase 19 — Logging + Housekeeping)
+- **Structured logging via Serilog:** Rolling file sink at `%AppData%\NexusMonitor\logs\nexus-.log`
+  (daily roll, 10 MB cap, 7-file retention). `Microsoft.Extensions.Logging` wired into DI so all
+  services receive typed `ILogger<T>` instances.
+- **Runtime logging for key services:** `RulesEngine`, `GamingModeService`, `ProBalanceService`,
+  `PerformanceProfileService`, `MetricsStore`, and `SettingsService` now log warnings on
+  recoverable failures rather than swallowing exceptions silently.
+- **Startup/shutdown logging:** Unhandled exceptions in `AppDomain`, `TaskScheduler`, and the
+  Avalonia dispatcher are now forwarded to Serilog in addition to `CrashLogger`.
+- **Nmap target sanitization:** `NmapScannerService.BuildArgs` validates the target string against
+  an IP/CIDR/hostname allowlist regex before appending it to nmap arguments, preventing flag
+  injection via the Target field.
+
+### Fixed (Bug Audit Round 3 — 24 bugs across 22 files)
+
+**Batch 1 — Shutdown Symmetry**
+- **`App.axaml.cs` shutdown handler** now calls `Stop()` on all 15+ background services in safe
+  teardown order (automation → monitoring → data persistence → infrastructure). Previously only 6
+  of the started services were stopped, leaving timers, threads, and modified process priorities
+  dangling on exit.
+- **`ServiceStarter.StopCoreServices` (CLI)** updated to mirror the same complete teardown.
+- **`PerformanceProfileService.Dispose()`** now calls `DeactivateProfile()` first so boosted
+  processes and the power plan are restored before the service is torn down.
+
+**Batch 2 — Silent Rx Death + `async void` Crash Risk**
+- **`ForegroundBoostService`, `CpuLimiterService`, `InstanceBalancerService`, `IdleSaverService`,
+  `SleepPreventionService`:** All rewritten — added `ILogger<T>` injection, Rx error handlers that
+  set `_running = false` (so `Start()` can re-subscribe), `_running` guard in `Start()`, and full
+  `try/catch` wrappers inside `async void OnTick` to prevent unhandled exceptions from reaching
+  `SynchronizationContext` and crashing the process.
+- **`AlertsService`:** Rx error handler now sets `_running = false` instead of silently discarding.
+- **`RulesEngine`, `ProBalanceService`:** Error handlers updated to set `_running = false`; `Start()`
+  guarded against double-subscription.
+
+**Batch 3 — Thread Safety**
+- **`SemaphoreSlim _tickLock = new(1, 1)`** added to `ForegroundBoostService`, `CpuLimiterService`,
+  `InstanceBalancerService`, `IdleSaverService`, `ProBalanceService`, and `RulesEngine`. `OnTick`
+  skips with `WaitAsync(0)` if the previous tick is still in flight; `Stop()` drains the semaphore
+  before calling `RestoreAllAsync` to prevent restoring while a tick holds modified state.
+- **`GamingModeService`:** `_stateLock` SemaphoreSlim serialises `ThrottleBackgroundProcessesAsync`
+  and `RestoreAllAsync` to prevent concurrent mutation of the `_throttled` dictionary.
+- **`PerformanceProfileService`:** `_applyLock` SemaphoreSlim serialises `ApplyProfileAsync`
+  (polling skip-if-busy) vs `RestoreProcessesAsync` (waits for in-flight apply).
+- **`BottleneckDetector`:** Static `_smoothLock` wraps all 5 static `Queue<double>` mutations in
+  `Analyse()`, preventing corruption if called from multiple threads.
+- **`AnomalyDetectionService`:** `_cooldownLock` guards `IsCooldownElapsed` / `MarkCooldown`
+  against concurrent access from 3 independent Rx subscriptions; added `_running` guard in `Start()`
+  and `Stop()`.
+- **`SmartTrimService`:** `ScheduleNextTrim()` now disposes the previous `_timerSubscription`
+  before reassigning, closing a subscription leak that grew unbounded over time.
+
+**Batch 4 — Platform Bugs**
+- **`WindowsStartupProvider` (Critical):** `ReadApproved` was bit-testing the wrong way (treating
+  odd byte = enabled). Corrected to even byte = enabled (`(bytes[0] & 1) == 0`). `SetEnabled`
+  was writing 8-byte values with incorrect byte codes (`0x00`/`0x02`); corrected to 12-byte
+  values with `0x02` (enabled) / `0x03` (disabled) per the Windows `StartupApproved` format.
+- **`MacOSSystemMetricsProvider.ExtractBaseDiskName`:** `IndexOf('s')` returned index 1 (the 's'
+  in "disk"), causing all I/O matching for partitioned devices to fail. Replaced with a right-to-
+  left search for 's' flanked by digits, correctly stripping "disk3s5" → "disk3".
+- **`MacOSProcessProvider.Snapshot()`:** Added `if (_disposed) return Array.Empty<ProcessInfo>()`
+  guard at entry — timer callbacks firing after `Dispose()` could write to freed `_taskInfoPtr`
+  memory.
+- **`LinuxPowerPlanProvider.SetActivePlan`:** `_active = schemeGuid` moved to after the backend
+  system call; previously a failed call would leave `GetActivePlan()` returning the wrong state.
+
+**Batch 5 — UI Thread Safety**
+- **`PerformanceProfilesViewModel`:** `ProfileChanged` subscription wrapped with
+  `ObserveOn(RxApp.MainThreadScheduler)` — the observable fires from a background thread, and
+  directly setting an `ObservableProperty` from it violated Avalonia's threading contract.
+- **`LanScannerViewModel`:** Constructor `Task.Run` results now marshalled via
+  `Dispatcher.UIThread.Post` before setting `NmapAvailable`, `PackageManagerName`, and
+  `StatusText`.
+- **`SettingsViewModel.OnLuminanceChanged`:** Event handler from `GlassAdaptiveService` (background
+  thread) wrapped in `Dispatcher.UIThread.Post` to guard `ApplyGlass()` which writes to
+  `Application.Current.Resources`.
+
+### Fixed (housekeeping)
+- **Version mismatch:** `Directory.Build.props` now correctly reflects version `0.1.8`
+  (was `0.1.6` at start of v0.1.7 cycle; carried forward).
+
 ## [0.1.7] - 2026-03-06
 
 ### Added

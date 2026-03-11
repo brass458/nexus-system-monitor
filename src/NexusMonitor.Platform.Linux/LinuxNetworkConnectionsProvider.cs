@@ -7,22 +7,22 @@ using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.Linux;
 
-public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvider
+public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvider, IDisposable
 {
-    [DllImport("libc.so.6", SetLastError = true)]
+    [DllImport("libc", SetLastError = true)]
     private static extern int readlink(string path, byte[] buf, int bufsiz);
 
     private readonly AdapterThroughputTracker _adapterTracker = new();
 
     // inode→(pid, name) cache; rebuilt every 10 s (was 2 s)
-    private readonly Dictionary<long, (int pid, string name)> _inodeMap = new();
+    // Non-readonly so we can atomically swap the whole dictionary (thread safety)
+    private Dictionary<long, (int pid, string name)> _inodeMap = new();
     private DateTime _inodeMapTime = DateTime.MinValue;
 
-    // Shared readlink buffer — "socket:[1234567890]" is at most ~22 bytes
-    private readonly byte[] _readlinkBuf = new byte[128];
-
     private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     public bool SupportsPerConnectionThroughput => false;
 
@@ -30,14 +30,21 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -74,7 +81,9 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
 
     private void RebuildInodeMap()
     {
-        _inodeMap.Clear();
+        var newMap = new Dictionary<long, (int pid, string name)>();
+        // Shared readlink buffer — "socket:[1234567890]" is at most ~22 bytes
+        var readlinkBuf = new byte[128];
 
         string[] pidDirs;
         try { pidDirs = Directory.GetDirectories("/proc"); }
@@ -105,22 +114,24 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
                 {
                     try
                     {
-                        Array.Clear(_readlinkBuf, 0, _readlinkBuf.Length);
-                        int len = readlink(fd, _readlinkBuf, _readlinkBuf.Length);
+                        Array.Clear(readlinkBuf, 0, readlinkBuf.Length);
+                        int len = readlink(fd, readlinkBuf, readlinkBuf.Length);
                         if (len <= 0) continue;
                         // Target looks like "socket:[12345678]"
-                        if (len < 9 || _readlinkBuf[0] != 's') continue; // fast pre-check
-                        var target = System.Text.Encoding.UTF8.GetString(_readlinkBuf, 0, len);
+                        if (len < 9 || readlinkBuf[0] != 's') continue; // fast pre-check
+                        var target = System.Text.Encoding.UTF8.GetString(readlinkBuf, 0, len);
                         if (!target.StartsWith("socket:[", StringComparison.Ordinal)) continue;
                         var inodeStr = target[8..^1]; // strip "socket:[" and "]"
-                        if (long.TryParse(inodeStr, out var inode) && !_inodeMap.ContainsKey(inode))
-                            _inodeMap[inode] = (pid, procName);
+                        if (long.TryParse(inodeStr, out var inode) && !newMap.ContainsKey(inode))
+                            newMap[inode] = (pid, procName);
                     }
                     catch { }
                 }
             }
             catch { }
         }
+        // Atomic swap — readers of _inodeMap see either old or new, never partial
+        _inodeMap = newMap;
     }
 
     // ── Parse /proc/net/{tcp,udp} ──────────────────────────────────────────────
@@ -243,5 +254,10 @@ public sealed class LinuxNetworkConnectionsProvider : INetworkConnectionsProvide
             0x0B => TcpConnectionState.Closing,
             _    => TcpConnectionState.Unknown,
         };
+    }
+
+    public void Dispose()
+    {
+        lock (_sharedLock) { _connection?.Dispose(); }
     }
 }

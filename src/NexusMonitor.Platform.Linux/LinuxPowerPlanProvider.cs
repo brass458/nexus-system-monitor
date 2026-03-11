@@ -57,7 +57,6 @@ public sealed class LinuxPowerPlanProvider : IPowerPlanProvider
 
     public void SetActivePlan(Guid schemeGuid)
     {
-        _active = schemeGuid;
         switch (_backend)
         {
             case Backend.PowerProfilesDaemon:
@@ -68,6 +67,7 @@ public sealed class LinuxPowerPlanProvider : IPowerPlanProvider
                 break;
             // Mock: no-op
         }
+        _active = schemeGuid; // only update after system call succeeds
     }
 
     // ── power-profiles-daemon ──────────────────────────────────────────────────
@@ -106,9 +106,9 @@ public sealed class LinuxPowerPlanProvider : IPowerPlanProvider
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd().Trim();
-            proc.WaitForExit(2000);
-            return MapPowerProfileToGuid(output);
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+            return MapPowerProfileToGuid(outputTask.Result.Trim());
         }
         catch { return IPowerPlanProvider.Balanced; }
     }
@@ -154,10 +154,11 @@ public sealed class LinuxPowerPlanProvider : IPowerPlanProvider
             var governor = File.ReadAllText(GovernorPath).Trim();
             return governor switch
             {
-                "powersave" or "schedutil" or "ondemand" => IPowerPlanProvider.PowerSaver,
-                "conservative"                           => IPowerPlanProvider.Balanced,
-                "performance"                            => IPowerPlanProvider.HighPerformance,
-                _                                        => IPowerPlanProvider.Balanced,
+                "powersave"                        => IPowerPlanProvider.PowerSaver,
+                "conservative"                     => IPowerPlanProvider.PowerSaver,
+                "schedutil" or "ondemand"          => IPowerPlanProvider.Balanced,
+                "performance"                      => IPowerPlanProvider.HighPerformance,
+                _                                  => IPowerPlanProvider.Balanced,
             };
         }
         catch { return IPowerPlanProvider.Balanced; }

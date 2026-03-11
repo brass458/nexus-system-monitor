@@ -25,11 +25,12 @@ public sealed class LinuxHardwareInfoProvider
             L2CacheKB:     (int)l2Kb,
             L3CacheKB:     (int)l3Kb,
             MaxClockMhz:   (int)maxFreqMhz,
-            Socket:        ReadDmiField("board_name"),
+            Socket:        ReadCpuSocket(),
             Stepping:      stepping);
 
-        var gpus    = ReadGpus();
-        var storage = ReadStorage();
+        var gpus     = ReadGpus();
+        var storage  = ReadStorage();
+        var ramSlots = ReadRamSlots();
 
         return new SystemHardwareInfo(
             Hostname:               Environment.MachineName,
@@ -43,7 +44,7 @@ public sealed class LinuxHardwareInfoProvider
             MotherboardModel:       ReadDmiField("board_name"),
             Cpu:                    cpu,
             TotalRamBytes:          totalRamBytes,
-            RamSlots:               [],
+            RamSlots:               ramSlots,
             Gpus:                   gpus,
             Storage:                storage);
     }
@@ -209,7 +210,109 @@ public sealed class LinuxHardwareInfoProvider
         return GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
     }
 
-    // ── GPUs via /sys/class/drm ────────────────────────────────────────────────
+    // ── CPU socket ────────────────────────────────────────────────────────────
+    private static string ReadCpuSocket()
+    {
+        // Try dmidecode -t processor for socket info (requires root or elevated capability)
+        try
+        {
+            using var proc = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo("dmidecode", "-t processor")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            proc.Start();
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+            var output = outputTask.Result;
+            foreach (var line in output.Split('\n'))
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("Socket Designation:", StringComparison.Ordinal))
+                {
+                    var val = trimmed["Socket Designation:".Length..].Trim();
+                    if (!string.IsNullOrEmpty(val)) return val;
+                }
+            }
+        }
+        catch { }
+        return "N/A";
+    }
+
+    // ── RAM slots via dmidecode ────────────────────────────────────────────────
+    private static IReadOnlyList<RamSlotInfo> ReadRamSlots()
+    {
+        var result = new List<RamSlotInfo>();
+        try
+        {
+            using var proc = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo("dmidecode", "-t memory")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            proc.Start();
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+            var output = outputTask.Result;
+
+            // Parse Memory Device blocks
+            var blocks = output.Split(new[] { "\nMemory Device\n" }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var block in blocks.Skip(1)) // first element is header before first block
+            {
+                string slot = "", manufacturer = "", partNumber = "", speed = "", formFactor = "";
+                long sizeBytes = 0;
+                foreach (var line in block.Split('\n'))
+                {
+                    var t = line.TrimStart();
+                    if (t.StartsWith("Locator:", StringComparison.Ordinal) && !t.StartsWith("Bank Locator:", StringComparison.Ordinal))
+                        slot = t["Locator:".Length..].Trim();
+                    else if (t.StartsWith("Size:", StringComparison.Ordinal))
+                    {
+                        var sz = t["Size:".Length..].Trim();
+                        if (!sz.Contains("No Module", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // "8192 MB" or "16 GB"
+                            var szParts = sz.Split(' ');
+                            if (szParts.Length >= 2 && long.TryParse(szParts[0], out var num))
+                            {
+                                sizeBytes = szParts[1].Equals("GB", StringComparison.OrdinalIgnoreCase)
+                                    ? num * 1_073_741_824L
+                                    : num * 1_048_576L; // MB
+                            }
+                        }
+                    }
+                    else if (t.StartsWith("Manufacturer:", StringComparison.Ordinal))
+                        manufacturer = t["Manufacturer:".Length..].Trim();
+                    else if (t.StartsWith("Part Number:", StringComparison.Ordinal))
+                        partNumber = t["Part Number:".Length..].Trim();
+                    else if (t.StartsWith("Speed:", StringComparison.Ordinal))
+                        speed = t["Speed:".Length..].Trim();
+                    else if (t.StartsWith("Form Factor:", StringComparison.Ordinal))
+                        formFactor = t["Form Factor:".Length..].Trim();
+                }
+                if (string.IsNullOrEmpty(slot)) continue;
+                result.Add(new RamSlotInfo(
+                    DeviceLocator: slot,
+                    CapacityBytes: sizeBytes,
+                    SpeedMhz:      int.TryParse(speed.Split(' ')[0], out var mhz) ? mhz : 0,
+                    MemoryType:    formFactor,
+                    Manufacturer:  manufacturer,
+                    PartNumber:    partNumber));
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    // ── GPUs via /sys/class/drm + nvidia-smi ──────────────────────────────────
     private static IReadOnlyList<GpuHardwareInfo> ReadGpus()
     {
         var result = new List<GpuHardwareInfo>();
@@ -221,7 +324,6 @@ public sealed class LinuxHardwareInfoProvider
             var seen = new HashSet<string>();
             foreach (var card in Directory.GetDirectories(drmBase, "card*"))
             {
-                // Only top-level cards, not card0-HDMI-A-1 etc.
                 var name = Path.GetFileName(card);
                 if (name.Contains('-')) continue;
 
@@ -234,14 +336,31 @@ public sealed class LinuxHardwareInfoProvider
                 var key = $"{vendorId}:{deviceId}";
                 if (!seen.Add(key)) continue;
 
+                // ── NVIDIA: use nvidia-smi for product name, VRAM, and driver ───
+                if (vendorId == "0x10de")
+                {
+                    var nvInfo = ReadNvidiaHardwareInfo();
+                    if (nvInfo is not null)
+                    {
+                        result.Add(nvInfo);
+                        continue;
+                    }
+                }
+
+                // ── AMD: read product name from lspci, VRAM from sysfs ──────────
+                if (vendorId == "0x1002")
+                {
+                    var amdInfo = ReadAmdHardwareInfo(card, name);
+                    result.Add(amdInfo);
+                    continue;
+                }
+
+                // ── Intel or unknown: generic fallback ──────────────────────────
                 var vendorName = vendorId switch
                 {
-                    "0x10de" => "NVIDIA",
-                    "0x1002" => "AMD",
                     "0x8086" => "Intel",
                     _        => vendorId
                 };
-
                 result.Add(new GpuHardwareInfo(
                     Name:           $"{vendorName} GPU ({name})",
                     DriverVersion:  string.Empty,
@@ -254,6 +373,101 @@ public sealed class LinuxHardwareInfoProvider
         return result;
     }
 
+    private static GpuHardwareInfo? ReadNvidiaHardwareInfo()
+    {
+        try
+        {
+            var smiBin = File.Exists("/usr/bin/nvidia-smi") ? "/usr/bin/nvidia-smi" : "/usr/local/bin/nvidia-smi";
+            if (!File.Exists(smiBin)) return null;
+
+            using var proc = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo(smiBin,
+                    "--query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            proc.Start();
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            var output = outputTask.Result;
+
+            var line = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            if (line is null) return null;
+
+            var parts = line.Split(',');
+            if (parts.Length < 3) return null;
+
+            var gpuName       = parts[0].Trim();
+            var vramMb        = long.TryParse(parts[1].Trim(), out var mb) ? mb : 0;
+            var driverVersion = parts[2].Trim();
+
+            return new GpuHardwareInfo(
+                Name:           gpuName,
+                DriverVersion:  driverVersion,
+                VramBytes:      vramMb * 1_048_576L,
+                VideoProcessor: gpuName,
+                Status:         "OK");
+        }
+        catch { return null; }
+    }
+
+    private static GpuHardwareInfo ReadAmdHardwareInfo(string cardPath, string cardName)
+    {
+        // VRAM from sysfs
+        long vramBytes = 0;
+        try
+        {
+            var vramPath = Path.Combine(cardPath, "device", "mem_info_vram_total");
+            if (File.Exists(vramPath) && long.TryParse(File.ReadAllText(vramPath).Trim(), out var v))
+                vramBytes = v;
+        }
+        catch { }
+
+        // Product name from lspci output
+        var gpuName = $"AMD GPU ({cardName})";
+        try
+        {
+            var devicePath = Path.Combine(cardPath, "device", "device");
+            var deviceId   = File.Exists(devicePath) ? File.ReadAllText(devicePath).Trim() : "";
+
+            using var proc = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo("lspci", "-mm -d 1002:")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true,
+                }
+            };
+            proc.Start();
+            var lspciTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+            var lspci = lspciTask.Result;
+            // Format: BDF "Class" "Vendor" "Device" ...
+            var matchLine = lspci.Split('\n')
+                .FirstOrDefault(l => !string.IsNullOrEmpty(deviceId)
+                    && l.Contains(deviceId[2..], StringComparison.OrdinalIgnoreCase)); // strip "0x" prefix
+            if (matchLine is not null)
+            {
+                // Extract quoted fields
+                var fields = System.Text.RegularExpressions.Regex.Matches(matchLine, "\"([^\"]*)\"");
+                if (fields.Count >= 4) gpuName = fields[3].Groups[1].Value; // "Device" field
+            }
+        }
+        catch { }
+
+        return new GpuHardwareInfo(
+            Name:           gpuName,
+            DriverVersion:  string.Empty,
+            VramBytes:      vramBytes,
+            VideoProcessor: gpuName,
+            Status:         "OK");
+    }
+
     // ── Storage via /sys/block ────────────────────────────────────────────────
     private static IReadOnlyList<StorageDriveInfo> ReadStorage()
     {
@@ -263,6 +477,7 @@ public sealed class LinuxHardwareInfoProvider
             var blockBase = "/sys/block";
             if (!Directory.Exists(blockBase)) return result;
 
+            int idx = 0;
             foreach (var dev in Directory.GetDirectories(blockBase))
             {
                 var devName = Path.GetFileName(dev);
@@ -272,22 +487,50 @@ public sealed class LinuxHardwareInfoProvider
                     devName.StartsWith("dm-",  StringComparison.Ordinal) ||
                     devName.StartsWith("zram", StringComparison.Ordinal)) continue;
 
-                var modelPath = Path.Combine(dev, "device", "model");
-                var sizePath  = Path.Combine(dev, "size");
+                var modelPath      = Path.Combine(dev, "device", "model");
+                var sizePath       = Path.Combine(dev, "size");
+                var rotationalPath = Path.Combine(dev, "queue", "rotational");
+                var serialPath     = Path.Combine(dev, "device", "serial");
+                var transportPath  = Path.Combine(dev, "device", "transport");
 
                 var model = File.Exists(modelPath) ? File.ReadAllText(modelPath).Trim() : devName;
+
                 long sizeBytes = 0;
                 if (File.Exists(sizePath) && long.TryParse(File.ReadAllText(sizePath).Trim(), out var sectors))
                     sizeBytes = sectors * 512L;
 
+                // MediaType: 0=SSD/NVMe, 1=HDD
+                var mediaType = "Unknown";
+                if (File.Exists(rotationalPath))
+                {
+                    var rot = File.ReadAllText(rotationalPath).Trim();
+                    mediaType = rot == "0"
+                        ? (devName.StartsWith("nvme", StringComparison.Ordinal) ? "NVMe SSD" : "SSD")
+                        : "HDD";
+                }
+
+                // Serial number
+                var serial = string.Empty;
+                if (File.Exists(serialPath))
+                    serial = File.ReadAllText(serialPath).Trim();
+
+                // Interface: NVMe, SATA, or USB based on device path/name
+                var iface = "Unknown";
+                if (devName.StartsWith("nvme", StringComparison.Ordinal))
+                    iface = "NVMe";
+                else if (File.Exists(transportPath))
+                    iface = File.ReadAllText(transportPath).Trim().ToUpperInvariant();
+                else if (devName.StartsWith("sd", StringComparison.Ordinal))
+                    iface = "SATA";
+
                 result.Add(new StorageDriveInfo(
-                    Index:        0,
+                    Index:        idx++,
                     Model:        model,
-                    Interface:    string.Empty,
+                    Interface:    iface,
                     SizeBytes:    sizeBytes,
-                    MediaType:    string.Empty,
-                    SerialNumber: string.Empty,
-                    Status:       string.Empty));
+                    MediaType:    mediaType,
+                    SerialNumber: serial,
+                    Status:       "Healthy"));
             }
         }
         catch { }

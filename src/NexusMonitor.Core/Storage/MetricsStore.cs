@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -15,6 +16,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     private readonly ISystemMetricsProvider     _metricsProvider;
     private readonly IProcessProvider           _processProvider;
     private readonly INetworkConnectionsProvider _networkProvider;
+    private readonly ILogger<MetricsStore>      _logger;
 
     // Dedicated read-only connection — WAL mode allows concurrent readers alongside the writer.
     // This avoids SqliteConnection thread-safety issues when reader queries run on Task.Run threads
@@ -39,13 +41,15 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         MetricsStoreConfig          config,
         ISystemMetricsProvider      metricsProvider,
         IProcessProvider            processProvider,
-        INetworkConnectionsProvider networkProvider)
+        INetworkConnectionsProvider networkProvider,
+        ILogger<MetricsStore>       logger)
     {
         _db              = db;
         _config          = config;
         _metricsProvider = metricsProvider;
         _processProvider = processProvider;
         _networkProvider = networkProvider;
+        _logger          = logger;
 
         // Open a second connection to the same DB file for read queries.
         // SQLite WAL mode supports concurrent readers on separate connections.
@@ -147,7 +151,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
             _processBuffer.Clear();
             _networkBuffer.Clear();
         }
-        catch { /* swallow — never crash the monitoring loop */ }
+        catch (Exception ex) { _logger.LogError(ex, "MetricsStore: FlushAll failed"); }
     }
 
     private void FlushMetrics(SqliteTransaction tx)
@@ -347,7 +351,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
                     cmd.Parameters.AddWithValue("$meta",  (object?)metadataJson ?? DBNull.Value);
                     cmd.ExecuteNonQuery();
                 }
-                catch { /* swallow — never crash the monitoring loop */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "MetricsStore: InsertEventAsync failed for type {EventType}", eventType); }
             }
         });
 

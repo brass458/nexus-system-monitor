@@ -83,9 +83,9 @@ internal sealed class S6Backend : ILinuxInitBackend
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch { return string.Empty; }
     }

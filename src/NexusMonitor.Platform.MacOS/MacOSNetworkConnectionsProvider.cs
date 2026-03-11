@@ -6,7 +6,7 @@ using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Platform.MacOS;
 
-public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvider
+public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvider, IDisposable
 {
     private readonly AdapterThroughputTracker _adapterTracker = new();
 
@@ -17,7 +17,9 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
     private DateTime _connectionsCacheTime = DateTime.MinValue;
 
     private IObservable<IReadOnlyList<NetworkConnection>>? _shared;
+    private TimeSpan _sharedInterval;
     private readonly object _sharedLock = new();
+    private IDisposable? _connection;
 
     public bool SupportsPerConnectionThroughput => false;
 
@@ -25,14 +27,21 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
     {
         lock (_sharedLock)
         {
+            var clampedInterval = interval < TimeSpan.FromSeconds(2)
+                ? TimeSpan.FromSeconds(2) : interval;
+            if (_shared is not null && _sharedInterval != clampedInterval)
+            {
+                _connection?.Dispose();
+                _shared = null;
+            }
             if (_shared is null)
             {
-                var sharedInterval = interval < TimeSpan.FromSeconds(2)
-                    ? TimeSpan.FromSeconds(2) : interval;
-                _shared = Observable.Timer(TimeSpan.Zero, sharedInterval)
-                                    .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
-                                    .Publish()
-                                    .RefCount();
+                _sharedInterval = clampedInterval;
+                var connectable = Observable.Timer(TimeSpan.Zero, clampedInterval)
+                                            .Select(_ => (IReadOnlyList<NetworkConnection>)GetConnections())
+                                            .Publish();
+                _shared     = connectable;
+                _connection = connectable.Connect();
             }
             return _shared;
         }
@@ -138,9 +147,9 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch
         {
@@ -191,4 +200,9 @@ public sealed class MacOSNetworkConnectionsProvider : INetworkConnectionsProvide
         "CLOSED"      => TcpConnectionState.Closed,
         _             => TcpConnectionState.Unknown,
     };
+
+    public void Dispose()
+    {
+        lock (_sharedLock) { _connection?.Dispose(); }
+    }
 }

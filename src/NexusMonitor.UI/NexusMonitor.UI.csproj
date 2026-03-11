@@ -46,21 +46,13 @@
     <PackageReference Include="System.Reactive" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-  </ItemGroup>
-
-  <!-- Platform-specific references -->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-windows'))">
-    <PackageReference Include="System.Management" Version="8.0.0" />
-    <ProjectReference Include="..\NexusMonitor.Platform.Windows\NexusMonitor.Platform.Windows.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-macos'))">
-    <ProjectReference Include="..\NexusMonitor.Platform.MacOS\NexusMonitor.Platform.MacOS.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework) == 'net8.0'">
-    <ProjectReference Include="..\NexusMonitor.Platform.Linux\NexusMonitor.Platform.Linux.csproj" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NexusMonitor.Hosting\NexusMonitor.Hosting.csproj" />
     <ProjectReference Include="..\NexusMonitor.Core\NexusMonitor.Core.csproj" />
     <ProjectReference Include="..\NexusMonitor.DiskAnalyzer\NexusMonitor.DiskAnalyzer.csproj" />
   </ItemGroup>

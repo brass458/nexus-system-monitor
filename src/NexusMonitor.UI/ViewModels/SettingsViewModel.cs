@@ -177,6 +177,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     /// <summary>Index into <see cref="CloseActionLabels"/>: 0=Ask, 1=Tray, 2=Exit.</summary>
     [ObservableProperty] private int  _closeActionIndex;
     [ObservableProperty] private bool _hideWidgetOnMinimize;
+    [ObservableProperty] private bool _minimizeToTray = true;
+
+    // ── Default tab ───────────────────────────────────────────────────────────
+    [ObservableProperty] private int _defaultTabIndex;
 
     // ── Other ─────────────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _showOverlayWidget;
@@ -242,6 +246,16 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ["Always Ask", "Minimize to Tray", "Close Application"];
 
     private static readonly string[] _closeActionValues = ["", "Tray", "Exit"];
+
+    public static IReadOnlyList<string> DefaultTabLabels { get; } =
+        ["(Last Used)", "Dashboard", "Performance", "Processes", "Services",
+         "Startup", "System Info", "Automation", "Disk Analyzer", "Gaming Mode",
+         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History"];
+
+    private static readonly string[] _defaultTabValues =
+        ["", "Dashboard", "Performance", "Processes", "Services",
+         "Startup", "System Info", "Automation", "Disk Analyzer", "Gaming Mode",
+         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History"];
 
     /// <summary>All system font families — enumerated lazily on first access (deferred past startup).</summary>
     private static readonly Lazy<IReadOnlyList<string>> _lazySystemFonts = new(LoadSystemFonts);
@@ -318,6 +332,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _closeActionIndex = Array.IndexOf(_closeActionValues, settings.Current.CloseAction);
         if (_closeActionIndex < 0) _closeActionIndex = 0;
         _hideWidgetOnMinimize = settings.Current.HideWidgetOnMinimize;
+        _minimizeToTray       = settings.Current.MinimizeToTray;
+
+        // Map stored DefaultTab → index
+        _defaultTabIndex = Array.IndexOf(_defaultTabValues, settings.Current.DefaultTab);
+        if (_defaultTabIndex < 0) _defaultTabIndex = 0;
 
         // Map stored UpdateIntervalMs → index
         _updateIntervalIndex = Array.IndexOf(_intervalValues, settings.Current.UpdateIntervalMs);
@@ -565,6 +584,19 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _settings.Save();
     }
 
+    partial void OnMinimizeToTrayChanged(bool value)
+    {
+        _settings.Current.MinimizeToTray = value;
+        _settings.Save();
+    }
+
+    partial void OnDefaultTabIndexChanged(int value)
+    {
+        _settings.Current.DefaultTab =
+            _defaultTabValues[Math.Clamp(value, 0, _defaultTabValues.Length - 1)];
+        _settings.Save();
+    }
+
     partial void OnUpdateIntervalIndexChanged(int value)
     {
         var ms = _intervalValues[Math.Clamp(value, 0, _intervalValues.Length - 1)];
@@ -629,8 +661,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
     private void OnLuminanceChanged(byte minAlpha)
     {
-        _luminanceMinAlpha = minAlpha;
-        ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, minAlpha);
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            _luminanceMinAlpha = minAlpha;
+            ApplyGlass(IsGlassEnabled, GlassOpacity, CustomWindowBgHex, CustomSurfaceBgHex, CustomSidebarBgHex, minAlpha);
+        });
     }
 
     partial void OnMetricsEnabledChanged(bool value)

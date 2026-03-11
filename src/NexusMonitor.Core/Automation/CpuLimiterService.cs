@@ -1,4 +1,6 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -10,31 +12,36 @@ namespace NexusMonitor.Core.Automation;
 /// </summary>
 public sealed class CpuLimiterService : IDisposable
 {
-    private readonly IProcessProvider _processProvider;
-    private readonly AppSettings      _settings;
+    private readonly IProcessProvider  _processProvider;
+    private readonly AppSettings       _settings;
     private readonly ProcessActionLock _actionLock;
+    private readonly ILogger<CpuLimiterService> _logger;
 
     private sealed class LimiterState
     {
-        public int      OverThresholdTicks;     // consecutive ticks over threshold
-        public long     OriginalAffinity;       // mask before we reduced it
-        public DateTime? LimitEndTime;          // when to restore (null = not limited)
+        public int       OverThresholdTicks;     // consecutive ticks over threshold
+        public long      OriginalAffinity;       // mask before we reduced it
+        public DateTime? LimitEndTime;           // when to restore (null = not limited)
     }
 
     private readonly Dictionary<int, LimiterState> _state = new();
     private IDisposable? _subscription;
     private bool _running;
 
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
+
     private const string Owner = "CpuLimiter";
 
     public CpuLimiterService(
         IProcessProvider  processProvider,
         AppSettings       settings,
-        ProcessActionLock actionLock)
+        ProcessActionLock actionLock,
+        ILogger<CpuLimiterService>? logger = null)
     {
         _processProvider = processProvider;
         _settings        = settings;
         _actionLock      = actionLock;
+        _logger          = logger ?? NullLogger<CpuLimiterService>.Instance;
     }
 
     public void Start()
@@ -43,7 +50,11 @@ public sealed class CpuLimiterService : IDisposable
         _running = true;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, _ => { });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "CpuLimiterService stream faulted");
+                _running = false;
+            });
     }
 
     public void Stop()
@@ -52,66 +63,78 @@ public sealed class CpuLimiterService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
-        _ = RestoreAllAsync();
+        _ = Task.Run(async () =>
+        {
+            await _tickLock.WaitAsync();
+            try { await RestoreAllAsync(); }
+            catch (Exception ex) { _logger.LogError(ex, "CpuLimiterService restore failed during stop"); }
+            finally { _tickLock.Release(); }
+        });
     }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
-        if (!_settings.CpuLimiterEnabled) return;
-
-        var rules = _settings.CpuLimiterRules?.Where(r => r.IsEnabled).ToList();
-        if (rules is null || rules.Count == 0) return;
-
-        var alive = new HashSet<int>(processes.Select(p => p.Pid));
-
-        // Evict dead PIDs
-        foreach (var pid in _state.Keys.Where(k => !alive.Contains(k)).ToList())
+        if (!await _tickLock.WaitAsync(0)) return;
+        try
         {
-            _actionLock.Release(pid, Owner);
-            _state.Remove(pid);
-        }
+            if (!_settings.CpuLimiterEnabled) return;
 
-        var now = DateTime.UtcNow;
+            var rules = _settings.CpuLimiterRules?.Where(r => r.IsEnabled).ToList();
+            if (rules is null || rules.Count == 0) return;
 
-        foreach (var proc in processes)
-        {
-            var matchingRule = rules.FirstOrDefault(r =>
-                !string.IsNullOrEmpty(r.ProcessNamePattern) &&
-                proc.Name.Contains(r.ProcessNamePattern.TrimEnd('*').TrimStart('*'),
-                    StringComparison.OrdinalIgnoreCase));
-            if (matchingRule is null) continue;
+            var alive = new HashSet<int>(processes.Select(p => p.Pid));
 
-            if (!_state.TryGetValue(proc.Pid, out var st))
+            // Evict dead PIDs
+            foreach (var pid in _state.Keys.Where(k => !alive.Contains(k)).ToList())
             {
-                st = new LimiterState();
-                _state[proc.Pid] = st;
+                _actionLock.Release(pid, Owner);
+                _state.Remove(pid);
             }
 
-            // If currently limited, check if duration expired
-            if (st.LimitEndTime.HasValue)
+            var now = DateTime.UtcNow;
+
+            foreach (var proc in processes)
             {
-                if (now >= st.LimitEndTime.Value || proc.CpuPercent < matchingRule.CpuThresholdPercent)
+                var matchingRule = rules.FirstOrDefault(r =>
+                    !string.IsNullOrEmpty(r.ProcessNamePattern) &&
+                    proc.Name.Contains(r.ProcessNamePattern.TrimEnd('*').TrimStart('*'),
+                        StringComparison.OrdinalIgnoreCase));
+                if (matchingRule is null) continue;
+
+                if (!_state.TryGetValue(proc.Pid, out var st))
                 {
-                    await RestorePidAsync(proc.Pid, st);
+                    st = new LimiterState();
+                    _state[proc.Pid] = st;
                 }
-                continue;
-            }
 
-            // Track consecutive ticks over threshold (each tick = ~2s)
-            if (proc.CpuPercent > matchingRule.CpuThresholdPercent)
-            {
-                st.OverThresholdTicks++;
-                int secondsOver = st.OverThresholdTicks * 2;
-                if (secondsOver >= matchingRule.OverLimitSeconds && !_actionLock.IsLocked(proc.Pid))
+                // If currently limited, check if duration expired
+                if (st.LimitEndTime.HasValue)
                 {
-                    await ApplyLimitAsync(proc.Pid, matchingRule, st);
+                    if (now >= st.LimitEndTime.Value || proc.CpuPercent < matchingRule.CpuThresholdPercent)
+                    {
+                        await RestorePidAsync(proc.Pid, st);
+                    }
+                    continue;
                 }
-            }
-            else
-            {
-                st.OverThresholdTicks = 0;
+
+                // Track consecutive ticks over threshold (each tick = ~2s)
+                if (proc.CpuPercent > matchingRule.CpuThresholdPercent)
+                {
+                    st.OverThresholdTicks++;
+                    int secondsOver = st.OverThresholdTicks * 2;
+                    if (secondsOver >= matchingRule.OverLimitSeconds && !_actionLock.IsLocked(proc.Pid))
+                    {
+                        await ApplyLimitAsync(proc.Pid, matchingRule, st);
+                    }
+                }
+                else
+                {
+                    st.OverThresholdTicks = 0;
+                }
             }
         }
+        catch (Exception ex) { _logger.LogDebug(ex, "CpuLimiterService OnTick error"); }
+        finally { _tickLock.Release(); }
     }
 
     private async Task ApplyLimitAsync(int pid, CpuLimiterRule rule, LimiterState st)

@@ -1334,7 +1334,8 @@
                                HorizontalAlignment="Right"/>
                   </Grid>
 
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6"
+                        IsVisible="{Binding DirectXVersion, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Grid.Column="0" Text="DirectX version"
                                FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <TextBlock Grid.Column="1" Text="{Binding DirectXVersion}"

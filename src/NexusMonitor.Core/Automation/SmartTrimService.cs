@@ -47,7 +47,7 @@ public sealed class SmartTrimService : IDisposable
         // Track idle ticks on every process-stream tick (2s)
         _tickSubscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(TrackIdleTicks, _ => { });
+            .Subscribe(TrackIdleTicks, _ => { /* stream error — idle tracking stops; trim still scheduled */ });
 
         // Actual trim runs on the configured interval
         ScheduleNextTrim();
@@ -68,6 +68,7 @@ public sealed class SmartTrimService : IDisposable
         if (!_running) return;
         var interval = TimeSpan.FromSeconds(
             Math.Max(10, _settings.SmartTrimIntervalSeconds));
+        _timerSubscription?.Dispose(); // dispose previous before reassigning (Bug 23)
         _timerSubscription = Observable.Timer(interval)
             .Subscribe(__ =>
             {

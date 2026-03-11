@@ -1,4 +1,5 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Storage;
@@ -16,10 +17,13 @@ public sealed class RulesEngine : IDisposable
     private readonly IProcessProvider        _processProvider;
     private readonly AppSettings             _settings;
     private readonly ProcessPreferenceStore? _preferenceStore;
+    private readonly ILogger<RulesEngine>    _logger;
     private readonly HashSet<int> _seenPids = new();
     // watchdog tracking: (pid, ruleId) → first-seen-over-threshold time
     private readonly Dictionary<(int pid, Guid ruleId), DateTime> _conditionFirstSeen = new();
     private IDisposable? _subscription;
+    private bool _running;
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
 
     // Cached enabled-rules list — rebuilt only when _settings.Rules reference changes
     private List<ProcessRule>? _cachedRules;
@@ -37,24 +41,41 @@ public sealed class RulesEngine : IDisposable
     private readonly Dictionary<string, KeepRunningState> _keepRunningState = new();
 
     public RulesEngine(IProcessProvider processProvider, AppSettings settings,
+        ILogger<RulesEngine> logger,
         ProcessPreferenceStore? preferenceStore = null)
     {
         _processProvider  = processProvider;
         _settings         = settings;
+        _logger           = logger;
         _preferenceStore  = preferenceStore;
     }
 
     public void Start()
     {
+        if (_running) return;
+        _running = true;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, _ => { });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "RulesEngine stream faulted");
+                _running = false;
+            });
     }
 
-    public void Stop() { _subscription?.Dispose(); _subscription = null; }
+    public void Stop()
+    {
+        if (!_running) return;
+        _running = false;
+        _subscription?.Dispose();
+        _subscription = null;
+    }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
+        if (!await _tickLock.WaitAsync(0)) return;
+        try
+        {
         // Rebuild cached enabled-rules list only when the source collection reference changes.
         var srcRules = _settings.Rules;
         if (!ReferenceEquals(srcRules, _cachedRulesSource))
@@ -76,7 +97,8 @@ public sealed class RulesEngine : IDisposable
                 // ── Disallowed: terminate immediately ─────────────────────
                 if (rule.Disallowed && isNew)
                 {
-                    try { await _processProvider.KillProcessAsync(proc.Pid); } catch { }
+                    try { await _processProvider.KillProcessAsync(proc.Pid); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "Kill disallowed process {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     continue;
                 }
 
@@ -85,17 +107,23 @@ public sealed class RulesEngine : IDisposable
                 {
                     ruleMatched = true;
                     if (rule.Priority.HasValue)
-                        try { await _processProvider.SetPriorityAsync(proc.Pid, rule.Priority.Value); } catch { }
+                        try { await _processProvider.SetPriorityAsync(proc.Pid, rule.Priority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (rule.AffinityMask.HasValue)
-                        try { await _processProvider.SetAffinityAsync(proc.Pid, rule.AffinityMask.Value); } catch { }
+                        try { await _processProvider.SetAffinityAsync(proc.Pid, rule.AffinityMask.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set affinity on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (rule.IoPriority.HasValue)
-                        try { await _processProvider.SetIoPriorityAsync(proc.Pid, rule.IoPriority.Value); } catch { }
+                        try { await _processProvider.SetIoPriorityAsync(proc.Pid, rule.IoPriority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set IO priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (rule.MemoryPriority.HasValue)
-                        try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, rule.MemoryPriority.Value); } catch { }
+                        try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, rule.MemoryPriority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set memory priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (rule.EfficiencyMode.HasValue)
-                        try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, rule.EfficiencyMode.Value); } catch { }
+                        try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, rule.EfficiencyMode.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set efficiency mode on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (rule.CpuSetIds is { Length: > 0 })
-                        try { await _processProvider.SetCpuSetsAsync(proc.Pid, rule.CpuSetIds); } catch { }
+                        try { await _processProvider.SetCpuSetsAsync(proc.Pid, rule.CpuSetIds); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Set CPU sets on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                 }
 
                 // ── KeepRunning: record image path while alive ─────────────
@@ -122,15 +150,20 @@ public sealed class RulesEngine : IDisposable
                 if (pref is not null)
                 {
                     if (pref.Priority.HasValue)
-                        try { await _processProvider.SetPriorityAsync(proc.Pid, pref.Priority.Value); } catch { }
+                        try { await _processProvider.SetPriorityAsync(proc.Pid, pref.Priority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Apply pref priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (pref.AffinityMask.HasValue)
-                        try { await _processProvider.SetAffinityAsync(proc.Pid, pref.AffinityMask.Value); } catch { }
+                        try { await _processProvider.SetAffinityAsync(proc.Pid, pref.AffinityMask.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Apply pref affinity on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (pref.IoPriority.HasValue)
-                        try { await _processProvider.SetIoPriorityAsync(proc.Pid, pref.IoPriority.Value); } catch { }
+                        try { await _processProvider.SetIoPriorityAsync(proc.Pid, pref.IoPriority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Apply pref IO priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (pref.MemoryPriority.HasValue)
-                        try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, pref.MemoryPriority.Value); } catch { }
+                        try { await _processProvider.SetMemoryPriorityAsync(proc.Pid, pref.MemoryPriority.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Apply pref memory priority on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     if (pref.EfficiencyMode.HasValue)
-                        try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, pref.EfficiencyMode.Value); } catch { }
+                        try { await _processProvider.SetEfficiencyModeAsync(proc.Pid, pref.EfficiencyMode.Value); }
+                        catch (Exception ex) { _logger.LogWarning(ex, "Apply pref efficiency mode on {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                 }
             }
         }
@@ -149,6 +182,9 @@ public sealed class RulesEngine : IDisposable
 
         // ── Instance count limits ─────────────────────────────────────────
         await EvaluateInstanceLimits(processes, rules);
+        } // end try
+        catch (Exception ex) { _logger.LogDebug(ex, "RulesEngine OnTick error"); }
+        finally { _tickLock.Release(); }
     }
 
     // ── KeepRunning ──────────────────────────────────────────────────────────
@@ -203,8 +239,9 @@ public sealed class RulesEngine : IDisposable
                 });
                 ks.RestartCount++;
                 ks.LastExitTime = default;
+                _logger.LogInformation("KeepRunning: restarted {ImagePath} (attempt {Count})", ks.ImagePath, ks.RestartCount);
             }
-            catch { /* best-effort */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "KeepRunning: restart failed for {ImagePath}", ks.ImagePath); }
         }
 
         return Task.CompletedTask;
@@ -229,7 +266,8 @@ public sealed class RulesEngine : IDisposable
             var excess = matching.Skip(max).ToList();
             foreach (var proc in excess)
             {
-                try { await _processProvider.KillProcessAsync(proc.Pid); } catch { }
+                try { await _processProvider.KillProcessAsync(proc.Pid); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Instance limit: kill {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
             }
         }
     }
@@ -293,8 +331,9 @@ public sealed class RulesEngine : IDisposable
                                     FileName        = proc.ImagePath,
                                     UseShellExecute = true
                                 });
+                                _logger.LogInformation("Watchdog: restarted {Name} ({ImagePath})", proc.Name, proc.ImagePath);
                             }
-                            catch { }
+                            catch (Exception restartEx) { _logger.LogWarning(restartEx, "Watchdog: restart of {Name} failed", proc.Name); }
                         }
                         break;
                     case WatchdogAction.ReduceAffinity:
@@ -305,7 +344,7 @@ public sealed class RulesEngine : IDisposable
                         break;
                 }
             }
-            catch { /* process may have exited */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "Watchdog action {Action} on {Name} (PID {Pid}) failed", rule.WatchdogAction, proc.Name, proc.Pid); }
         }
         else
         {
@@ -323,7 +362,7 @@ public sealed class RulesEngine : IDisposable
             long newMask  = BuildMaskWithNCores(newCount, sysMask);
             await _processProvider.SetAffinityAsync(pid, newMask);
         }
-        catch { }
+        catch (Exception ex) { _logger.LogWarning(ex, "ReduceAffinity on PID {Pid} failed", pid); }
     }
 
     private static int CountBits(long mask)

@@ -29,7 +29,10 @@ internal sealed class DinitBackend : ILinuxInitBackend
                 var nameParts = rest.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                 var name = nameParts[0];
 
-                var isRunning = stateStr.Contains("started", StringComparison.OrdinalIgnoreCase);
+                // dinitctl list format: "[{+}  ]" for started, "[{-}  ]" for stopped.
+                // Older versions may print "started"/"stopped" as text — handle both.
+                var isRunning = stateStr.Contains('+')
+                             || stateStr.Contains("started", StringComparison.OrdinalIgnoreCase);
 
                 result.Add(new ServiceInfo
                 {
@@ -87,9 +90,9 @@ internal sealed class DinitBackend : ILinuxInitBackend
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch { return string.Empty; }
     }

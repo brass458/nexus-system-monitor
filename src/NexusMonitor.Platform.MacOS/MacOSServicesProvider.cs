@@ -84,9 +84,9 @@ public sealed class MacOSServicesProvider : IServicesProvider
                 }
             };
             proc.Start();
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
-            return output;
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(5000)) { try { proc.Kill(); } catch { } }
+            return outputTask.Result;
         }
         catch
         {

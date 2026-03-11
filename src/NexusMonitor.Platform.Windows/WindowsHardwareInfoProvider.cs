@@ -55,6 +55,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 string name  = obj["Name"]?.ToString()?.Trim() ?? "";
                 string arch  = DecodeArch(obj["Architecture"]);
@@ -95,6 +96,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PhysicalMemory");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 string loc  = obj["DeviceLocator"]?.ToString()?.Trim() ?? "";
                 long   cap  = Convert.ToInt64(obj["Capacity"]          ?? 0L);
@@ -138,6 +140,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 string name    = obj["Name"]?.ToString()?.Trim()           ?? "";
                 string driver  = obj["DriverVersion"]?.ToString()?.Trim()  ?? "";
@@ -199,6 +202,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 int    idx    = Convert.ToInt32(obj["Index"]             ?? 0);
                 string model  = obj["Model"]?.ToString()?.Trim()         ?? "";
@@ -225,6 +229,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var cs = new ManagementObjectSearcher("SELECT DNSHostName FROM Win32_ComputerSystem");
             foreach (ManagementObject obj in cs.Get())
+            using (obj)
                 hostname = obj["DNSHostName"]?.ToString()?.Trim() ?? Environment.MachineName;
         }
         catch { hostname = Environment.MachineName; }
@@ -233,6 +238,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var os = new ManagementObjectSearcher("SELECT Caption,BuildNumber,OSArchitecture,LastBootUpTime FROM Win32_OperatingSystem");
             foreach (ManagementObject obj in os.Get())
+            using (obj)
             {
                 osName  = obj["Caption"]?.ToString()?.Trim() ?? "";
                 osBuild = obj["BuildNumber"]?.ToString()?.Trim() ?? "";
@@ -262,6 +268,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT Manufacturer,SMBIOSBIOSVersion FROM Win32_BIOS");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 string vendor  = obj["Manufacturer"]?.ToString()?.Trim()       ?? "";
                 string version = obj["SMBIOSBIOSVersion"]?.ToString()?.Trim()  ?? "";
@@ -280,6 +287,7 @@ public sealed class WindowsHardwareInfoProvider
         {
             using var searcher = new ManagementObjectSearcher("SELECT Manufacturer,Product FROM Win32_BaseBoard");
             foreach (ManagementObject obj in searcher.Get())
+            using (obj)
             {
                 string mfr   = obj["Manufacturer"]?.ToString()?.Trim() ?? "";
                 string model = obj["Product"]?.ToString()?.Trim()      ?? "";

@@ -7,8 +7,8 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Abstractions;
+using Serilog;
 using NexusMonitor.Core.Automation;
-using NexusMonitor.Core.Mock;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Alerts;
 using System.Reactive;
@@ -20,19 +20,10 @@ using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Telemetry;
 using NexusMonitor.UI.Controls;
 using NexusMonitor.UI.Services;
-using NexusMonitor.Core.Network;
 using NexusMonitor.Core.Health;
-using NexusMonitor.Core.Themes;
 using NexusMonitor.UI.ViewModels;
 using NexusMonitor.UI.Views;
-#if WINDOWS
-using NexusMonitor.Platform.Windows;
-using NexusMonitor.Platform.Windows.Shell;
-#elif MACOS
-using NexusMonitor.Platform.MacOS;
-#elif LINUX
-using NexusMonitor.Platform.Linux;
-#endif
+using NexusMonitor.Hosting;
 
 namespace NexusMonitor.UI;
 
@@ -56,6 +47,7 @@ public class App : Application
         // ── Log any exception that escapes to the Avalonia UI-thread dispatcher ──
         Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
+            Log.Fatal(e.Exception, "Unhandled exception on Avalonia UI thread");
             CrashLogger.Write(e.Exception, "Avalonia Dispatcher UI Thread");
             // Do NOT set e.Handled = true here — let Avalonia's default crash behaviour run
             // so the user isn't left with a silent, frozen window.
@@ -122,6 +114,10 @@ public class App : Application
             if (saved.Current.AnomalyDetectionEnabled)
                 anomalyService.Start();
 
+            // Start memory leak detection if enabled
+            if (saved.Current.MemoryLeakDetectionEnabled)
+                Services.GetRequiredService<MemoryLeakDetectionService>().Start();
+
             // Restore active performance profile if one was saved
             if (saved.Current.ActiveProfileId.HasValue)
                 Services.GetRequiredService<PerformanceProfileService>()
@@ -157,9 +153,33 @@ public class App : Application
                 _trayIcon?.Dispose();
                 _trayIcon = null;
 
-                Services.GetRequiredService<MetricsStore>().Stop();
+                // Automation services (hold OS handles / modified process state)
+                Services.GetService<ForegroundBoostService>()?.Stop();
+                Services.GetService<IdleSaverService>()?.Stop();
+                Services.GetService<SmartTrimService>()?.Stop();
+                Services.GetService<CpuLimiterService>()?.Stop();
+                Services.GetService<InstanceBalancerService>()?.Stop();
+                Services.GetService<SleepPreventionService>()?.Stop();
+                Services.GetService<GamingModeService>()?.Stop();
+                Services.GetService<ProBalanceService>()?.Stop();
+                Services.GetService<PerformanceProfileService>()?.DeactivateProfile();
+                Services.GetService<MemoryLeakDetectionService>()?.Stop();
+
+                // Monitoring services
+                Services.GetService<AlertsService>()?.Stop();
+                Services.GetService<AnomalyDetectionService>()?.Stop();
+                Services.GetService<RulesEngine>()?.Stop();
+
+                // Data persistence (flush buffers last)
                 Services.GetRequiredService<EventMonitorService>().Stop();
+                Services.GetService<MetricsRollupService>()?.Stop();
+                Services.GetRequiredService<MetricsStore>().Stop();
                 Services.GetRequiredService<SystemHealthService>().Stop();
+
+                // Infrastructure
+                Services.GetService<GlassAdaptiveService>()?.Stop();
+                Services.GetService<PrometheusExporter>()?.Stop();
+
                 _subscriptions.Dispose();
                 (Services as IDisposable)?.Dispose();
             };
@@ -227,8 +247,9 @@ public class App : Application
                 }
             }));
 
-            // System-tray icon
-            SetupTrayIcon(desktop);
+            // System-tray icon (only if enabled)
+            if (saved.Current.MinimizeToTray)
+                SetupTrayIcon(desktop);
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -328,155 +349,14 @@ public class App : Application
     {
         var services = new ServiceCollection();
 
-        // -- Platform-specific providers --
-#if WINDOWS
-        services.AddSingleton<IProcessProvider,             WindowsProcessProvider>();
-        services.AddSingleton<ISystemMetricsProvider,       WindowsSystemMetricsProvider>();
-        services.AddSingleton<IServicesProvider,            WindowsServicesProvider>();
-        services.AddSingleton<INetworkConnectionsProvider,  WindowsNetworkConnectionsProvider>();
-        services.AddSingleton<IStartupProvider,             WindowsStartupProvider>();
-        services.AddSingleton<IForegroundWindowProvider,    WindowsForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           WindowsPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         WindowsNotificationService>();
-        services.AddSingleton<IWallpaperService,            WindowsWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     WindowsSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     WindowsShellContextMenuService>();
-        services.AddSingleton<WindowsHardwareInfoProvider>();
-        services.AddSingleton<IPlatformCapabilities,        WindowsPlatformCapabilities>();
-#elif MACOS
-        services.AddSingleton<IProcessProvider,             MacOSProcessProvider>();
-        services.AddSingleton<ISystemMetricsProvider,       MacOSSystemMetricsProvider>();
-        services.AddSingleton<IServicesProvider,            MacOSServicesProvider>();
-        services.AddSingleton<INetworkConnectionsProvider,  MacOSNetworkConnectionsProvider>();
-        services.AddSingleton<IStartupProvider,             MacOSStartupProvider>();
-        services.AddSingleton<IForegroundWindowProvider,    MacOSForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           MacOSPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         MacOSNotificationService>();
-        services.AddSingleton<IWallpaperService,            MacOSWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     MacOSSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     MacOSShellContextMenuService>();
-        services.AddSingleton<MacOSHardwareInfoProvider>();
-        services.AddSingleton<IPlatformCapabilities,        MacOSPlatformCapabilities>();
-#elif LINUX
-        services.AddSingleton<IProcessProvider,             LinuxProcessProvider>();
-        services.AddSingleton<ISystemMetricsProvider,       LinuxSystemMetricsProvider>();
-        services.AddSingleton<IServicesProvider,            LinuxServicesProvider>();
-        services.AddSingleton<INetworkConnectionsProvider,  LinuxNetworkConnectionsProvider>();
-        services.AddSingleton<IStartupProvider,             LinuxStartupProvider>();
-        services.AddSingleton<IForegroundWindowProvider,    LinuxForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           LinuxPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         LinuxNotificationService>();
-        services.AddSingleton<IWallpaperService,            LinuxWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     LinuxSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     LinuxShellContextMenuService>();
-        services.AddSingleton<LinuxHardwareInfoProvider>();
-        services.AddSingleton<IPlatformCapabilities,        LinuxPlatformCapabilities>();
-#else
-        services.AddSingleton<IProcessProvider,             MockProcessProvider>();
-        services.AddSingleton<ISystemMetricsProvider,       MockSystemMetricsProvider>();
-        services.AddSingleton<IServicesProvider,            MockServicesProvider>();
-        services.AddSingleton<INetworkConnectionsProvider,  MockNetworkConnectionsProvider>();
-        services.AddSingleton<IStartupProvider,             MockStartupProvider>();
-        services.AddSingleton<IForegroundWindowProvider,    MockForegroundWindowProvider>();
-        services.AddSingleton<IPowerPlanProvider,           MockPowerPlanProvider>();
-        services.AddSingleton<INotificationService,         NullNotificationService>();
-        services.AddSingleton<IWallpaperService,            NullWallpaperService>();
-        services.AddSingleton<ISleepPreventionProvider,     NullSleepPreventionProvider>();
-        services.AddSingleton<IShellContextMenuService,     NullShellContextMenuService>();
-        services.AddSingleton<IPlatformCapabilities>(_ => new MockPlatformCapabilities());
-#endif
+        services.AddNexusPlatformProviders();
+        services.AddNexusCoreServices();
 
-        // -- Core services --
-        services.AddSingleton<SettingsService>();
-        services.AddSingleton<ThemePresetService>();
-        // Register the live AppSettings instance so ProBalanceService / RulesEngine
-        // receive the same object that SettingsService mutates on save.
-        services.AddSingleton<AppSettings>(sp =>
-            sp.GetRequiredService<SettingsService>().Current);
-
-        // -- Metrics persistence --
-        var dbPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "NexusMonitor", "metrics.db");
-        services.AddSingleton<MetricsDatabase>(_ => new MetricsDatabase(dbPath));
-        services.AddSingleton<MetricsStoreConfig>(sp =>
-        {
-            var s = sp.GetRequiredService<AppSettings>();
-            return new MetricsStoreConfig
-            {
-                TopNProcesses          = s.MetricsTopNProcesses,
-                RecordNetworkSnapshots = s.MetricsRecordNetwork,
-                RawRetention           = TimeSpan.FromHours(s.MetricsRawRetentionHours),
-                Rollup1mRetention      = TimeSpan.FromDays(s.MetricsRollup1mDays),
-                Rollup5mRetention      = TimeSpan.FromDays(s.MetricsRollup5mDays),
-                Rollup1hRetention      = TimeSpan.FromDays(s.MetricsRollup1hDays),
-                EventsRetention        = TimeSpan.FromDays(s.MetricsEventsRetentionDays),
-            };
-        });
-        services.AddSingleton<MetricsStore>();
-        services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
-        services.AddSingleton<IEventWriter>(sp => sp.GetRequiredService<MetricsStore>());
-        services.AddSingleton<MetricsRollupService>();
-
-        // -- Resource incident repository --
-        services.AddSingleton<EventRepository>();
-        services.AddSingleton<IResourceEventReader>(sp => sp.GetRequiredService<EventRepository>());
-        services.AddSingleton<IResourceEventWriter>(sp => sp.GetRequiredService<EventRepository>());
-
-        // -- Event monitor (incident classification) --
-        services.AddSingleton<EventMonitorService>();
-
-        // -- Anomaly detection --
-        services.AddSingleton<AnomalyDetectionConfig>(sp =>
-        {
-            var s = sp.GetRequiredService<AppSettings>();
-            var cfg = new AnomalyDetectionConfig
-            {
-                Enabled                        = s.AnomalyDetectionEnabled,
-                CooldownSeconds                = s.AnomalyCooldownSeconds,
-                NewConnectionGracePeriodSeconds = s.AnomalyNewConnGracePeriodSec,
-            };
-            cfg.ApplySensitivity(s.AnomalySensitivity);
-            return cfg;
-        });
-        services.AddSingleton<AnomalyDetectionService>();
-
-        // -- Telemetry --
-        services.AddSingleton<PrometheusExporter>();
-
-        // -- In-app notifications --
+        // UI-only registrations
         services.AddSingleton<InAppNotificationService>();
         services.AddSingleton<IInAppNotificationService>(sp =>
             sp.GetRequiredService<InAppNotificationService>());
-
-        // -- Smart glass adaptive service --
         services.AddSingleton<GlassAdaptiveService>();
-
-        // -- Process preferences store --
-        services.AddSingleton<ProcessPreferenceStore>();
-
-        // -- Automation services --
-        services.AddSingleton<ProcessActionLock>();
-        services.AddSingleton<ProBalanceService>();
-        services.AddSingleton<RulesEngine>();
-        services.AddSingleton<RulesPersistence>();
-        services.AddSingleton<PerformanceProfileService>();
-        services.AddSingleton<SleepPreventionService>();
-        services.AddSingleton<ForegroundBoostService>();
-        services.AddSingleton<IdleSaverService>();
-        services.AddSingleton<SmartTrimService>();
-        services.AddSingleton<CpuLimiterService>();
-        services.AddSingleton<InstanceBalancerService>();
-
-        // -- Gaming and Alerts services --
-        services.AddSingleton<GamingModeService>();
-        services.AddSingleton<AlertsService>();
-
-        // -- Network tools --
-        services.AddSingleton<NmapScannerService>();
-
-        // -- Health service (Phase 1 Dashboard) --
-        services.AddSingleton<SystemHealthService>();
 
         // -- ViewModels --
         services.AddSingleton<MainViewModel>();
@@ -499,6 +379,7 @@ public class App : Application
         services.AddSingleton<LanScannerViewModel>();
         services.AddSingleton<PerformanceProfilesViewModel>();
         services.AddSingleton<AutomationViewModel>();
+        services.AddSingleton<DiagnosticsViewModel>();
 
         return services.BuildServiceProvider();
     }

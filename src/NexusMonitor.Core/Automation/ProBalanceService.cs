@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -15,12 +16,14 @@ public sealed class ProBalanceService : IDisposable
     private readonly IProcessProvider _processProvider;
     private readonly IForegroundWindowProvider _foregroundWindow;
     private readonly AppSettings _settings; // live reference — reads current options each tick
+    private readonly ILogger<ProBalanceService> _logger;
 
     // pid → original priority (before we throttled them)
     private readonly Dictionary<int, ProcessPriority> _throttled = new();
     private readonly Subject<ProBalanceEvent> _events = new();
     private IDisposable? _subscription;
     private bool _running;
+    private readonly SemaphoreSlim _tickLock = new(1, 1);
 
     public IObservable<ProBalanceEvent> Events => _events.AsObservable();
     public bool IsRunning => _running;
@@ -28,11 +31,13 @@ public sealed class ProBalanceService : IDisposable
     public ProBalanceService(
         IProcessProvider processProvider,
         IForegroundWindowProvider foregroundWindow,
-        AppSettings settings)
+        AppSettings settings,
+        ILogger<ProBalanceService> logger)
     {
-        _processProvider = processProvider;
+        _processProvider  = processProvider;
         _foregroundWindow = foregroundWindow;
-        _settings = settings;
+        _settings         = settings;
+        _logger           = logger;
     }
 
     /// <summary>Start the monitoring loop. Safe to call multiple times.</summary>
@@ -45,7 +50,11 @@ public sealed class ProBalanceService : IDisposable
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(1))
             .Sample(TimeSpan.FromMilliseconds(500))
-            .Subscribe(OnTick, ex => { /* swallow — loop must not crash */ });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "ProBalance stream faulted");
+                _running = false;
+            });
         _events.OnNext(new ProBalanceEvent(
             ProBalanceEventType.Started, 0, string.Empty,
             ProcessPriority.Normal, ProcessPriority.Normal, DateTime.UtcNow));
@@ -66,6 +75,9 @@ public sealed class ProBalanceService : IDisposable
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)
     {
+        if (!await _tickLock.WaitAsync(0)) return;
+        try
+        {
         if (!_settings.ProBalanceEnabled) return;
 
         double totalCpu = processes.Sum(p => p.CpuPercent);
@@ -100,7 +112,7 @@ public sealed class ProBalanceService : IDisposable
                         ProBalanceEventType.Throttled, proc.Pid, proc.Name,
                         original, ProcessPriority.BelowNormal, DateTime.UtcNow));
                 }
-                catch { /* process may have exited */ }
+                catch (Exception ex) { _logger.LogDebug(ex, "ProBalance: throttle {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
             }
         }
         else if (totalCpu < threshold * 0.7) // restore at 70% of threshold to avoid oscillation
@@ -118,7 +130,7 @@ public sealed class ProBalanceService : IDisposable
                         ProBalanceEventType.Restored, pid, name,
                         ProcessPriority.BelowNormal, original, DateTime.UtcNow));
                 }
-                catch { _throttled.Remove(pid); /* process exited — just remove */ }
+                catch (Exception ex) { _throttled.Remove(pid); _logger.LogDebug(ex, "ProBalance: restore PID {Pid} failed", pid); }
             }
         }
         else
@@ -130,7 +142,8 @@ public sealed class ProBalanceService : IDisposable
             foreach (var pid in inactive)
             {
                 var original = _throttled[pid];
-                try { await _processProvider.SetPriorityAsync(pid, original); } catch { }
+                try { await _processProvider.SetPriorityAsync(pid, original); }
+                catch (Exception ex) { _logger.LogDebug(ex, "ProBalance: mid-zone restore PID {Pid} failed", pid); }
                 _throttled.Remove(pid);
                 var name = processes.FirstOrDefault(p => p.Pid == pid)?.Name ?? $"PID {pid}";
                 _events.OnNext(new ProBalanceEvent(
@@ -143,6 +156,9 @@ public sealed class ProBalanceService : IDisposable
         var alive = new HashSet<int>(processes.Select(p => p.Pid));
         foreach (var pid in _throttled.Keys.Where(k => !alive.Contains(k)).ToList())
             _throttled.Remove(pid);
+        } // end try
+        catch (Exception ex) { _logger.LogDebug(ex, "ProBalance OnTick error"); }
+        finally { _tickLock.Release(); }
     }
 
     private static ProcessPriority InferPriority(ProcessInfo p)
@@ -155,7 +171,8 @@ public sealed class ProBalanceService : IDisposable
     {
         foreach (var (pid, original) in _throttled.ToList())
         {
-            try { await _processProvider.SetPriorityAsync(pid, original); } catch { }
+            try { await _processProvider.SetPriorityAsync(pid, original); }
+            catch (Exception ex) { _logger.LogDebug(ex, "ProBalance: RestoreAll PID {Pid} failed", pid); }
         }
         _throttled.Clear();
     }

@@ -12,6 +12,7 @@ using NexusMonitor.Core.Storage;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReactiveUI;
@@ -23,9 +24,10 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class ProcessesViewModel : ViewModelBase, IDisposable
 {
-    private readonly IProcessProvider        _processProvider;
-    private readonly AppSettings             _appSettings;
-    private readonly ProcessPreferenceStore? _preferenceStore;
+    private readonly IProcessProvider           _processProvider;
+    private readonly AppSettings                _appSettings;
+    private readonly ProcessPreferenceStore?    _preferenceStore;
+    private readonly MemoryLeakDetectionService? _leakService;
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Exposes platform capability flags for binding in the View.</summary>
@@ -33,6 +35,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     // 4E: Per-selection CTS — cancelled each time SelectedProcess changes to abort stale detail loads
     private CancellationTokenSource _detailCts = new();
     private IDisposable? _subscription;
+    private IDisposable? _leakSubscription;
 
     // Master cache: all live processes keyed by PID.
     // Allows in-place property updates so the DataGrid never loses sort state or selection.
@@ -111,11 +114,13 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
         IPlatformCapabilities? platformCapabilities = null,
-        ProcessPreferenceStore? preferenceStore = null)
+        ProcessPreferenceStore? preferenceStore = null,
+        MemoryLeakDetectionService? leakService = null)
     {
         _processProvider  = processProvider;
         _appSettings      = appSettings;
         _preferenceStore  = preferenceStore;
+        _leakService      = leakService;
         Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);
@@ -134,6 +139,14 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         // Re-evaluate Category converters when the theme changes so light-mode colors apply.
         if (Application.Current is { } app)
             app.ActualThemeVariantChanged += OnThemeChanged;
+
+        // Subscribe to leak suspects and update matching rows
+        if (_leakService is not null)
+        {
+            _leakSubscription = _leakService.Suspects
+                .ObserveOn(RxApp.MainThreadScheduler)
+                .Subscribe(UpdateLeakIndicators);
+        }
     }
 
     private void OnThemeChanged(object? sender, EventArgs e)
@@ -143,6 +156,28 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
             foreach (var row in _allRows.Values)
                 row.NotifyThemeChanged();
         });
+    }
+
+    private void UpdateLeakIndicators(IReadOnlyList<NexusMonitor.Core.Health.MemoryLeakSuspect> suspects)
+    {
+        // Clear all leak indicators first
+        foreach (var row in _allRows.Values)
+        {
+            row.LeakRateMbPerHour = 0;
+            row.IsLeakCritical    = false;
+            row.IsLeakWarning     = false;
+        }
+
+        // Apply new leak data
+        foreach (var suspect in suspects)
+        {
+            if (_allRows.TryGetValue(suspect.Pid, out var row))
+            {
+                row.LeakRateMbPerHour = suspect.LeakRateBytesPerHour / 1024.0 / 1024.0;
+                row.IsLeakCritical    = suspect.Confidence > 0.8;
+                row.IsLeakWarning     = !row.IsLeakCritical;
+            }
+        }
     }
 
     private void StartMonitoring(int intervalMs)
@@ -179,6 +214,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 row.SetIoRates(info.IoReadBytesPerSec, info.IoWriteBytesPerSec);
                 row.ThreadCount     = info.ThreadCount;
                 row.HandleCount     = info.HandleCount;
+                row.BasePriority    = info.BasePriority;
                 row.PushCpuHistory(info.CpuPercent);
                 row.ImpactScore     = impact;
                 row.HasActiveRule   = activeRule is not null;
@@ -695,6 +731,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         _detailCts.Cancel();
         _detailCts.Dispose();
         _subscription?.Dispose();
+        _leakSubscription?.Dispose();
         (SelectedDetails as IDisposable)?.Dispose();
         _allRows.Clear();
         WeakReferenceMessenger.Default.UnregisterAll(this);
@@ -758,6 +795,7 @@ public partial class ProcessRowViewModel : ObservableObject
 
     [ObservableProperty] private int _threadCount;
     [ObservableProperty] private int _handleCount;
+    [ObservableProperty] private int _basePriority;
 
     // ── Impact score (Phase 1 Dashboard) ─────────────────────────────────────
     /// <summary>Composite 0-100 score of how much this process affects system performance.</summary>
@@ -795,6 +833,40 @@ public partial class ProcessRowViewModel : ObservableObject
         return result;
     }
 
+    // ── Memory leak indicators ────────────────────────────────────────────────
+    [ObservableProperty] private double _leakRateMbPerHour;
+    [ObservableProperty] private bool   _isLeakCritical;
+    [ObservableProperty] private bool   _isLeakWarning;
+
+    private static readonly IBrush _dangerBrush  = new SolidColorBrush(Color.Parse("#FF453A"));
+    private static readonly IBrush _warningBrush = new SolidColorBrush(Color.Parse("#FF9F0A"));
+
+    public string LeakRateDisplay => LeakRateMbPerHour switch
+    {
+        <= 0 => "",
+        < 1  => $"↑ {LeakRateMbPerHour * 1024:F0} KB/hr",
+        _    => $"↑ {LeakRateMbPerHour:F0} MB/hr",
+    };
+
+    public IBrush LeakRateBrush => IsLeakCritical ? _dangerBrush
+        : IsLeakWarning ? _warningBrush : Brushes.Transparent;
+
+    partial void OnLeakRateMbPerHourChanged(double value)
+    {
+        OnPropertyChanged(nameof(LeakRateDisplay));
+        OnPropertyChanged(nameof(LeakRateBrush));
+    }
+
+    partial void OnIsLeakCriticalChanged(bool value)
+    {
+        OnPropertyChanged(nameof(LeakRateBrush));
+    }
+
+    partial void OnIsLeakWarningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(LeakRateBrush));
+    }
+
     public string CpuDisplay => CpuPercent < 0.1 ? "" : $"{CpuPercent:F1}%";
     public string MemDisplay => FormatBytes(WorkingSetBytes);
     public string IoDisplay  => IoReadBytesPerSec + IoWriteBytesPerSec > 0
@@ -822,6 +894,7 @@ public partial class ProcessRowViewModel : ObservableObject
         _ioWriteBytesPerSec= p.IoWriteBytesPerSec;
         _threadCount       = p.ThreadCount;
         _handleCount       = p.HandleCount;
+        _basePriority      = p.BasePriority;
     }
 
     public static string FormatBytes(long bytes)

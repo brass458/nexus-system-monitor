@@ -11,6 +11,7 @@ public enum RecommendationAction
     ReviewProcesses,
     CheckDiskSpace,
     CheckTemperatures,
+    InvestigateMemoryLeak,
 }
 
 public record Recommendation

@@ -45,7 +45,7 @@ public sealed class AlertsService : IDisposable
         _running = true;
         _subscription = _metrics
             .GetMetricsStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, ex => { /* swallow — loop must not crash */ });
+            .Subscribe(OnTick, ex => { _running = false; });
     }
 
     /// <summary>Stop the monitoring loop.</summary>

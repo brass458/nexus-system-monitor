@@ -27,24 +27,22 @@ public sealed class MacOSNotificationService : INotificationService
     {
         try
         {
-            // Escape single quotes for AppleScript string literals
-            string safeTitle = title.Replace("'", "\'");
-            string safeBody  = body.Replace("'", "\'");
-
             var psi = new System.Diagnostics.ProcessStartInfo
             {
-                FileName               = "osascript",
-                Arguments              = $"-e 'display notification \"{safeBody}\" with title \"{safeTitle}\"'",
-                UseShellExecute        = false,
-                RedirectStandardOutput = false,
-                RedirectStandardError  = false,
-                CreateNoWindow         = true,
+                FileName        = "osascript",
+                UseShellExecute = false,
+                CreateNoWindow  = true,
             };
-            System.Diagnostics.Process.Start(psi);
+            psi.ArgumentList.Add("-e");
+            psi.ArgumentList.Add($"display notification \"{EscapeAppleScript(body)}\" with title \"{EscapeAppleScript(title)}\"");
+            using var proc = System.Diagnostics.Process.Start(psi);
         }
         catch
         {
             // Swallow — notifications must never crash the app
         }
     }
+
+    private static string EscapeAppleScript(string s) =>
+        s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

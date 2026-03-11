@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Core.Services;
@@ -12,11 +13,16 @@ public class SettingsService : IDisposable
     private static readonly JsonSerializerOptions _opts = new() { WriteIndented = true };
 
     private readonly object _saveLock = new();
+    private readonly ILogger<SettingsService> _logger;
     private Timer? _debounceTimer;
 
     public AppSettings Current { get; private set; } = new();
 
-    public SettingsService() => Load();
+    public SettingsService(ILogger<SettingsService> logger)
+    {
+        _logger = logger;
+        Load();
+    }
 
     private void Load()
     {
@@ -31,7 +37,11 @@ public class SettingsService : IDisposable
             if (!doc.RootElement.TryGetProperty("ThemeMode", out _))
                 Current.ThemeMode = Current.IsDarkTheme ? "Dark" : "Light";
         }
-        catch { Current = new(); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load settings from {Path}; using defaults", _path);
+            Current = new();
+        }
     }
 
     /// <summary>
@@ -64,7 +74,7 @@ public class SettingsService : IDisposable
             File.WriteAllText(tmp, json);
             File.Move(tmp, _path, overwrite: true);
         }
-        catch { }
+        catch (Exception ex) { _logger.LogError(ex, "Failed to write settings to {Path}", _path); }
     }
 
     public void Dispose()

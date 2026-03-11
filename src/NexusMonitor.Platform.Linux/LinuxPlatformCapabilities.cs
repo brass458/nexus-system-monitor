@@ -20,4 +20,5 @@ public sealed class LinuxPlatformCapabilities : IPlatformCapabilities
     public bool SupportsMemoryMap          => false;
     public bool SupportsPowerPlan          => true;
     public string OpenLocationMenuLabel    => "Show in Files";
+    public bool SupportsDirectX            => false;
 }

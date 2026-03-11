@@ -36,11 +36,12 @@ public sealed class MacOSWallpaperService : IWallpaperService, IDisposable
                 RedirectStandardOutput = true,
                 CreateNoWindow         = true,
             };
-            var proc = System.Diagnostics.Process.Start(psi);
+            using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is null) return WallpaperInfo.Default;
 
-            var output = proc.StandardOutput.ReadToEnd().Trim();
-            proc.WaitForExit(2000);
+            var outputTask = proc.StandardOutput.ReadToEndAsync();
+            if (!proc.WaitForExit(2000)) { try { proc.Kill(); } catch { } }
+            var output = outputTask.Result.Trim();
 
             if (!string.IsNullOrEmpty(output) && File.Exists(output))
                 return WallpaperInfo.FromFile(output);
