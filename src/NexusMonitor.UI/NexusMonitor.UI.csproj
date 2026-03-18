@@ -27,6 +27,12 @@
     <!-- Required by macOS SDK to generate a valid .app bundle identifier -->
     <ApplicationId>com.brass458.nexus-monitor</ApplicationId>
   </PropertyGroup>
+  <!-- macOS: copy .icns into Contents/Resources/ so macOS can find the icon via CFBundleIconFile -->
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0-macos'))">
+    <BundleResource Include="Assets/nexus-icon.icns">
+      <LogicalName>nexus-icon.icns</LogicalName>
+    </BundleResource>
+  </ItemGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'
     AND !$([MSBuild]::IsOSPlatform('windows'))
     AND !$([MSBuild]::IsOSPlatform('osx'))">

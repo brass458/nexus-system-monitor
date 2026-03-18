@@ -51,6 +51,26 @@ mkdir -p "${OUTDIR}"
 
 echo "→ Found app bundle: ${APP_SRC}"
 
+# ── Embed the app icon into the bundle resources ─────────────────────────────
+# The .icns is embedded by the SDK as an Avalonia avares:// resource, but macOS
+# needs it at Contents/Resources/<name>.icns (as referenced in Info.plist via
+# CFBundleIconFile) to display the icon in Finder, the DMG window, and the Dock.
+echo "→ Embedding app icon …"
+mkdir -p "${APP_SRC}/Contents/Resources"
+cp "src/NexusMonitor.UI/Assets/nexus-icon.icns" \
+   "${APP_SRC}/Contents/Resources/nexus-icon.icns"
+echo "  ✓ Icon embedded"
+
+# ── Ad-hoc code sign the bundle ───────────────────────────────────────────────
+# Apple Silicon requires ALL arm64 binaries to carry a code signature.
+# Without any signature, macOS reports the app as "damaged and can't be opened".
+# Ad-hoc signing (-) satisfies this requirement without an Apple Developer ID.
+# Users will see an "unidentified developer" Gatekeeper prompt on first launch;
+# they can bypass it via right-click → Open or System Settings → Privacy & Security.
+echo "→ Ad-hoc signing bundle (required for arm64) …"
+codesign --deep --force --sign - --timestamp=none "${APP_SRC}"
+echo "  ✓ Signed (ad-hoc)"
+
 # ── Create .dmg with drag-to-Applications layout ─────────────────────────────
 echo "→ Creating ${DMG_PATH} ..."
 rm -f "${DMG_PATH}"
