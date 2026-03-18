@@ -5,14 +5,31 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/brass458/nexus-system-monitor/releases/latest"><img src="https://img.shields.io/github/v/release/brass458/nexus-system-monitor?label=latest" alt="Latest Release"></a>
+  <a href="https://github.com/brass458/nexus-system-monitor/releases/latest"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Platforms"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
   <a href="https://github.com/sponsors/brass458"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github" alt="Sponsor"></a>
 </p>
 
 **One tool. Every platform. Complete system visibility.**
 
-Nexus System Monitor is a cross-platform desktop application that gives you deep, granular insight into your system's processes, performance, services, and hardware — with a single, consistent interface whether you're on Windows, macOS, or Linux.
+Process Lasso is Windows-only. WizTree is Windows-only. Activity Monitor is macOS-only. htop is terminal-only. Nexus does what all of them do — on all three platforms, with a consistent interface you learn once.
 
 > **Testing on macOS or Linux?** → [TESTING.md](TESTING.md) — step-by-step setup, what to test, and how to report issues.
+
+---
+
+## Screenshots
+
+> Screenshots coming soon. See the [Releases](https://github.com/brass458/nexus-system-monitor/releases) page for download links.
+
+<!-- TODO: Add screenshots of:
+  - System Health Dashboard (health score, sparklines, bottleneck detection)
+  - Process list (color-coded categories, Impact Score, rules indicators)
+  - Crystal Glass theme dark + light
+  - Theme customization panel
+  - Side-by-side: Windows / macOS / Linux
+-->
 
 ---
 
@@ -143,6 +160,30 @@ All tabs show real data on all three platforms. Windows has the deepest detail l
 
 ---
 
+## Quick Start
+
+**No .NET SDK required** — just download and run.
+
+1. Go to [**Releases**](https://github.com/brass458/nexus-system-monitor/releases/latest)
+2. Download the build for your platform (see table below)
+3. Unzip / mount / install and run
+
+| Platform | Download |
+|----------|----------|
+| **Windows x64** | `NexusMonitor-*-win-x64-setup.exe` (installer) or `…win-x64.zip` (portable) |
+| **Windows ARM64** | `NexusMonitor-*-win-arm64-setup.exe` |
+| **macOS Apple Silicon** | `NexusMonitor-*-osx-arm64.dmg` |
+| **macOS Intel** | `NexusMonitor-*-osx-x64.dmg` |
+| **Linux x64** | `NexusMonitor-*-linux-x64.AppImage` or `nexus-monitor_*_amd64.deb` |
+
+**Platform notes:**
+- **Windows:** SmartScreen may warn on first launch (the app is not yet code-signed). Click "More info" → "Run anyway."
+- **macOS:** Gatekeeper will block an unsigned binary. Right-click → **Open** to bypass, or: `xattr -d com.apple.quarantine NexusMonitor.app`
+- **Linux AppImage:** Requires FUSE. On Ubuntu 22.04+: `sudo apt install libfuse2`. Or run with `--appimage-extract-and-run`.
+- **Elevated access:** Some features (IO priority, certain service operations) need admin/root. On Windows, run as Administrator. On macOS/Linux, launch with `sudo` if specific features don't work.
+
+---
+
 ## Running Nexus System Monitor
 
 ### Prerequisites
@@ -250,6 +291,27 @@ Download the latest release for your platform from the [**Releases**](https://gi
 > sudo apt install libfuse2
 > ```
 > Alternatively, run any AppImage without FUSE via `--appimage-extract-and-run`.
+
+---
+
+## Performance
+
+Nexus is designed to be a monitoring tool, not a monitoring problem. Measured on a mid-range Linux desktop (AMD Ryzen 5, 16 GB RAM):
+
+| Metric | Idle | Active polling |
+|--------|------|---------------|
+| CPU usage | ~1–3% | 3–8% |
+| RAM footprint | ~100 MB | 100–150 MB |
+| Disk I/O | Negligible | Negligible |
+
+**How it stays lean:**
+- Metrics are polled on configurable intervals (default 1 s), not continuously
+- SQLite WAL mode with tiered retention — hot metrics in memory, historical data batched to disk
+- Platform providers cache hardware-invariant data (CPU model, memory slots) at startup
+- UI rendering only updates changed values; sparklines use a ring buffer, not unbounded growth
+- Semaphore-guarded tick loops prevent re-entrant polling spikes under slow API calls
+
+> Baseline CPU was ~25% before the optimization pass (Phase 17). The current 3–8% figure reflects GC tuning, caching, and Rx subscription cleanup.
 
 ---
 
