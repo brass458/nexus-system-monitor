@@ -170,11 +170,11 @@ All tabs show real data on all three platforms. Windows has the deepest detail l
 
 | Platform | Download |
 |----------|----------|
-| **Windows x64** | `NexusMonitor-*-win-x64-setup.exe` (installer) or `…win-x64.zip` (portable) |
-| **Windows ARM64** | `NexusMonitor-*-win-arm64-setup.exe` |
-| **macOS Apple Silicon** | `NexusMonitor-*-osx-arm64.dmg` |
-| **macOS Intel** | `NexusMonitor-*-osx-x64.dmg` |
-| **Linux x64** | `NexusMonitor-*-linux-x64.AppImage` or `nexus-monitor_*_amd64.deb` |
+| **Windows x64** | `NexusMonitor-Windows-Installer-*.exe` (installer) or `NexusMonitor-Windows-Portable-*.zip` (portable) |
+| **Windows ARM64** | `NexusMonitor-Windows-ARM-Installer-*.exe` |
+| **macOS Apple Silicon** | `NexusMonitor-MacOS-*.dmg` |
+| **macOS Intel** | `NexusMonitor-MacOS-Intel-*.dmg` |
+| **Linux x64** | `NexusMonitor-Linux-*.AppImage` or `NexusMonitor-Linux-*.deb` |
 
 **Platform notes:**
 - **Windows:** SmartScreen may warn on first launch (the app is not yet code-signed). Click "More info" → "Run anyway."
@@ -272,14 +272,14 @@ dotnet publish src/NexusMonitor.UI /p:PublishProfile=linux-arm64
 
 Download the latest release for your platform from the [**Releases**](https://github.com/brass458/nexus-system-monitor/releases) page:
 
-| Platform | Installer | Portable |
-|----------|-----------|----------|
-| Windows x64 | `NexusMonitor-*-win-x64-setup.exe` | `NexusMonitor-*-win-x64.zip` |
-| Windows ARM64 | `NexusMonitor-*-win-arm64-setup.exe` | `NexusMonitor-*-win-arm64.zip` |
-| macOS Intel (x64) | `NexusMonitor-*-osx-x64.dmg` | `NexusMonitor-*-osx-x64.tar.gz` |
-| macOS Apple Silicon (arm64) | `NexusMonitor-*-osx-arm64.dmg` | `NexusMonitor-*-osx-arm64.tar.gz` |
-| Linux x64 | `NexusMonitor-*-linux-x64.AppImage` / `nexus-monitor_*_amd64.deb` | `NexusMonitor-*-linux-x64.tar.gz` |
-| Linux ARM64 | — | `NexusMonitor-*-linux-arm64.tar.gz` |
+| Platform | Installer / Package | Portable |
+|----------|---------------------|----------|
+| Windows x64 | `NexusMonitor-Windows-Installer-*.exe` | `NexusMonitor-Windows-Portable-*.zip` |
+| Windows ARM64 | `NexusMonitor-Windows-ARM-Installer-*.exe` | `NexusMonitor-Windows-ARM-Portable-*.zip` |
+| macOS Apple Silicon | `NexusMonitor-MacOS-*.dmg` | `NexusMonitor-MacOS-Portable-*.tar.gz` |
+| macOS Intel | `NexusMonitor-MacOS-Intel-*.dmg` | `NexusMonitor-MacOS-Intel-Portable-*.tar.gz` |
+| Linux x64 | `NexusMonitor-Linux-*.AppImage` / `NexusMonitor-Linux-*.deb` | `NexusMonitor-Linux-Portable-*.tar.gz` |
+| Linux ARM64 | — | `NexusMonitor-Linux-ARM-Portable-*.tar.gz` |
 
 > **macOS note:** The app is unsigned. On first launch, right-click → **Open** to bypass Gatekeeper, or run:
 > ```bash
@@ -291,6 +291,170 @@ Download the latest release for your platform from the [**Releases**](https://gi
 > sudo apt install libfuse2
 > ```
 > Alternatively, run any AppImage without FUSE via `--appimage-extract-and-run`.
+
+---
+
+## NexusCLI — Terminal Interface
+
+NexusCLI (`nexus`) is a headless companion to the GUI. It exposes the same monitoring engine as a terminal tool — useful for remote servers, SSH sessions, scripting, CI pipelines, or any situation where a graphical desktop isn't available or wanted.
+
+| | NexusCLI | GUI |
+|---|---|---|
+| Graphical window | ✗ | ✓ |
+| Real-time dashboard | ✓ (terminal) | ✓ |
+| Process list & control | ✓ | ✓ |
+| Services management | ✓ | ✓ |
+| System health score | ✓ | ✓ |
+| Alerts engine | ✓ | ✓ |
+| Rules engine | ✓ | ✓ |
+| Prometheus endpoint | ✓ | ✓ |
+| CSV / JSON export | ✓ | — |
+| Theming, overlays, LAN scanner | — | ✓ |
+| SSH / headless server use | ✓ | — |
+
+### Download
+
+Go to [**Releases**](https://github.com/brass458/nexus-system-monitor/releases/latest) and grab the CLI archive for your platform:
+
+| Platform | Archive |
+|----------|---------|
+| Windows x64 | `NexusCLI-Windows-*.zip` |
+| Windows ARM64 | `NexusCLI-Windows-ARM-*.zip` |
+| macOS Apple Silicon | `NexusCLI-MacOS-*.tar.gz` |
+| macOS Intel | `NexusCLI-MacOS-Intel-*.tar.gz` |
+| Linux x64 | `NexusCLI-Linux-*.tar.gz` |
+| Linux ARM64 | `NexusCLI-Linux-ARM-*.tar.gz` |
+
+Each archive is self-contained — no .NET installation required on the target machine.
+
+### Launching the CLI
+
+#### Windows
+
+1. Extract `NexusCLI-Windows-*.zip` to a folder (e.g. `C:\Tools\nexus\`).
+2. Open **PowerShell** or **Command Prompt** and navigate to that folder:
+
+```powershell
+cd C:\Tools\nexus
+.\nexus.exe --help
+```
+
+To use `nexus` from any directory, add the folder to your PATH:
+
+```powershell
+$env:PATH += ";C:\Tools\nexus"
+# Or permanently via System Properties → Environment Variables
+```
+
+> **SmartScreen:** Windows may warn on first run. Click **More info → Run anyway**. The binary is unsigned.
+
+#### macOS
+
+1. Extract the archive:
+
+```bash
+mkdir nexus && tar -xzf NexusCLI-MacOS-*.tar.gz -C nexus && cd nexus
+```
+
+2. Clear the Gatekeeper quarantine attribute (required for unsigned binaries downloaded from the internet):
+
+```bash
+xattr -d com.apple.quarantine nexus
+```
+
+3. Run:
+
+```bash
+./nexus --help
+```
+
+To make `nexus` available system-wide:
+
+```bash
+sudo mv nexus /usr/local/bin/nexus
+nexus --help
+```
+
+> **Apple Silicon vs Intel:** Download `NexusCLI-MacOS-*.tar.gz` for M1/M2/M3/M4 Macs and `NexusCLI-MacOS-Intel-*.tar.gz` for Intel Macs. Running the wrong architecture will produce an error on launch.
+
+#### Linux
+
+1. Extract the archive:
+
+```bash
+mkdir nexus && tar -xzf NexusCLI-Linux-*.tar.gz -C nexus && cd nexus
+```
+
+2. Ensure the binary is executable (it should be already, but confirm):
+
+```bash
+chmod +x nexus
+```
+
+3. Run:
+
+```bash
+./nexus --help
+```
+
+To install system-wide:
+
+```bash
+sudo mv nexus /usr/local/bin/nexus
+nexus --help
+```
+
+> **ARM64:** Use `NexusCLI-Linux-ARM-*.tar.gz` on Raspberry Pi 4/5, AWS Graviton, or any other 64-bit ARM board. The x64 build will not run on ARM.
+
+> **Elevated access:** Some operations (service control, process priority changes) require root. Prefix with `sudo` when needed, e.g. `sudo nexus services --interactive`.
+
+### Commands
+
+```
+nexus <command> [options]
+```
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `dashboard` | — | Live-refreshing system dashboard (CPU, memory, disk, GPU, health, top processes). Press **Q** to exit. |
+| `processes` | `ps` | List processes. Supports `--sort cpu\|mem\|name`, `--filter <name>`, `--top <n>`, `--live` (auto-refresh), `--interactive` (pick and act). |
+| `services` | `svc` | List system services. Supports `--filter`, `--running`, `--stopped`, `--interactive`. |
+| `health` | — | One-shot system health snapshot — composite score, subsystem breakdown, top CPU consumers, bottleneck. |
+| `alerts list` | — | Show configured alert rules. |
+| `alerts status` | — | Show whether the alerts engine is running. |
+| `alerts watch` | — | Stream live alert events to the terminal. Press **Ctrl+C** to stop. |
+| `rules list` | — | Show configured process rules. |
+| `rules status` | — | Show rules engine status and rule count. |
+| `settings show` | — | Dump all current application settings. |
+| `settings get <key>` | — | Read a single setting value by property name. |
+| `settings set <key> <value>` | — | Write a setting value and save. |
+| `prometheus` | `prom` | Start a Prometheus `/metrics` HTTP endpoint. Supports `--port <n>`. Press **Ctrl+C** to stop. |
+| `export` | — | Export historical metrics to CSV or JSON. Supports `--format csv\|json`, `--last <Nh>` (e.g. `24h`), `--output <file>`. |
+
+**Examples:**
+
+```bash
+# Live dashboard
+nexus dashboard
+
+# Top 10 processes by memory
+nexus ps --sort mem --top 10
+
+# Filter running services and pick one interactively
+nexus svc --running --interactive
+
+# System health check (great for scripts / CI)
+nexus health
+
+# Export the last 24 hours of metrics to a file
+nexus export --format json --last 24h --output metrics.json
+
+# Prometheus endpoint on a custom port
+nexus prometheus --port 9091
+
+# Watch live alerts (leave running in a side terminal)
+nexus alerts watch
+```
 
 ---
 
@@ -335,7 +499,9 @@ Nexus is designed to be a monitoring tool, not a monitoring problem. Measured on
 NexusMonitor.sln
 ├── src/
 │   ├── NexusMonitor.Core/              # Abstractions, models, services (net8.0)
+│   ├── NexusMonitor.Hosting/           # DI wiring shared by GUI and CLI
 │   ├── NexusMonitor.UI/                # Avalonia desktop app (platform-conditional)
+│   ├── NexusMonitor.CLI/               # NexusCLI terminal app (Spectre.Console)
 │   ├── NexusMonitor.DiskAnalyzer/      # Disk analysis engine
 │   ├── NexusMonitor.Platform.Windows/  # Windows API implementations
 │   ├── NexusMonitor.Platform.MacOS/    # macOS implementations
