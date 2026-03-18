@@ -80,7 +80,7 @@ internal sealed class HealthCommand : AsyncCommand
     {
         parent.AddNode(
             $"[bold]{label}:[/] {MetricsRenderer.ColoredPercentBar(sub.CurrentValue, width: 15)}  " +
-            $"Score: {sub.Score:F0}  [{sub.Level}]  Trend: {sub.Trend}" +
+            $"Score: {sub.Score:F0}  [[{sub.Level}]]  Trend: {sub.Trend}" +
             (string.IsNullOrEmpty(sub.Summary) ? "" : $"  — {Markup.Escape(sub.Summary)}"));
     }
 }

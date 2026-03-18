@@ -33,7 +33,7 @@ internal static class MetricsRenderer
         percent = Math.Clamp(percent, 0, 100);
         int filled = (int)Math.Round(percent / 100.0 * width);
         var bar = new string('\u2588', filled) + new string('\u2591', width - filled);
-        return $"[{bar}] {percent,5:F1}%";
+        return $"[[{bar}]] {percent,5:F1}%";
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ internal static class MetricsRenderer
         int filled = (int)Math.Round(score / 100.0 * width);
         var bar = new string('\u2588', filled) + new string('\u2591', width - filled);
         string color = score > 80 ? "green" : score > 50 ? "yellow" : "red";
-        return $"[{color}][{bar}][/] {score,5:F1}";
+        return $"[{color}][[{bar}]][/] {score,5:F1}";
     }
 
     /// <summary>
@@ -59,6 +59,6 @@ internal static class MetricsRenderer
         int filled = (int)Math.Round(percent / 100.0 * width);
         var bar = new string('\u2588', filled) + new string('\u2591', width - filled);
         string color = percent > 80 ? "red" : percent > 50 ? "yellow" : "green";
-        return $"[{color}][{bar}][/] {percent,5:F1}%";
+        return $"[{color}][[{bar}]][/] {percent,5:F1}%";
     }
 }

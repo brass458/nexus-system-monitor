@@ -62,7 +62,7 @@ try
     app.Configure(config =>
     {
         config.SetApplicationName("nexus");
-        config.SetApplicationVersion("0.1.7");
+        config.SetApplicationVersion("0.1.8.2");
 
         config.AddCommand<DashboardCommand>("dashboard")
             .WithDescription("Show a live system dashboard (default command)");
