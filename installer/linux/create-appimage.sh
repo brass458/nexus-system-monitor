@@ -18,7 +18,7 @@ OUTDIR="${2:-dist}"
 
 PUBLISH_DIR="src/NexusMonitor.UI/publish/linux-x64"
 APPDIR="${OUTDIR}/NexusMonitor.AppDir"
-APPIMAGE_OUT="${OUTDIR}/NexusMonitor-${VERSION}-linux-x64.AppImage"
+APPIMAGE_OUT="${OUTDIR}/NexusMonitor-Linux-${VERSION}.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
 APPIMAGETOOL="${OUTDIR}/appimagetool-x86_64.AppImage"
 

@@ -4,13 +4,13 @@
 ;   iscc NexusMonitor.iss /DAppVersion=0.1.0 /DAppArch=x64
 ;        /DPublishDir=..\..\src\NexusMonitor.UI\publish\win-x64
 ;        /DOutputDir=..\..\dist
-;        /DOutputFilename=NexusMonitor-0.1.0-win-x64-setup
+;        /DOutputFilename=NexusMonitor-Windows-Installer-0.1.0
 ;
 ; Usage (local — Inno Setup must be installed):
 ;   iscc installer\windows\NexusMonitor.iss /DAppVersion=0.1.0 /DAppArch=x64
 ;        /DPublishDir=src\NexusMonitor.UI\publish\win-x64
 ;        /DOutputDir=dist
-;        /DOutputFilename=NexusMonitor-0.1.0-win-x64-setup
+;        /DOutputFilename=NexusMonitor-Windows-Installer-0.1.0
 ; =====================================================================
 
 ; Defaults for local/manual runs (CI passes these via /D flags)
@@ -27,7 +27,11 @@
   #define OutputDir "..\..\dist"
 #endif
 #ifndef OutputFilename
-  #define OutputFilename "NexusMonitor-" + AppVersion + "-win-" + AppArch + "-setup"
+  #if AppArch == "arm64"
+    #define OutputFilename "NexusMonitor-Windows-ARM-Installer-" + AppVersion
+  #else
+    #define OutputFilename "NexusMonitor-Windows-Installer-" + AppVersion
+  #endif
 #endif
 
 [Setup]

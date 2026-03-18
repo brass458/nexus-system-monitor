@@ -100,13 +100,13 @@ jobs:
           $v = "${{ steps.ver.outputs.VERSION }}"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Compress-Archive -Path src/NexusMonitor.UI/publish/win-x64/* `
-            -DestinationPath "dist/NexusMonitor-$v-win-x64.zip"
+            -DestinationPath "dist/NexusMonitor-Windows-Portable-$v.zip"
           Compress-Archive -Path src/NexusMonitor.UI/publish/win-arm64/* `
-            -DestinationPath "dist/NexusMonitor-$v-win-arm64.zip"
+            -DestinationPath "dist/NexusMonitor-Windows-ARM-Portable-$v.zip"
           Compress-Archive -Path src/NexusMonitor.CLI/publish/cli-win-x64/* `
-            -DestinationPath "dist/NexusCLI-$v-win-x64.zip"
+            -DestinationPath "dist/NexusCLI-Windows-$v.zip"
           Compress-Archive -Path src/NexusMonitor.CLI/publish/cli-win-arm64/* `
-            -DestinationPath "dist/NexusCLI-$v-win-arm64.zip"
+            -DestinationPath "dist/NexusCLI-Windows-ARM-$v.zip"
 
       - name: Build installers (Inno Setup)
         shell: pwsh
@@ -129,12 +129,12 @@ jobs:
             /DAppVersion=$v /DAppArch=x64 `
             "/DPublishDir=..\..\src\NexusMonitor.UI\publish\win-x64" `
             /DOutputDir=..\..\dist `
-            "/DOutputFilename=NexusMonitor-$v-win-x64-setup"
+            "/DOutputFilename=NexusMonitor-Windows-Installer-$v"
           & $isccPath installer\windows\NexusMonitor.iss `
             /DAppVersion=$v /DAppArch=arm64 `
             "/DPublishDir=..\..\src\NexusMonitor.UI\publish\win-arm64" `
             /DOutputDir=..\..\dist `
-            "/DOutputFilename=NexusMonitor-$v-win-arm64-setup"
+            "/DOutputFilename=NexusMonitor-Windows-ARM-Installer-$v"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -202,9 +202,9 @@ jobs:
           bash installer/macos/create-app-bundle.sh osx-arm64 ${{ steps.ver.outputs.VERSION }} dist
           bash installer/macos/create-app-bundle.sh osx-x64 ${{ steps.ver.outputs.VERSION }} dist
           V="${{ steps.ver.outputs.VERSION }}"
-          tar -czf "dist/NexusCLI-${V}-osx-arm64.tar.gz" \
+          tar -czf "dist/NexusCLI-MacOS-${V}.tar.gz" \
             -C src/NexusMonitor.CLI/publish/cli-osx-arm64 .
-          tar -czf "dist/NexusCLI-${V}-osx-x64.tar.gz" \
+          tar -czf "dist/NexusCLI-MacOS-Intel-${V}.tar.gz" \
             -C src/NexusMonitor.CLI/publish/cli-osx-x64 .
 
       - name: Upload macOS artifacts
@@ -260,13 +260,13 @@ jobs:
         run: |
           V="${{ steps.ver.outputs.VERSION }}"
           mkdir -p dist
-          tar -czf "dist/NexusMonitor-${V}-linux-x64.tar.gz" \
+          tar -czf "dist/NexusMonitor-Linux-Portable-${V}.tar.gz" \
             -C src/NexusMonitor.UI/publish/linux-x64 .
-          tar -czf "dist/NexusMonitor-${V}-linux-arm64.tar.gz" \
+          tar -czf "dist/NexusMonitor-Linux-ARM-Portable-${V}.tar.gz" \
             -C src/NexusMonitor.UI/publish/linux-arm64 .
-          tar -czf "dist/NexusCLI-${V}-linux-x64.tar.gz" \
+          tar -czf "dist/NexusCLI-Linux-${V}.tar.gz" \
             -C src/NexusMonitor.CLI/publish/cli-linux-x64 .
-          tar -czf "dist/NexusCLI-${V}-linux-arm64.tar.gz" \
+          tar -czf "dist/NexusCLI-Linux-ARM-${V}.tar.gz" \
             -C src/NexusMonitor.CLI/publish/cli-linux-arm64 .
 
       - name: Build AppImage (x64)

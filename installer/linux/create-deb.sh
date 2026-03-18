@@ -18,7 +18,7 @@ OUTDIR="${2:-dist}"
 PUBLISH_DIR="src/NexusMonitor.UI/publish/linux-x64"
 PKG_NAME="nexus-monitor"
 PKG_DIR="${OUTDIR}/${PKG_NAME}_${VERSION}_amd64"
-DEB_OUT="${OUTDIR}/${PKG_NAME}_${VERSION}_amd64.deb"
+DEB_OUT="${OUTDIR}/NexusMonitor-Linux-${VERSION}.deb"
 INSTALL_DIR="${PKG_DIR}/usr/lib/nexus-monitor"
 
 # ── Validate publish output ──────────────────────────────────────────────────

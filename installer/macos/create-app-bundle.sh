@@ -24,9 +24,16 @@ OUTDIR="${3:-dist}"
 
 PUBLISH_DIR="src/NexusMonitor.UI/publish/${RID}"
 APP_NAME="NexusMonitor"
-DMG_NAME="${APP_NAME}-${VERSION}-${RID}.dmg"
+
+case "${RID}" in
+  osx-arm64)  OS_LABEL="MacOS"        ;;
+  osx-x64)    OS_LABEL="MacOS-Intel"  ;;
+  *)          echo "Error: unsupported RID '${RID}'"; exit 1 ;;
+esac
+
+DMG_NAME="${APP_NAME}-${OS_LABEL}-${VERSION}.dmg"
 DMG_PATH="${OUTDIR}/${DMG_NAME}"
-TARBALL="${OUTDIR}/${APP_NAME}-${VERSION}-${RID}.tar.gz"
+TARBALL="${OUTDIR}/${APP_NAME}-${OS_LABEL}-Portable-${VERSION}.tar.gz"
 
 # ── Locate the .app bundle produced by the macOS workload ────────────────────
 # The SDK places the .app in the PublishDir alongside the .pkg installer.
@@ -50,6 +57,12 @@ fi
 mkdir -p "${OUTDIR}"
 
 echo "→ Found app bundle: ${APP_SRC}"
+
+# ── Replace SDK-generated Info.plist with our custom one ─────────────────────
+echo "→ Installing custom Info.plist …"
+cp "installer/macos/Info.plist" "${APP_SRC}/Contents/Info.plist"
+sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" "${APP_SRC}/Contents/Info.plist"
+echo "  ✓ Info.plist installed (version: ${VERSION})"
 
 # ── Embed the app icon into the bundle resources ─────────────────────────────
 # The .icns is embedded by the SDK as an Avalonia avares:// resource, but macOS
