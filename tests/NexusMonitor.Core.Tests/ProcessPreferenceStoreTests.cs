@@ -156,6 +156,29 @@ public class ProcessPreferenceStoreTests
         result.MemoryPriority.Should().Be(MemoryPriority.High);
         result.EfficiencyMode.Should().BeTrue();
         result.ModifiedUtc.Should().BeAfter(before);
+
+        // Verify CreatedUtc is set to a reasonable value (not DateTime.MinValue).
+        result.CreatedUtc.Should().BeAfter(before);
+        var createdUtcFirst = result.CreatedUtc;
+        var modifiedUtcFirst = result.ModifiedUtc;
+
+        // Update the entry via a second Upsert, preserving CreatedUtc, and verify CreatedUtc does not change.
+        store.Upsert(new ProcessPreference
+        {
+            ExeName        = "fulltest",
+            Priority       = ProcessPriority.RealTime,
+            AffinityMask   = 0b1010L,
+            IoPriority     = IoPriority.High,
+            MemoryPriority = MemoryPriority.Low,
+            EfficiencyMode = false,
+            CreatedUtc     = createdUtcFirst,
+        });
+
+        var updated = store.Get("fulltest");
+        updated.Should().NotBeNull();
+        updated!.CreatedUtc.Should().Be(createdUtcFirst);
+        updated.ModifiedUtc.Should().BeAfter(modifiedUtcFirst);
+        updated.Priority.Should().Be(ProcessPriority.RealTime);
     }
 
     [Fact]
@@ -281,6 +304,13 @@ public class ProcessPreferenceStoreTests
         });
 
         act.Should().NotThrow();
-        store.GetAll().Should().HaveCount(50);
+        var all = store.GetAll();
+        all.Should().HaveCount(50);
+
+        // Verify all 50 records have correct ExeName and Priority.
+        for (int i = 0; i < 50; i++)
+        {
+            all.Should().Contain(r => r.ExeName == $"proc{i:D3}" && r.Priority == ProcessPriority.Normal);
+        }
     }
 }
