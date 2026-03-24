@@ -97,6 +97,7 @@ public sealed class RulesEngine : IDisposable
                 // ── Disallowed: terminate immediately ─────────────────────
                 if (rule.Disallowed && isNew)
                 {
+                    ruleMatched = true;
                     try { await _processProvider.KillProcessAsync(proc.Pid); }
                     catch (Exception ex) { _logger.LogWarning(ex, "Kill disallowed process {Name} (PID {Pid}) failed", proc.Name, proc.Pid); }
                     continue;
