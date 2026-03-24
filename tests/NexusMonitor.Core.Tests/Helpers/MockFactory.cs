@@ -46,6 +46,40 @@ public static class MockFactory
         mock.Setup(p => p.GetAffinityMasksAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((0L, 0L));
 
+        // Plain-Task mutation methods — must return Task.CompletedTask so awaiting them doesn't NRE
+        mock.Setup(p => p.KillProcessAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SuspendProcessAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.ResumeProcessAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetPriorityAsync(It.IsAny<int>(), It.IsAny<ProcessPriority>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetAffinityAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetIoPriorityAsync(It.IsAny<int>(), It.IsAny<IoPriority>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetMemoryPriorityAsync(It.IsAny<int>(), It.IsAny<MemoryPriority>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.TrimWorkingSetAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetEfficiencyModeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.CreateDumpFileAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mock.Setup(p => p.SetCpuSetsAsync(It.IsAny<int>(), It.IsAny<uint[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         return mock;
     }
 

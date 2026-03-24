@@ -36,9 +36,11 @@ public static class RxTestHelper
     }
 
     /// <summary>
-    /// Collects all items from a cold/finite observable synchronously (with a timeout).
+    /// Collects all items from a cold/synchronous observable into a list.
+    /// Only use for observables that complete synchronously (e.g., Observable.Return, Observable.Empty).
+    /// For async or hot observables use <see cref="RecordItems{T}(IObservable{T}, ICollection{IDisposable})"/> instead.
     /// </summary>
-    public static List<T> ToList<T>(IObservable<T> source, TimeSpan? timeout = null)
+    public static List<T> ToListSync<T>(IObservable<T> source)
     {
         var result = new List<T>();
         using var sub = source.Subscribe(result.Add);
