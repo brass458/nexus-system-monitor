@@ -43,3 +43,4 @@ installer/windows/Output/
 *.AppImage
 *.dmg
 *.deb
+.worktrees/
