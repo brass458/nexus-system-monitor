@@ -813,6 +813,51 @@ public class RulesEngineTests : IDisposable
             Times.Never);
     }
 
+    // ── 28. Disallowed rule sets ruleMatched — preference NOT applied ──────────
+
+    [Fact]
+    public async Task Disallowed_WithPreferenceStore_PreferenceNotApplied()
+    {
+        // A process that is disallowed should be killed, and its preference should NOT be applied
+        // (the Disallowed branch must set ruleMatched=true before continuing)
+        var subject = new Subject<IReadOnlyList<ProcessInfo>>();
+        _mockProvider.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>()))
+                     .Returns(subject);
+
+        using var db = new TestMetricsDatabase();
+        var store = new NexusMonitor.Core.Storage.ProcessPreferenceStore(db.Database);
+
+        // Save a preference with Idle priority for "malware"
+        store.Upsert(new ProcessPreference
+        {
+            ExeName = "malware",
+            Priority = ProcessPriority.Idle
+        });
+
+        // Disallowed rule — should kill the process and NOT fall through to preference
+        var rule = new ProcessRule
+        {
+            ProcessNamePattern = "malware",
+            Disallowed = true,
+            IsEnabled = true
+        };
+
+        using var engine = CreateEngineWithStore(rule, store);
+        engine.Start();
+
+        await EmitAndWait(subject, new[] { MakeProcess(99, "malware") });
+
+        // Kill was called
+        _mockProvider.Verify(
+            p => p.KillProcessAsync(99, It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Preference-applied Idle priority must NOT be called
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(99, ProcessPriority.Idle, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Empty rules → early return ────────────────────────────────────────────
 
     [Fact]
