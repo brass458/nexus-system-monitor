@@ -14,6 +14,13 @@ public sealed class MetricsStoreConfig
     /// <summary>Accumulate this many ticks before flushing in a single transaction.</summary>
     public int WriteBufferSize { get; set; } = 30;
 
+    /// <summary>
+    /// Hard cap on the metrics write buffer. When buffer Count exceeds this,
+    /// the oldest entry is dropped and a warning is logged.
+    /// Prevents OOM if the flush stalls. Set to 0 to compute as 3 × WriteBufferSize.
+    /// </summary>
+    public int MaxBufferSize { get; set; } = 0;
+
     // ── Retention ──────────────────────────────────────────────────────────────
     public TimeSpan RawRetention      { get; set; } = TimeSpan.FromHours(1);
     public TimeSpan Rollup1mRetention { get; set; } = TimeSpan.FromDays(7);
