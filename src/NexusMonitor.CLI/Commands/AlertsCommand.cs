@@ -115,12 +115,7 @@ internal sealed class AlertsWatchCommand : AsyncCommand
 
         AnsiConsole.MarkupLine("[grey]Watching for alerts... Press Ctrl+C to stop.[/]\n");
 
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-        };
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Program.GlobalCts.Token);
 
         using var sub = _alerts.Events.Subscribe(evt =>
         {

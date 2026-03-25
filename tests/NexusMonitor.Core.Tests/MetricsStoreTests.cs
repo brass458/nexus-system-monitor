@@ -436,6 +436,54 @@ public class MetricsStoreTests
         store.Dispose();
     }
 
+    // ── Hard buffer cap (D1) ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Buffer_WhenExceedsMaxBufferSize_DropsOldestEntry()
+    {
+        // WriteBufferSize=100 so auto-flush never fires; MaxBufferSize=3
+        var metricsSubject = new Subject<SystemMetrics>();
+        var processSubject = new Subject<IReadOnlyList<ProcessInfo>>();
+        var networkSubject = new Subject<IReadOnlyList<NetworkConnection>>();
+
+        var mockMetrics = MockFactory.CreateMetricsProvider();
+        var mockProcess = MockFactory.CreateProcessProvider();
+        var mockNetwork = new Mock<INetworkConnectionsProvider>(MockBehavior.Loose);
+
+        mockMetrics.Setup(p => p.GetMetricsStream(It.IsAny<TimeSpan>())).Returns(metricsSubject);
+        mockProcess.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>())).Returns(processSubject);
+        mockNetwork.Setup(p => p.GetConnectionStream(It.IsAny<TimeSpan>())).Returns(networkSubject);
+        mockNetwork.Setup(p => p.SupportsPerConnectionThroughput).Returns(false);
+
+        var db = new TestMetricsDatabase();
+        using var _ = db;
+
+        var config = new MetricsStoreConfig { WriteBufferSize = 100, MaxBufferSize = 3 };
+        var store = new MetricsStore(
+            db.Database, config,
+            mockMetrics.Object, mockProcess.Object, mockNetwork.Object,
+            MockFactory.CreateLogger<MetricsStore>().Object);
+
+        store.Start(TimeSpan.FromSeconds(1));
+
+        // Push 4 samples — the 4th push causes the oldest (cpu=10) to be dropped
+        metricsSubject.OnNext(MakeMetrics(cpuPercent: 10.0));
+        metricsSubject.OnNext(MakeMetrics(cpuPercent: 20.0));
+        metricsSubject.OnNext(MakeMetrics(cpuPercent: 30.0));
+        metricsSubject.OnNext(MakeMetrics(cpuPercent: 40.0)); // triggers cap drop
+
+        store.Stop(); // flushes remaining 3
+
+        var rows = await store.GetSystemMetricsAsync(Far(), Soon());
+        rows.Should().HaveCount(3, "oldest entry should have been dropped when buffer exceeded MaxBufferSize=3");
+
+        var cpuValues = rows.Select(r => r.CpuPercent).OrderBy(v => v).ToList();
+        cpuValues.Should().NotContain(10.0, "the first (oldest) sample should have been dropped");
+        cpuValues.Should().ContainInOrder(20.0, 30.0, 40.0);
+
+        store.Dispose();
+    }
+
     // ── GetDatabaseSizeBytes ──────────────────────────────────────────────────
 
     [Fact]

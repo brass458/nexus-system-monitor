@@ -6,6 +6,7 @@ using NexusMonitor.Hosting;
 using Serilog;
 using Serilog.Events;
 using Spectre.Console.Cli;
+using System.Reflection;
 
 // ── Logging ──────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,17 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Information("Nexus CLI starting");
+
+// Global cancellation: CTRL+C or process exit cancels all long-running commands.
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;      // prevent abrupt termination; let commands clean up
+    Program.GlobalCts.Cancel();
+};
+AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+{
+    try { Program.GlobalCts.Cancel(); } catch (ObjectDisposedException) { }
+};
 
 int exitCode = 0;
 try
@@ -62,7 +74,8 @@ try
     app.Configure(config =>
     {
         config.SetApplicationName("nexus");
-        config.SetApplicationVersion("0.1.8.2");
+        config.SetApplicationVersion(
+            Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0");
 
         config.AddCommand<DashboardCommand>("dashboard")
             .WithDescription("Show a live system dashboard (default command)");
@@ -127,6 +140,14 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+    GlobalCts.Cancel();  // ensure cancellation is requested before dispose
+    GlobalCts.Dispose();
 }
 
 return exitCode;
+
+// Partial class declaration so commands can access GlobalCts as Program.GlobalCts.
+internal static partial class Program
+{
+    internal static readonly CancellationTokenSource GlobalCts = new();
+}

@@ -67,7 +67,7 @@ internal sealed class ProcessesCommand : AsyncCommand<ProcessesCommand.Settings>
 
     private async Task<int> RunLiveAsync(Settings settings)
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Program.GlobalCts.Token);
         _ = Task.Run(() =>
         {
             while (!cts.Token.IsCancellationRequested)

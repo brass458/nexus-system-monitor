@@ -93,6 +93,13 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         lock (_lock)
         {
             _metricsBuffer.Add(m);
+            int maxBuf = _config.MaxBufferSize > 0 ? _config.MaxBufferSize : _config.WriteBufferSize * 3;
+            if (_metricsBuffer.Count > maxBuf)
+            {
+                _metricsBuffer.RemoveAt(0);
+                _logger.LogWarning(
+                    "MetricsStore buffer overflow — oldest sample dropped (cap={Cap})", maxBuf);
+            }
             if (_metricsBuffer.Count >= _config.WriteBufferSize)
                 FlushAll();
         }
@@ -122,14 +129,32 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
         var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         lock (_lock)
+        {
             _processBuffer.Add((ts, topN));
+            int maxBuf = _config.MaxBufferSize > 0 ? _config.MaxBufferSize : _config.WriteBufferSize * 3;
+            if (_processBuffer.Count > maxBuf)
+            {
+                _processBuffer.RemoveAt(0);
+                _logger.LogWarning(
+                    "MetricsStore process buffer overflow — oldest snapshot dropped (cap={Cap})", maxBuf);
+            }
+        }
     }
 
     private void OnNetworkTick(IReadOnlyList<NetworkConnection> conns)
     {
         var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         lock (_lock)
+        {
             _networkBuffer.Add((ts, conns));
+            int maxBuf = _config.MaxBufferSize > 0 ? _config.MaxBufferSize : _config.WriteBufferSize * 3;
+            if (_networkBuffer.Count > maxBuf)
+            {
+                _networkBuffer.RemoveAt(0);
+                _logger.LogWarning(
+                    "MetricsStore network buffer overflow — oldest snapshot dropped (cap={Cap})", maxBuf);
+            }
+        }
     }
 
     // ── Flush ──────────────────────────────────────────────────────────────────

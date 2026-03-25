@@ -139,9 +139,6 @@ Exhaustive checklist of every implemented feature, organized by category. Versio
 - [x] Multi-threaded directory scanning engine (`NexusMonitor.DiskAnalyzer` project) (v0.1.0)
 - [x] Identify space-hogging directories at a glance (v0.1.0)
 
-> [!warning] Platform status
-> Disk Analyzer is currently disabled on all platforms pending UI integration work.
-
 ---
 
 ## 8. System Information

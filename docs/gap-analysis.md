@@ -143,7 +143,7 @@ Feature-by-feature comparison of Nexus System Monitor against **Process Lasso** 
 
 | WizTree Feature | Nexus Status | Priority | Notes |
 |-----------------|-------------|---------|-------|
-| Visual disk space treemap | ✅ Implemented | — | DiskAnalyzer project (currently disabled in UI) |
+| Visual disk space treemap | ✅ Implemented | — | DiskAnalyzer project |
 | Multi-threaded directory scan | ✅ Implemented | — | |
 | MFT-based scanning (instant scan) | ✅ Implemented | — | `MftScanner.cs` in NexusMonitor.DiskAnalyzer (v0.1.7) |
 | Flat file list sorted by size | ✅ Implemented | — | File View tab in `DiskAnalyzerView.axaml` (v0.1.7) |
