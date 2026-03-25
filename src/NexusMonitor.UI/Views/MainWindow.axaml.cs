@@ -38,10 +38,10 @@ public partial class MainWindow : Window
         base.OnClosing(e);
 
         // Tray "Quit" on Linux: allow the close immediately
-        if (ForceQuitFromTray) return;
+        if (ForceQuitFromTray) { SaveSession(); return; }
 
         // Already decided → let the OS close proceed
-        if (_forceClose) return;
+        if (_forceClose) { SaveSession(); return; }
 
         var settings = App.Services.GetRequiredService<SettingsService>();
 
@@ -54,6 +54,7 @@ public partial class MainWindow : Window
                 return;
 
             case "Exit":
+                SaveSession();
                 return; // allow normal close
         }
 
@@ -95,6 +96,22 @@ public partial class MainWindow : Window
             _forceClose = true;
             Close();
         }
+    }
+
+    private void SaveSession()
+    {
+        var settings = App.Services.GetRequiredService<SettingsService>();
+        var vm       = DataContext as MainViewModel;
+        settings.Current.LastActiveTab   = vm?.SelectedNavItem?.Label ?? string.Empty;
+        settings.Current.LastWindowState = WindowState.ToString();
+        if (WindowState == WindowState.Normal)
+        {
+            settings.Current.LastWindowWidth  = Width;
+            settings.Current.LastWindowHeight = Height;
+            settings.Current.LastWindowX      = Position.X;
+            settings.Current.LastWindowY      = Position.Y;
+        }
+        settings.Save();
     }
 
     private static void MaybeHideWidget(bool hide)

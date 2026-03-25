@@ -8,6 +8,8 @@ using Avalonia.Media;
 using Avalonia.Media.Transformation;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Services;
 using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI;
@@ -42,12 +44,10 @@ public partial class MainWindow : Window
         // has previously enabled glass. Changing this from AcrylicBlur to None prevents
         // wallpaper bleed-through on light desktops before settings are applied.
         //
-        // TODO(crystal-glass): Re-evaluate before public release. The Crystal Glass specular
-        // shimmer + prismatic layers are intentional and should stay. The problem is that
-        // AcrylicBlur as a window-wide backdrop makes content unreadable over bright
-        // wallpapers. Options to revisit: per-panel acrylic (sidebar/titlebar only),
-        // minimum-tint enforcement in GlassBg, or a "smart tint" that reads wallpaper
-        // luminance and adjusts the GlassBg alpha accordingly.
+        // Crystal Glass effect: per-panel acrylic / smart-tint blur is deferred to
+        // Phase 27 (v0.9.0 accessibility + UX pass). The specular shimmer + prismatic
+        // layers below provide visual polish without requiring a window-wide AcrylicBlur
+        // backdrop (which makes content unreadable over bright wallpapers).
         TransparencyLevelHint = [WindowTransparencyLevel.None];
 
         // Dispose all cached ViewModels when the window closes.
@@ -60,6 +60,23 @@ public partial class MainWindow : Window
         // Hook drag-to-reorder once the visual tree is ready.
         Loaded += (_, _) =>
         {
+            // Restore window geometry from last session.
+            var settings = App.Services.GetRequiredService<SettingsService>();
+            if (settings.Current.LastWindowWidth > 0 && settings.Current.LastWindowHeight > 0)
+            {
+                Width  = settings.Current.LastWindowWidth;
+                Height = settings.Current.LastWindowHeight;
+            }
+            if (settings.Current.LastWindowX >= 0 && settings.Current.LastWindowY >= 0)
+            {
+                Position = new PixelPoint(settings.Current.LastWindowX, settings.Current.LastWindowY);
+            }
+            if (Enum.TryParse<WindowState>(settings.Current.LastWindowState, out var savedState))
+            {
+                WindowState = savedState;
+            }
+            // Active tab is restored by MainViewModel via DefaultTab binding (already wired).
+
             SetupNavDrag();
             // Shimmer timer is started only if glass is enabled (via SetGlassActive).
             // SettingsViewModel.ApplyBackdropMode calls SetGlassActive after settings load.
