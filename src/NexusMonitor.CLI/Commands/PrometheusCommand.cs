@@ -36,12 +36,7 @@ internal sealed class PrometheusCommand : AsyncCommand<PrometheusCommand.Setting
             $"[green]Serving metrics at[/] [link=http://localhost:{port}/metrics]http://localhost:{port}/metrics[/]");
         AnsiConsole.MarkupLine("[grey]Press Ctrl+C to stop.[/]");
 
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-        };
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Program.GlobalCts.Token);
 
         try
         {

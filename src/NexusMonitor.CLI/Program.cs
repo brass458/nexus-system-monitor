@@ -28,6 +28,14 @@ Log.Logger = new LoggerConfiguration()
 
 Log.Information("Nexus CLI starting");
 
+// Global cancellation: CTRL+C or process exit cancels all long-running commands.
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;      // prevent abrupt termination; let commands clean up
+    Program.GlobalCts.Cancel();
+};
+AppDomain.CurrentDomain.ProcessExit += (_, _) => Program.GlobalCts.Cancel();
+
 int exitCode = 0;
 try
 {
@@ -130,3 +138,9 @@ finally
 }
 
 return exitCode;
+
+// Partial class declaration so commands can access GlobalCts as Program.GlobalCts.
+internal static partial class Program
+{
+    internal static readonly CancellationTokenSource GlobalCts = new();
+}

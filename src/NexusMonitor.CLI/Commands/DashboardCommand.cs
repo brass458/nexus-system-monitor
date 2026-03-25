@@ -35,7 +35,7 @@ internal sealed class DashboardCommand : AsyncCommand
 
     public override async Task<int> ExecuteAsync(CommandContext context)
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Program.GlobalCts.Token);
 
         // Allow Q key to cancel
         _ = Task.Run(() =>
