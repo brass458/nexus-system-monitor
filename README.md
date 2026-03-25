@@ -153,7 +153,6 @@ This isn't a lowest-common-denominator approach. Nexus aims for the **union** of
 All tabs show real data on all three platforms. Windows has the deepest detail level (WMI hardware info, PDH counters, GPU engines). macOS and Linux provide the same interface and equivalent data through native APIs.
 
 **Platform-specific notes:**
-- **Disk Analyzer** is currently disabled on all platforms (separate work item)
 - **System Info tab** shows full WMI hardware inventory on Windows; hostname, OS, architecture, uptime, and RAM on macOS/Linux
 - **Gaming Mode** power plan switching on macOS may require `sudo` (pmset restriction). Process throttling works without elevation.
 - **ProBalance** on Linux under Wayland without a compositor that supports `xdotool` will treat all background processes equally (no foreground window detection). Fully functional on X11 and macOS.
