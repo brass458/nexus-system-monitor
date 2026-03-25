@@ -48,7 +48,7 @@ internal sealed class DinitBackend : ILinuxInitBackend
                 });
             }
         }
-        catch { }
+        catch (Exception ex) { /* ignored: dinitctl enumeration failed */ _ = ex; }
         return result;
     }
 
@@ -73,7 +73,7 @@ internal sealed class DinitBackend : ILinuxInitBackend
             });
             proc?.WaitForExit(5000);
         }
-        catch { }
+        catch (Exception ex) { /* ignored: dinitctl command execution failed */ _ = ex; }
     }
 
     private static string RunCapture(string cmd, string args)
@@ -91,9 +91,9 @@ internal sealed class DinitBackend : ILinuxInitBackend
             };
             proc.Start();
             var outputTask = proc.StandardOutput.ReadToEndAsync();
-            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch { } }
+            if (!proc.WaitForExit(3000)) { try { proc.Kill(); } catch (Exception ex) { /* ignored: process kill failed */ _ = ex; } }
             return outputTask.Result;
         }
-        catch { return string.Empty; }
+        catch (Exception ex) { /* ignored: dinitctl command execution failed, return empty */ _ = ex; return string.Empty; }
     }
 }

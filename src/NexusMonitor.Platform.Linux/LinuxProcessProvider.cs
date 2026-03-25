@@ -64,7 +64,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             var output = RunFile("getconf", "CLK_TCK");
             if (long.TryParse(output.Trim(), out var v) && v > 0) return v;
         }
-        catch { }
+        catch (Exception ex) { /* ignored: getconf CLK_TCK not available, fallback to 100 */ _ = ex; }
         return 100;
     }
 
@@ -83,10 +83,10 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
             };
             p.Start();
             var outputTask = p.StandardOutput.ReadToEndAsync();
-            if (!p.WaitForExit(2000)) { try { p.Kill(); } catch { } }
+            if (!p.WaitForExit(2000)) { try { p.Kill(); } catch (Exception ex) { /* ignored: process kill failed */ _ = ex; } }
             return outputTask.Result;
         }
-        catch { return string.Empty; }
+        catch (Exception ex) { /* ignored: process execution failed, return empty */ _ = ex; return string.Empty; }
     }
 
     // Shared multicast observable
@@ -143,14 +143,14 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                                 out var uptimeSec))
                 bootTime = now - TimeSpan.FromSeconds(uptimeSec);
         }
-        catch { }
+        catch (Exception ex) { /* ignored: /proc/uptime read failed */ _ = ex; }
 
         string[] pidDirs;
         try
         {
             pidDirs = Directory.GetDirectories("/proc");
         }
-        catch { return result; }
+        catch (Exception ex) { /* ignored: /proc directory enumeration failed */ _ = ex; return result; }
 
         foreach (var dir in pidDirs)
         {
@@ -162,7 +162,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 var info = ReadProcessInfo(pid, dir, now, bootTime);
                 if (info != null) result.Add(info);
             }
-            catch { }
+            catch (Exception ex) { /* ignored: process info read failed for this PID */ _ = ex; }
         }
 
         // Evict stale CPU, I/O, and static-field samples for dead PIDs
@@ -255,7 +255,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
         {
             imagePath = string.Empty;
             try { imagePath = new FileInfo(Path.Combine(procDir, "exe")).LinkTarget ?? string.Empty; }
-            catch { }
+            catch (Exception ex) { /* ignored: symlink read failed */ _ = ex; }
 
             cmdLine = string.Empty;
             try
@@ -263,7 +263,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 var rawCmd = File.ReadAllText(Path.Combine(procDir, "cmdline"));
                 cmdLine = rawCmd.Replace('\0', ' ').Trim();
             }
-            catch { }
+            catch (Exception ex) { /* ignored: cmdline read failed */ _ = ex; }
 
             userName = LookupUsername(uid);
             category = pid == s_currentPid
@@ -387,7 +387,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { /* ignored: /etc/passwd read failed, fallback to UID string */ _ = ex; }
         _uidCache[uid] = uid.ToString();
         return uid.ToString();
     }
@@ -493,7 +493,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 result.Add(new ModuleInfo(Path.GetFileName(path), path, baseAddr));
             }
         }
-        catch { }
+        catch (Exception ex) { /* ignored: /proc maps read failed */ _ = ex; }
 
         return result;
     }
@@ -526,10 +526,10 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
 
                     result.Add(new ThreadInfo(tid, pid, priority));
                 }
-                catch { }
+                catch (Exception ex) { /* ignored: thread stat read failed */ _ = ex; }
             }
         }
-        catch { }
+        catch (Exception ex) { /* ignored: task directory enumeration failed */ _ = ex; }
 
         return result;
     }
@@ -555,7 +555,7 @@ public sealed class LinuxProcessProvider : IProcessProvider, IDisposable
                 result.Add(new EnvironmentEntry(entry[..eq], entry[(eq + 1)..]));
             }
         }
-        catch { }
+        catch (Exception ex) { /* ignored: environ read failed */ _ = ex; }
 
         return result;
     }
