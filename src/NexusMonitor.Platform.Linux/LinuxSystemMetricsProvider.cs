@@ -28,7 +28,7 @@ public sealed class LinuxSystemMetricsProvider : ISystemMetricsProvider, IDispos
         public ulong f_flag;
         public ulong f_namemax;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
-        public ulong[] Spare;
+        public int[] Spare;
     }
 
     // ── Cached static data ─────────────────────────────────────────────────────
