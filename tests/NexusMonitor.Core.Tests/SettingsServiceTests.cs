@@ -326,6 +326,53 @@ public class SettingsServiceTests : IDisposable
         }
     }
 
+    // ── Session persistence ───────────────────────────────────────────────────
+
+    [Fact]
+    public void SessionFields_DefaultValues_AreCorrect()
+    {
+        WithSettings(null, svc =>
+        {
+            svc.Current.LastActiveTab.Should().Be(string.Empty);
+            svc.Current.LastWindowWidth.Should().Be(0);
+            svc.Current.LastWindowHeight.Should().Be(0);
+            svc.Current.LastWindowX.Should().Be(-1);
+            svc.Current.LastWindowY.Should().Be(-1);
+            svc.Current.LastWindowState.Should().Be("Normal");
+        });
+    }
+
+    [Fact]
+    public void SessionFields_PersistAcrossSaveAndReload()
+    {
+        var backup = File.Exists(SettingsPath) ? File.ReadAllText(SettingsPath) : null;
+        try
+        {
+            if (File.Exists(SettingsPath)) File.Delete(SettingsPath);
+
+            var svc1 = new SettingsService(MockFactory.CreateLogger<SettingsService>().Object);
+            svc1.Current.LastActiveTab    = "Processes";
+            svc1.Current.LastWindowWidth  = 1280;
+            svc1.Current.LastWindowHeight = 720;
+            svc1.Current.LastWindowX      = 100;
+            svc1.Current.LastWindowY      = 200;
+            svc1.Current.LastWindowState  = "Maximized";
+            svc1.Dispose();   // flushes synchronously
+
+            using var svc2 = new SettingsService(MockFactory.CreateLogger<SettingsService>().Object);
+            svc2.Current.LastActiveTab.Should().Be("Processes");
+            svc2.Current.LastWindowWidth.Should().Be(1280);
+            svc2.Current.LastWindowHeight.Should().Be(720);
+            svc2.Current.LastWindowX.Should().Be(100);
+            svc2.Current.LastWindowY.Should().Be(200);
+            svc2.Current.LastWindowState.Should().Be("Maximized");
+        }
+        finally
+        {
+            RestoreBackup(backup);
+        }
+    }
+
     // ── Timer cleanup ─────────────────────────────────────────────────────────
 
     [Fact]

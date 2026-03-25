@@ -134,4 +134,12 @@ public class AppSettings
     public int    LeakObservationWindowMinutes { get; set; } = 10;
     public double LeakRateThresholdMbPerHour   { get; set; } = 50;
     public double HandleLeakThresholdPerHour   { get; set; } = 100;
+
+    // ── Session persistence ─────────────────────────────────────────────────────
+    public string LastActiveTab    { get; set; } = string.Empty;
+    public double LastWindowWidth  { get; set; } = 0;
+    public double LastWindowHeight { get; set; } = 0;
+    public int    LastWindowX      { get; set; } = -1;
+    public int    LastWindowY      { get; set; } = -1;
+    public string LastWindowState  { get; set; } = "Normal";
 }
