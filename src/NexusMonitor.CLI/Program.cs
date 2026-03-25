@@ -34,7 +34,10 @@ Console.CancelKeyPress += (_, e) =>
     e.Cancel = true;      // prevent abrupt termination; let commands clean up
     Program.GlobalCts.Cancel();
 };
-AppDomain.CurrentDomain.ProcessExit += (_, _) => Program.GlobalCts.Cancel();
+AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+{
+    try { Program.GlobalCts.Cancel(); } catch (ObjectDisposedException) { }
+};
 
 int exitCode = 0;
 try
@@ -135,6 +138,8 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+    GlobalCts.Cancel();  // ensure cancellation is requested before dispose
+    GlobalCts.Dispose();
 }
 
 return exitCode;
