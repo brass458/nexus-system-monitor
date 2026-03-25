@@ -6,6 +6,7 @@ using NexusMonitor.Hosting;
 using Serilog;
 using Serilog.Events;
 using Spectre.Console.Cli;
+using System.Reflection;
 
 // ── Logging ──────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,8 @@ try
     app.Configure(config =>
     {
         config.SetApplicationName("nexus");
-        config.SetApplicationVersion("0.1.8.2");
+        config.SetApplicationVersion(
+            Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0");
 
         config.AddCommand<DashboardCommand>("dashboard")
             .WithDescription("Show a live system dashboard (default command)");
