@@ -54,6 +54,10 @@ public partial class CommandPaletteViewModel : ObservableObject
     /// <summary>Populates FilteredItems from _allItems based on SearchText filter.</summary>
     protected virtual void RefreshFilteredItems()
     {
+        // Reset IsSelected on all items before clearing
+        foreach (var item in _allItems)
+            item.IsSelected = false;
+
         FilteredItems.Clear();
         var term = SearchText?.Trim() ?? string.Empty;
         foreach (var item in _allItems)
@@ -66,6 +70,37 @@ public partial class CommandPaletteViewModel : ObservableObject
             }
         }
         SelectedIndex = 0;
+        // Ensure first item is marked as selected
+        if (FilteredItems.Count > 0)
+            FilteredItems[0].IsSelected = true;
+    }
+
+    /// <summary>Moves selection by delta, clamping to valid range.</summary>
+    public void MoveSelection(int delta)
+    {
+        if (FilteredItems.Count == 0) return;
+        var newIndex = SelectedIndex + delta;
+        SelectedIndex = Math.Clamp(newIndex, 0, FilteredItems.Count - 1);
+    }
+
+    /// <summary>Executes the selected item action and closes the palette.</summary>
+    public void ExecuteSelected()
+    {
+        if (SelectedIndex >= 0 && SelectedIndex < FilteredItems.Count)
+        {
+            FilteredItems[SelectedIndex].Execute();
+            Close();
+        }
+    }
+
+    /// <summary>Called by CommunityToolkit.Mvvm when SelectedIndex changes.</summary>
+    partial void OnSelectedIndexChanged(int oldValue, int newValue)
+    {
+        // Update IsSelected on items for visual highlight
+        if (oldValue >= 0 && oldValue < FilteredItems.Count)
+            FilteredItems[oldValue].IsSelected = false;
+        if (newValue >= 0 && newValue < FilteredItems.Count)
+            FilteredItems[newValue].IsSelected = true;
     }
 
     /// <summary>Called by CommunityToolkit.Mvvm when SearchText changes.</summary>

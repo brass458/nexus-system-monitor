@@ -227,4 +227,84 @@ public class CommandPaletteViewModelTests
 
         vm.FilteredItems.Should().HaveCount(2);
     }
+
+    [Fact]
+    public void MoveSelection_Down_IncrementsSelectedIndex()
+    {
+        var vm = CreateVm(3);
+        vm.Open(); // SelectedIndex = 0
+        vm.MoveSelection(1);
+        vm.SelectedIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void MoveSelection_Up_DecrementsSelectedIndex()
+    {
+        var vm = CreateVm(3);
+        vm.Open();
+        vm.SelectedIndex = 2;
+        vm.MoveSelection(-1);
+        vm.SelectedIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void MoveSelection_AtBottom_ClampsToLastItem()
+    {
+        var vm = CreateVm(3);
+        vm.Open(); // 3 items, indices 0-2
+        vm.SelectedIndex = 2;
+        vm.MoveSelection(1); // would be 3, clamped to 2
+        vm.SelectedIndex.Should().Be(2);
+    }
+
+    [Fact]
+    public void MoveSelection_AtTop_ClampsToZero()
+    {
+        var vm = CreateVm(3);
+        vm.Open(); // SelectedIndex = 0
+        vm.MoveSelection(-1); // would be -1, clamped to 0
+        vm.SelectedIndex.Should().Be(0);
+    }
+
+    [Fact]
+    public void MoveSelection_EmptyList_DoesNotThrow()
+    {
+        var vm = new CommandPaletteViewModel(Array.Empty<CommandPaletteItem>());
+        vm.Open();
+        var act = () => vm.MoveSelection(1);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ExecuteSelected_RunsActionAndCloses()
+    {
+        bool executed = false;
+        var items = new[] { new CommandPaletteItem("Test", "", "Navigate", () => executed = true) };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+        vm.ExecuteSelected();
+        executed.Should().BeTrue();
+        vm.IsOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ExecuteSelected_OutOfRange_DoesNotThrow()
+    {
+        var vm = new CommandPaletteViewModel(Array.Empty<CommandPaletteItem>());
+        vm.Open();
+        var act = () => vm.ExecuteSelected();
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void MoveSelection_UpdatesIsSelectedOnItems()
+    {
+        var vm = CreateVm(3);
+        vm.Open(); // item 0 selected
+        vm.FilteredItems[0].IsSelected.Should().BeTrue();
+
+        vm.MoveSelection(1); // move to item 1
+        vm.FilteredItems[0].IsSelected.Should().BeFalse();
+        vm.FilteredItems[1].IsSelected.Should().BeTrue();
+    }
 }
