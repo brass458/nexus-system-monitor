@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NexusMonitor.Core.Models;
+using NexusMonitor.Core.ViewModels;
 using Xunit;
 
 namespace NexusMonitor.Core.Tests;
@@ -58,5 +59,76 @@ public class CommandPaletteItemTests
 
         fired.Should().BeTrue();
         item.StateLabel.Should().Be("ON");
+    }
+}
+
+public class CommandPaletteViewModelTests
+{
+    private static CommandPaletteViewModel CreateVm(int itemCount = 3)
+    {
+        var items = Enumerable.Range(0, itemCount)
+            .Select(i => new CommandPaletteItem($"Item {i}", "", "Navigate", () => { }))
+            .ToList();
+        return new CommandPaletteViewModel(items);
+    }
+
+    [Fact]
+    public void Open_SetsIsOpenTrue()
+    {
+        var vm = CreateVm();
+        vm.Open();
+        vm.IsOpen.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Close_SetsIsOpenFalse()
+    {
+        var vm = CreateVm();
+        vm.Open();
+        vm.Close();
+        vm.IsOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Toggle_WhenClosed_Opens()
+    {
+        var vm = CreateVm();
+        vm.Toggle();
+        vm.IsOpen.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Toggle_WhenOpen_Closes()
+    {
+        var vm = CreateVm();
+        vm.Open();
+        vm.Toggle();
+        vm.IsOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Open_ClearsSearchText()
+    {
+        var vm = CreateVm();
+        vm.SearchText = "something";
+        vm.Open();
+        vm.SearchText.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public void Open_PopulatesFilteredItemsWithAllItems()
+    {
+        var vm = CreateVm(itemCount: 5);
+        vm.Open();
+        vm.FilteredItems.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void Open_ResetsSelectedIndexToZero()
+    {
+        var vm = CreateVm();
+        vm.SelectedIndex = 2;
+        vm.Open();
+        vm.SelectedIndex.Should().Be(0);
     }
 }
