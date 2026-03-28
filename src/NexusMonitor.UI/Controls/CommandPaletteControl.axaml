@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusMonitor.Core.ViewModels"
+             xmlns:models="using:NexusMonitor.Core.Models"
+             x:Class="NexusMonitor.UI.Controls.CommandPaletteControl"
+             x:DataType="vm:CommandPaletteViewModel"
+             IsVisible="{Binding IsOpen}">
+
+  <UserControl.Styles>
+
+    <!-- Selected item highlight -->
+    <Style Selector="Button.palette-item:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="Button.palette-item.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="Button.palette-item /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+  </UserControl.Styles>
+
+  <!-- Full-screen panel: backdrop layer + card layer -->
+  <Panel>
+
+    <!-- Backdrop: semi-transparent dimmer, click to close -->
+    <Border Background="#80000000"
+            PointerPressed="OnBackdropPointerPressed"/>
+
+    <!-- Palette card: centered, top-third position -->
+    <Border x:Name="PaletteCard"
+            MaxWidth="500"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,120,0,0"
+            CornerRadius="{StaticResource CornerLG}"
+            Background="{DynamicResource GlassBgBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            BoxShadow="0 8 40 0 #66000000, 0 2 8 0 #33000000"
+            PointerPressed="OnCardPointerPressed">
+
+      <StackPanel>
+
+        <!-- Search box row -->
+        <TextBox x:Name="SearchBox"
+                 Text="{Binding SearchText}"
+                 Watermark="Type a command..."
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Padding="16,14"
+                 FontSize="{StaticResource NxFont13}"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 CaretBrush="{DynamicResource TextPrimaryBrush}"
+                 KeyDown="OnSearchKeyDown"/>
+
+        <!-- Divider -->
+        <Border Height="1"
+                Background="{DynamicResource SeparatorBrush}"
+                Margin="0"/>
+
+        <!-- Results list -->
+        <ScrollViewer MaxHeight="360"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+
+          <ItemsControl ItemsSource="{Binding FilteredItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:CommandPaletteItem">
+
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        VerticalContentAlignment="Center"
+                        Padding="12,8"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Classes="palette-item"
+                        Classes.selected="{Binding IsSelected}"
+                        Click="OnItemButtonClick">
+
+                  <Grid ColumnDefinitions="28,*,Auto,Auto"
+                        VerticalAlignment="Center">
+
+                    <!-- Icon glyph -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Icon}"
+                               FontFamily="{StaticResource NexusIcons}"
+                               FontSize="{StaticResource NxFont13}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"/>
+
+                    <!-- Label -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Label}"
+                               FontSize="{StaticResource NxFont13}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="4,0,8,0"/>
+
+                    <!-- Category badge -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding Category}"
+                               FontSize="{StaticResource NxFont10}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+
+                    <!-- State badge (ON/OFF/ACTIVE), hidden when null/empty -->
+                    <Border Grid.Column="3"
+                            CornerRadius="4"
+                            Padding="6,2"
+                            Background="{DynamicResource BgElevatedBrush}"
+                            BorderBrush="{DynamicResource GlassBorderBrush}"
+                            BorderThickness="1"
+                            IsVisible="{Binding StateLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="{Binding StateLabel}"
+                                 FontSize="{StaticResource NxFont10}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontWeight="SemiBold"/>
+                    </Border>
+
+                  </Grid>
+                </Button>
+
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </ScrollViewer>
+
+      </StackPanel>
+    </Border>
+
+  </Panel>
+
+</UserControl>
