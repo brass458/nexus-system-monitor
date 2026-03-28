@@ -21,14 +21,14 @@
 
   </UserControl.Styles>
 
+  <UserControl.Transitions>
+    <Transitions>
+      <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+    </Transitions>
+  </UserControl.Transitions>
+
   <!-- Full-screen panel: backdrop layer + card layer -->
   <Panel>
-
-    <Panel.Transitions>
-      <Transitions>
-        <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-      </Transitions>
-    </Panel.Transitions>
 
     <!-- Backdrop: semi-transparent dimmer, click to close -->
     <Border Background="#80000000"
