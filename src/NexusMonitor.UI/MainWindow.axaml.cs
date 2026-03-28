@@ -56,6 +56,12 @@ public partial class MainWindow : Window
         // backdrop (which makes content unreadable over bright wallpapers).
         TransparencyLevelHint = [WindowTransparencyLevel.None];
 
+        // Initialize the command palette ViewModel eagerly so that
+        // CommandPaletteControl's IsVisible="{Binding IsOpen}" binding has a DataContext
+        // from the moment the window is created. Without this, the binding has no source
+        // and Avalonia defaults IsVisible to true — showing the backdrop overlay on startup.
+        InitializeCommandPalette();
+
         // Dispose all cached ViewModels when the window closes.
         Closed += (_, _) =>
         {
@@ -219,56 +225,76 @@ public partial class MainWindow : Window
 
     // ── Command Palette ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Eagerly initializes the command palette ViewModel and sets DataContext on the
+    /// overlay control. Called from the constructor so the IsVisible="{Binding IsOpen}"
+    /// binding always has a source — preventing the overlay from appearing on startup
+    /// when the DataContext would otherwise be null (causing IsVisible to default to true).
+    /// </summary>
+    private void InitializeCommandPalette()
+    {
+        var settingsSvc = App.Services.GetRequiredService<SettingsService>();
+        var appSettings = settingsSvc.Current;
+        var onSave      = (Action)settingsSvc.Save;
+
+        // Navigation items are not yet available at construction time (DataContext not set),
+        // so we start with a lightweight VM containing only settings-based items.
+        // Navigation items are added lazily on first toggle (below) once DataContext is set.
+        var items = new List<CommandPaletteItem>();
+
+        // Toggle items — built with static helper
+        items.Add(CommandPaletteViewModel.MakeToggle("Gaming Mode", "\uF451",
+            () => appSettings.GamingModeEnabled,
+            v => appSettings.GamingModeEnabled = v,
+            onSave));
+        items.Add(CommandPaletteViewModel.MakeToggle("ProBalance", "\uEA51",
+            () => appSettings.ProBalanceEnabled,
+            v => appSettings.ProBalanceEnabled = v,
+            onSave));
+        items.Add(CommandPaletteViewModel.MakeToggle("Desktop Notifications", "\uF115",
+            () => appSettings.DesktopNotificationsEnabled,
+            v => appSettings.DesktopNotificationsEnabled = v,
+            onSave));
+
+        // Theme items
+        items.Add(CommandPaletteViewModel.MakeTheme("Dark Theme",   "\uF4A7", "Dark",   appSettings, onSave, ApplyTheme));
+        items.Add(CommandPaletteViewModel.MakeTheme("Light Theme",  "\uF4A6", "Light",  appSettings, onSave, ApplyTheme));
+        items.Add(CommandPaletteViewModel.MakeTheme("System Theme", "\uF08C", "System", appSettings, onSave, ApplyTheme));
+
+        _commandPaletteVm = new CommandPaletteViewModel(
+            items,
+            appSettings,
+            onSave,
+            onThemeChanged: ApplyTheme);
+
+        CommandPalette.DataContext = _commandPaletteVm;
+    }
+
+    private bool _navItemsAddedToPalette;
+
     private void ToggleCommandPalette()
     {
         var mainVm = DataContext as MainViewModel;
         if (mainVm is null) return;
 
-        if (_commandPaletteVm is null)
+        // Add navigation items once, on first toggle, when DataContext is available.
+        if (!_navItemsAddedToPalette)
         {
-            var settingsSvc = App.Services.GetRequiredService<SettingsService>();
-            var appSettings = settingsSvc.Current;
-            var onSave      = (Action)settingsSvc.Save;
-
-            var items = new List<CommandPaletteItem>();
-
-            // Navigation items from sidebar NavItems
-            foreach (var nav in mainVm.NavItems.Where(n => !n.IsSeparator))
-            {
-                var captured = nav;
-                items.Add(new CommandPaletteItem(nav.Label, nav.Icon, "Navigate",
-                    execute: () => mainVm.Navigate(captured)));
-            }
-
-            // Toggle items — built with static helper; no VM instance needed yet
-            items.Add(CommandPaletteViewModel.MakeToggle("Gaming Mode", "\uF451",
-                () => appSettings.GamingModeEnabled,
-                v => appSettings.GamingModeEnabled = v,
-                onSave));
-            items.Add(CommandPaletteViewModel.MakeToggle("ProBalance", "\uEA51",
-                () => appSettings.ProBalanceEnabled,
-                v => appSettings.ProBalanceEnabled = v,
-                onSave));
-            items.Add(CommandPaletteViewModel.MakeToggle("Desktop Notifications", "\uF115",
-                () => appSettings.DesktopNotificationsEnabled,
-                v => appSettings.DesktopNotificationsEnabled = v,
-                onSave));
-
-            // Theme items
-            items.Add(CommandPaletteViewModel.MakeTheme("Dark Theme",   "\uF4A7", "Dark",   appSettings, onSave, ApplyTheme));
-            items.Add(CommandPaletteViewModel.MakeTheme("Light Theme",  "\uF4A6", "Light",  appSettings, onSave, ApplyTheme));
-            items.Add(CommandPaletteViewModel.MakeTheme("System Theme", "\uF08C", "System", appSettings, onSave, ApplyTheme));
-
-            _commandPaletteVm = new CommandPaletteViewModel(
-                items,
-                appSettings,
-                onSave,
-                onThemeChanged: ApplyTheme);
-
-            CommandPalette.DataContext = _commandPaletteVm;
+            _navItemsAddedToPalette = true;
+            var navItems = mainVm.NavItems
+                .Where(n => !n.IsSeparator)
+                .Select(nav =>
+                {
+                    var captured = nav;
+                    return new CommandPaletteItem(nav.Label, nav.Icon, "Navigate",
+                        execute: () => mainVm.Navigate(captured));
+                })
+                .ToList();
+            // Prepend navigation items before the settings-based items already in the list
+            _commandPaletteVm!.PrependItems(navItems);
         }
 
-        _commandPaletteVm.Toggle();
+        _commandPaletteVm!.Toggle();
     }
 
     /// <summary>

@@ -412,4 +412,26 @@ public class CommandPaletteToggleThemeTests
         var refreshedItem = vm.FilteredItems.First(i => i.Label == "Gaming Mode");
         refreshedItem.StateLabel.Should().Be("ON");
     }
+
+    [Fact]
+    public void ThemeExecute_CallsOnThemeChangedWithCorrectMode()
+    {
+        string? themeChangedValue = null;
+        var (vm, _) = CreateVmWithToggles(onThemeChanged: mode => themeChangedValue = mode);
+        vm.Open();
+
+        var darkItem = vm.FilteredItems.First(i => i.Label == "Dark Theme");
+        darkItem.Execute();
+        themeChangedValue.Should().Be("Dark");
+
+        themeChangedValue = null;
+        var lightItem = vm.FilteredItems.First(i => i.Label == "Light Theme");
+        lightItem.Execute();
+        themeChangedValue.Should().Be("Light");
+
+        themeChangedValue = null;
+        var systemItem = vm.FilteredItems.First(i => i.Label == "System Theme");
+        systemItem.Execute();
+        themeChangedValue.Should().Be("System");
+    }
 }

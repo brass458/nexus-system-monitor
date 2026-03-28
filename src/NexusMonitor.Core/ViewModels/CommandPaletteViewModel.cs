@@ -12,6 +12,13 @@ public partial class CommandPaletteViewModel : ObservableObject
 {
     protected readonly List<CommandPaletteItem> _allItems = new();
 
+    /// <summary>
+    /// Inserts additional items at the beginning of the all-items list.
+    /// Called by the UI layer to prepend navigation items once they are available.
+    /// </summary>
+    public void PrependItems(IEnumerable<CommandPaletteItem> items)
+        => _allItems.InsertRange(0, items);
+
     private readonly AppSettings? _settings;
     private readonly Action? _onSave;
     private readonly Action<string>? _onThemeChanged;
@@ -59,8 +66,7 @@ public partial class CommandPaletteViewModel : ObservableObject
     {
         RefreshToggleStates();
         SearchText = string.Empty;
-        RefreshFilteredItems();
-        SelectedIndex = 0;
+        RefreshFilteredItems(); // sets SelectedIndex = 0 internally
         IsOpen = true;
     }
 
