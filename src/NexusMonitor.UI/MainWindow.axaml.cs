@@ -6,16 +6,22 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Transformation;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
+using NexusMonitor.Core.ViewModels;
 using NexusMonitor.UI.ViewModels;
 
 namespace NexusMonitor.UI;
 
 public partial class MainWindow : Window
 {
+    // ── Command Palette ───────────────────────────────────────────────────────
+    private CommandPaletteViewModel? _commandPaletteVm;
+
     // ── Drag-to-reorder state ────────────────────────────────────────────────
     private NavItem? _dragItem;
     private int      _dragFromIndex;
@@ -162,6 +168,12 @@ public partial class MainWindow : Window
                 if (settingsNav is not null) vm.Navigate(settingsNav);
                 e.Handled = true;
                 break;
+
+            // Ctrl+K — toggle Command Palette
+            case Key.K when ctrl:
+                ToggleCommandPalette();
+                e.Handled = true;
+                break;
         }
     }
 
@@ -203,6 +215,76 @@ public partial class MainWindow : Window
             }
         }
         return null;
+    }
+
+    // ── Command Palette ───────────────────────────────────────────────────────
+
+    private void ToggleCommandPalette()
+    {
+        var mainVm = DataContext as MainViewModel;
+        if (mainVm is null) return;
+
+        if (_commandPaletteVm is null)
+        {
+            var settingsSvc = App.Services.GetRequiredService<SettingsService>();
+            var appSettings = settingsSvc.Current;
+            var onSave      = (Action)settingsSvc.Save;
+
+            var items = new List<CommandPaletteItem>();
+
+            // Navigation items from sidebar NavItems
+            foreach (var nav in mainVm.NavItems.Where(n => !n.IsSeparator))
+            {
+                var captured = nav;
+                items.Add(new CommandPaletteItem(nav.Label, nav.Icon, "Navigate",
+                    execute: () => mainVm.Navigate(captured)));
+            }
+
+            // Toggle items — built with static helper; no VM instance needed yet
+            items.Add(CommandPaletteViewModel.MakeToggle("Gaming Mode", "\uF451",
+                () => appSettings.GamingModeEnabled,
+                v => appSettings.GamingModeEnabled = v,
+                onSave));
+            items.Add(CommandPaletteViewModel.MakeToggle("ProBalance", "\uEA51",
+                () => appSettings.ProBalanceEnabled,
+                v => appSettings.ProBalanceEnabled = v,
+                onSave));
+            items.Add(CommandPaletteViewModel.MakeToggle("Desktop Notifications", "\uF115",
+                () => appSettings.DesktopNotificationsEnabled,
+                v => appSettings.DesktopNotificationsEnabled = v,
+                onSave));
+
+            // Theme items
+            items.Add(CommandPaletteViewModel.MakeTheme("Dark Theme",   "\uF4A7", "Dark",   appSettings, onSave, ApplyTheme));
+            items.Add(CommandPaletteViewModel.MakeTheme("Light Theme",  "\uF4A6", "Light",  appSettings, onSave, ApplyTheme));
+            items.Add(CommandPaletteViewModel.MakeTheme("System Theme", "\uF08C", "System", appSettings, onSave, ApplyTheme));
+
+            _commandPaletteVm = new CommandPaletteViewModel(
+                items,
+                appSettings,
+                onSave,
+                onThemeChanged: ApplyTheme);
+
+            CommandPalette.DataContext = _commandPaletteVm;
+        }
+
+        _commandPaletteVm.Toggle();
+    }
+
+    /// <summary>
+    /// Applies a ThemeMode string ("Dark" | "Light" | "System") to the running application.
+    /// Mirrors the pattern used in SettingsViewModel.ApplyAllVisuals().
+    /// </summary>
+    private static void ApplyTheme(string themeMode)
+    {
+        if (Application.Current is null) return;
+
+        Application.Current.RequestedThemeVariant = themeMode switch
+        {
+            "Dark"  => ThemeVariant.Dark,
+            "Light" => ThemeVariant.Light,
+            _       => App.DetectSystemTheme()
+        };
     }
 
     // ── macOS: traffic light clearance ──────────────────────────────────────

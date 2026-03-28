@@ -405,5 +405,11 @@
                                 IsHitTestVisible="False"
                                 ZIndex="100"/>
 
+    <!-- ===== COMMAND PALETTE OVERLAY ===== -->
+    <!-- Spans entire window; sits above notifications. DataContext wired in code-behind on first Ctrl+K. -->
+    <controls:CommandPaletteControl x:Name="CommandPalette"
+                                     Grid.Row="0" Grid.RowSpan="2"
+                                     ZIndex="200"/>
+
   </Grid>
 </Window>

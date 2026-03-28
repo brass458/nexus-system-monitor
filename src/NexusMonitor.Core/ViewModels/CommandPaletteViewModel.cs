@@ -97,13 +97,25 @@ public partial class CommandPaletteViewModel : ObservableObject
         string icon,
         Func<bool> getState,
         Action<bool> setState)
+        => MakeToggle(label, icon, getState, setState, _onSave);
+
+    /// <summary>
+    /// Static factory helper — creates a Toggle palette item wired to a bool getter/setter.
+    /// Can be called before a CommandPaletteViewModel instance is created.
+    /// </summary>
+    public static CommandPaletteItem MakeToggle(
+        string label,
+        string icon,
+        Func<bool> getState,
+        Action<bool> setState,
+        Action? onSave)
     {
         var item = new CommandPaletteItem(
             label, icon, "Toggle",
             execute: () =>
             {
                 setState(!getState());
-                _onSave?.Invoke();
+                onSave?.Invoke();
             },
             stateLabel: getState() ? "ON" : "OFF");
 
@@ -121,21 +133,34 @@ public partial class CommandPaletteViewModel : ObservableObject
         string label,
         string icon,
         string modeValue)
+        => MakeTheme(label, icon, modeValue, _settings, _onSave, _onThemeChanged);
+
+    /// <summary>
+    /// Static factory helper — creates a Theme palette item for a specific ThemeMode value.
+    /// Can be called before a CommandPaletteViewModel instance is created.
+    /// </summary>
+    public static CommandPaletteItem MakeTheme(
+        string label,
+        string icon,
+        string modeValue,
+        AppSettings? settings,
+        Action? onSave,
+        Action<string>? onThemeChanged)
     {
         var item = new CommandPaletteItem(
             label, icon, "Theme",
             execute: () =>
             {
-                if (_settings != null)
-                    _settings.ThemeMode = modeValue;
-                _onSave?.Invoke();
-                _onThemeChanged?.Invoke(modeValue);
+                if (settings != null)
+                    settings.ThemeMode = modeValue;
+                onSave?.Invoke();
+                onThemeChanged?.Invoke(modeValue);
             },
             stateLabel: null);
 
         item.StateRefresher = () =>
-            _settings != null
-            && string.Equals(_settings.ThemeMode, modeValue, StringComparison.OrdinalIgnoreCase)
+            settings != null
+            && string.Equals(settings.ThemeMode, modeValue, StringComparison.OrdinalIgnoreCase)
                 ? "ACTIVE"
                 : null;
 
