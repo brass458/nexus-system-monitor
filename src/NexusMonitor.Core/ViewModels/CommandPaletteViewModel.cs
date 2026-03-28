@@ -51,12 +51,23 @@ public partial class CommandPaletteViewModel : ObservableObject
         else Open();
     }
 
-    /// <summary>Populates FilteredItems from _allItems. Overridden in Task 3 to add filter logic.</summary>
+    /// <summary>Populates FilteredItems from _allItems based on SearchText filter.</summary>
     protected virtual void RefreshFilteredItems()
     {
         FilteredItems.Clear();
+        var term = SearchText?.Trim() ?? string.Empty;
         foreach (var item in _allItems)
-            FilteredItems.Add(item);
+        {
+            if (term.Length == 0
+                || item.Label.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || item.Category.Contains(term, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredItems.Add(item);
+            }
+        }
         SelectedIndex = 0;
     }
+
+    /// <summary>Called by CommunityToolkit.Mvvm when SearchText changes.</summary>
+    partial void OnSearchTextChanged(string value) => RefreshFilteredItems();
 }

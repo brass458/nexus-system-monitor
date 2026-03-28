@@ -131,4 +131,100 @@ public class CommandPaletteViewModelTests
         vm.Open();
         vm.SelectedIndex.Should().Be(0);
     }
+
+    [Fact]
+    public void Filter_EmptyString_ReturnsAllItems()
+    {
+        var vm = CreateVm(3);
+        vm.Open(); // SearchText is "", all items
+        vm.FilteredItems.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Filter_ByLabel_ReturnsMatchingItems()
+    {
+        var items = new[]
+        {
+            new CommandPaletteItem("Dashboard", "", "Navigate", () => { }),
+            new CommandPaletteItem("Network", "", "Navigate", () => { }),
+            new CommandPaletteItem("Processes", "", "Navigate", () => { }),
+        };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+
+        vm.SearchText = "dash";
+
+        vm.FilteredItems.Should().HaveCount(1);
+        vm.FilteredItems[0].Label.Should().Be("Dashboard");
+    }
+
+    [Fact]
+    public void Filter_ByCategory_ReturnsMatchingItems()
+    {
+        var items = new[]
+        {
+            new CommandPaletteItem("Dashboard", "", "Navigate", () => { }),
+            new CommandPaletteItem("Gaming Mode", "", "Toggle", () => { }),
+        };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+
+        vm.SearchText = "toggle";
+
+        vm.FilteredItems.Should().HaveCount(1);
+        vm.FilteredItems[0].Label.Should().Be("Gaming Mode");
+    }
+
+    [Fact]
+    public void Filter_CaseInsensitive()
+    {
+        var items = new[] { new CommandPaletteItem("Dashboard", "", "Navigate", () => { }) };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+
+        vm.SearchText = "DASH";
+
+        vm.FilteredItems.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Filter_NoMatch_ReturnsEmpty()
+    {
+        var items = new[] { new CommandPaletteItem("Dashboard", "", "Navigate", () => { }) };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+
+        vm.SearchText = "xyz_no_match";
+
+        vm.FilteredItems.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Filter_ResetsSelectedIndexToZero()
+    {
+        var vm = CreateVm(3);
+        vm.Open();
+        vm.SelectedIndex = 2;
+
+        vm.SearchText = "Item";
+
+        vm.SelectedIndex.Should().Be(0);
+    }
+
+    [Fact]
+    public void Filter_PartialMatch_MultipleResults()
+    {
+        var items = new[]
+        {
+            new CommandPaletteItem("Dashboard", "", "Navigate", () => { }),
+            new CommandPaletteItem("Dark Theme", "", "Theme", () => { }),
+            new CommandPaletteItem("Network", "", "Navigate", () => { }),
+        };
+        var vm = new CommandPaletteViewModel(items);
+        vm.Open();
+
+        vm.SearchText = "d";
+
+        vm.FilteredItems.Should().HaveCount(2);
+    }
 }
