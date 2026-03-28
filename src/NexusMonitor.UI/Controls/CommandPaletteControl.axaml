@@ -26,7 +26,13 @@
 
     <!-- Backdrop: semi-transparent dimmer, click to close -->
     <Border Background="#80000000"
-            PointerPressed="OnBackdropPointerPressed"/>
+            PointerPressed="OnBackdropPointerPressed">
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+        </Transitions>
+      </Border.Transitions>
+    </Border>
 
     <!-- Palette card: centered, top-third position -->
     <Border x:Name="PaletteCard"
@@ -40,6 +46,12 @@
             BorderThickness="1"
             BoxShadow="0 8 40 0 #66000000, 0 2 8 0 #33000000"
             PointerPressed="OnCardPointerPressed">
+
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+        </Transitions>
+      </Border.Transitions>
 
       <StackPanel>
 
@@ -65,7 +77,7 @@
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
 
-          <ItemsControl ItemsSource="{Binding FilteredItems}">
+          <ItemsControl x:Name="ItemsList" ItemsSource="{Binding FilteredItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="models:CommandPaletteItem">
 
