@@ -308,3 +308,108 @@ public class CommandPaletteViewModelTests
         vm.FilteredItems[1].IsSelected.Should().BeTrue();
     }
 }
+
+public class CommandPaletteToggleThemeTests
+{
+    /// <summary>
+    /// Creates a ViewModel with settings wired in plus two toggle items and three theme items.
+    /// Returns the VM and the AppSettings so tests can inspect/mutate state directly.
+    /// </summary>
+    private static (CommandPaletteViewModel vm, AppSettings settings) CreateVmWithToggles(
+        string initialTheme = "Dark",
+        Action? onSave = null,
+        Action<string>? onThemeChanged = null)
+    {
+        var appSettings = new AppSettings { GamingModeEnabled = false, ProBalanceEnabled = false, ThemeMode = initialTheme };
+        var vm = new CommandPaletteViewModel(
+            Array.Empty<CommandPaletteItem>(),
+            settings: appSettings,
+            onSave: onSave,
+            onThemeChanged: onThemeChanged);
+
+        // Build toggle + theme items via the helpers and add them to a new VM that holds them
+        var gamingToggle   = vm.MakeToggle("Gaming Mode",   "\uF451", () => appSettings.GamingModeEnabled,  v => appSettings.GamingModeEnabled  = v);
+        var probalToggle   = vm.MakeToggle("ProBalance",    "\uF1C0", () => appSettings.ProBalanceEnabled,  v => appSettings.ProBalanceEnabled   = v);
+        var darkTheme      = vm.MakeTheme("Dark Theme",     "\uF468", "Dark");
+        var lightTheme     = vm.MakeTheme("Light Theme",    "\uF07C", "Light");
+        var systemTheme    = vm.MakeTheme("System Theme",   "\uF108", "System");
+
+        var items = new CommandPaletteItem[] { gamingToggle, probalToggle, darkTheme, lightTheme, systemTheme };
+        var finalVm = new CommandPaletteViewModel(items, appSettings, onSave, onThemeChanged);
+        return (finalVm, appSettings);
+    }
+
+    [Fact]
+    public void ToggleItems_HaveStateBadges_ON_or_OFF()
+    {
+        var (vm, settings) = CreateVmWithToggles();
+        vm.Open();
+
+        // GamingMode and ProBalance both start false → "OFF"
+        var gamingItem = vm.FilteredItems.First(i => i.Label == "Gaming Mode");
+        var probalItem = vm.FilteredItems.First(i => i.Label == "ProBalance");
+
+        gamingItem.StateLabel.Should().Be("OFF");
+        probalItem.StateLabel.Should().Be("OFF");
+
+        // Flip gaming mode on directly, re-open to refresh
+        settings.GamingModeEnabled = true;
+        vm.Open();
+
+        gamingItem = vm.FilteredItems.First(i => i.Label == "Gaming Mode");
+        gamingItem.StateLabel.Should().Be("ON");
+    }
+
+    [Fact]
+    public void Open_RefreshesToggleStates()
+    {
+        var (vm, settings) = CreateVmWithToggles();
+        vm.Open();
+
+        // Externally flip ProBalance
+        settings.ProBalanceEnabled = true;
+
+        // Re-open — RefreshToggleStates should pick up the change
+        vm.Open();
+
+        var probalItem = vm.FilteredItems.First(i => i.Label == "ProBalance");
+        probalItem.StateLabel.Should().Be("ON");
+    }
+
+    [Fact]
+    public void ThemeItems_ShowACTIVE_OnCurrentTheme()
+    {
+        // Initial theme = "Dark"
+        var (vm, _) = CreateVmWithToggles(initialTheme: "Dark");
+        vm.Open();
+
+        var darkItem   = vm.FilteredItems.First(i => i.Label == "Dark Theme");
+        var lightItem  = vm.FilteredItems.First(i => i.Label == "Light Theme");
+        var systemItem = vm.FilteredItems.First(i => i.Label == "System Theme");
+
+        darkItem.StateLabel.Should().Be("ACTIVE");
+        lightItem.StateLabel.Should().BeNull();
+        systemItem.StateLabel.Should().BeNull();
+    }
+
+    [Fact]
+    public void ToggleExecute_FlipsSettingAndUpdatesState()
+    {
+        bool saveCalled = false;
+        var (vm, settings) = CreateVmWithToggles(onSave: () => saveCalled = true);
+        vm.Open();
+
+        // Gaming Mode starts OFF; find and execute it
+        var gamingItem = vm.FilteredItems.First(i => i.Label == "Gaming Mode");
+        gamingItem.Execute();
+
+        // Setting should be flipped
+        settings.GamingModeEnabled.Should().BeTrue();
+        saveCalled.Should().BeTrue();
+
+        // Re-open to refresh badges
+        vm.Open();
+        var refreshedItem = vm.FilteredItems.First(i => i.Label == "Gaming Mode");
+        refreshedItem.StateLabel.Should().Be("ON");
+    }
+}

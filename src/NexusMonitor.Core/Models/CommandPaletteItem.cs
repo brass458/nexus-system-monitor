@@ -18,6 +18,13 @@ public partial class CommandPaletteItem : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// Optional delegate called by <see cref="NexusMonitor.Core.ViewModels.CommandPaletteViewModel.RefreshToggleStates"/>
+    /// to re-derive the current state badge from live settings.
+    /// Returns "ON" / "OFF" / "ACTIVE" / null.
+    /// </summary>
+    internal Func<string?>? StateRefresher { get; set; }
+
     public CommandPaletteItem(string label, string icon, string category, Action execute, string? stateLabel = null)
     {
         Label = label;

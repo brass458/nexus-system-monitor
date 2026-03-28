@@ -12,6 +12,10 @@ public partial class CommandPaletteViewModel : ObservableObject
 {
     protected readonly List<CommandPaletteItem> _allItems = new();
 
+    private readonly AppSettings? _settings;
+    private readonly Action? _onSave;
+    private readonly Action<string>? _onThemeChanged;
+
     [ObservableProperty]
     private string _searchText = string.Empty;
 
@@ -28,12 +32,32 @@ public partial class CommandPaletteViewModel : ObservableObject
     /// Items are built by the UI layer (MainWindow) from NavItems + toggle definitions.
     /// </summary>
     public CommandPaletteViewModel(IReadOnlyList<CommandPaletteItem> items)
+        : this(items, settings: null, onSave: null, onThemeChanged: null)
     {
+    }
+
+    /// <summary>
+    /// Constructs the ViewModel with settings wired in for toggle and theme commands.
+    /// </summary>
+    /// <param name="items">Pre-built palette items (Navigate / Toggle / Theme).</param>
+    /// <param name="settings">Live AppSettings instance; null = no toggle/theme state tracking.</param>
+    /// <param name="onSave">Called after each toggle/theme execute (e.g. settingsService.Save()).</param>
+    /// <param name="onThemeChanged">Called with the new ThemeMode string when a theme item is executed.</param>
+    public CommandPaletteViewModel(
+        IReadOnlyList<CommandPaletteItem> items,
+        AppSettings? settings,
+        Action? onSave,
+        Action<string>? onThemeChanged)
+    {
+        _settings = settings;
+        _onSave = onSave;
+        _onThemeChanged = onThemeChanged;
         _allItems.AddRange(items);
     }
 
     public void Open()
     {
+        RefreshToggleStates();
         SearchText = string.Empty;
         RefreshFilteredItems();
         SelectedIndex = 0;
@@ -49,6 +73,73 @@ public partial class CommandPaletteViewModel : ObservableObject
     {
         if (IsOpen) Close();
         else Open();
+    }
+
+    /// <summary>
+    /// Re-derives StateLabel for every item that has a StateRefresher delegate.
+    /// Called at the start of Open() so badges always reflect current settings.
+    /// </summary>
+    public void RefreshToggleStates()
+    {
+        foreach (var item in _allItems.Where(i => i.StateRefresher != null))
+            item.StateLabel = item.StateRefresher!();
+    }
+
+    /// <summary>
+    /// Factory helper — creates a Toggle palette item wired to a bool on AppSettings.
+    /// </summary>
+    /// <param name="label">Display name (e.g. "Gaming Mode").</param>
+    /// <param name="icon">NexusIcons glyph char.</param>
+    /// <param name="getState">Reads current bool value from settings.</param>
+    /// <param name="setState">Writes new bool value to settings.</param>
+    public CommandPaletteItem MakeToggle(
+        string label,
+        string icon,
+        Func<bool> getState,
+        Action<bool> setState)
+    {
+        var item = new CommandPaletteItem(
+            label, icon, "Toggle",
+            execute: () =>
+            {
+                setState(!getState());
+                _onSave?.Invoke();
+            },
+            stateLabel: getState() ? "ON" : "OFF");
+
+        item.StateRefresher = () => getState() ? "ON" : "OFF";
+        return item;
+    }
+
+    /// <summary>
+    /// Factory helper — creates a Theme palette item for a specific ThemeMode value.
+    /// </summary>
+    /// <param name="label">Display name (e.g. "Dark Theme").</param>
+    /// <param name="icon">NexusIcons glyph char.</param>
+    /// <param name="modeValue">"Dark" | "Light" | "System"</param>
+    public CommandPaletteItem MakeTheme(
+        string label,
+        string icon,
+        string modeValue)
+    {
+        var item = new CommandPaletteItem(
+            label, icon, "Theme",
+            execute: () =>
+            {
+                if (_settings != null)
+                    _settings.ThemeMode = modeValue;
+                _onSave?.Invoke();
+                _onThemeChanged?.Invoke(modeValue);
+            },
+            stateLabel: null);
+
+        item.StateRefresher = () =>
+            _settings != null
+            && string.Equals(_settings.ThemeMode, modeValue, StringComparison.OrdinalIgnoreCase)
+                ? "ACTIVE"
+                : null;
+
+        return item;
     }
 
     /// <summary>Populates FilteredItems from _allItems based on SearchText filter.</summary>
