@@ -40,17 +40,22 @@ public partial class CommandPaletteControl : UserControl
         {
             if (IsVisible)
             {
+                // Trigger opacity animation: start at 0, animate to 1.
+                Opacity = 0;
+                Dispatcher.UIThread.Post(() => Opacity = 1.0, DispatcherPriority.Render);
+
                 // Capture whoever had focus before we open, then steal it.
                 _previousFocus = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
                 Dispatcher.UIThread.Post(
-                    () => this.FindControl<TextBox>("SearchBox")?.Focus(),
+                    () => SearchBox?.Focus(),
                     DispatcherPriority.Input);
             }
             else
             {
                 // Restore focus to the element that was active before the palette opened.
-                _previousFocus?.Focus();
+                var prev = _previousFocus;
                 _previousFocus = null;
+                Dispatcher.UIThread.Post(() => prev?.Focus(), DispatcherPriority.Input);
             }
         }
     }
@@ -105,18 +110,22 @@ public partial class CommandPaletteControl : UserControl
         var index = vm.SelectedIndex;
         Dispatcher.UIThread.Post(() =>
         {
-            var itemsList = this.FindControl<ItemsControl>("ItemsList");
-            var container = itemsList?.ContainerFromIndex(index);
+            var container = ItemsList?.ContainerFromIndex(index);
             container?.BringIntoView();
         }, DispatcherPriority.Background);
     }
 
     private void OnItemButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.DataContext is CommandPaletteItem item)
+        if (DataContext is not CommandPaletteViewModel vm) return;
+        if (sender is Button { DataContext: CommandPaletteItem item })
         {
-            item.Execute();
-            (DataContext as CommandPaletteViewModel)?.Close();
+            var idx = vm.FilteredItems.IndexOf(item);
+            if (idx >= 0)
+            {
+                vm.SelectedIndex = idx;
+                vm.ExecuteSelected();
+            }
         }
     }
 }
