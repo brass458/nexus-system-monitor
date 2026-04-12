@@ -1,4 +1,6 @@
 using System.Reactive.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -15,6 +17,7 @@ public sealed class SmartTrimService : IDisposable
     private readonly IForegroundWindowProvider _foregroundWindow;
     private readonly ISystemMetricsProvider   _metricsProvider;
     private readonly AppSettings              _settings;
+    private readonly ILogger<SmartTrimService> _logger;
 
     // pid → last trim time (per-PID cooldown)
     private readonly Dictionary<int, DateTime> _lastTrimTime = new();
@@ -33,12 +36,14 @@ public sealed class SmartTrimService : IDisposable
         IProcessProvider          processProvider,
         IForegroundWindowProvider foregroundWindow,
         ISystemMetricsProvider    metricsProvider,
-        AppSettings               settings)
+        AppSettings               settings,
+        ILogger<SmartTrimService>? logger = null)
     {
         _processProvider  = processProvider;
         _foregroundWindow = foregroundWindow;
         _metricsProvider  = metricsProvider;
         _settings         = settings;
+        _logger           = logger ?? NullLogger<SmartTrimService>.Instance;
     }
 
     public void Start()
@@ -49,7 +54,11 @@ public sealed class SmartTrimService : IDisposable
         // Track idle ticks on every process-stream tick (2s)
         _tickSubscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(TrackIdleTicks, _ => { /* stream error — idle tracking stops; trim still scheduled */ });
+            .Subscribe(TrackIdleTicks, ex =>
+            {
+                _logger.LogError(ex, "SmartTrimService stream faulted");
+                _running = false;
+            });
 
         // Actual trim runs on the configured interval
         ScheduleNextTrim();

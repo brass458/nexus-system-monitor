@@ -27,7 +27,7 @@ public sealed class AlertsService : IDisposable
 
     private readonly Subject<AlertEvent> _events = new();
     private IDisposable? _subscription;
-    private bool _running;
+    private volatile bool _running;
     private int  _alertCount;
 
     public IObservable<AlertEvent> Events     => _events.AsObservable();
@@ -67,6 +67,9 @@ public sealed class AlertsService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
+        _firstSeen.Clear();
+        _lastFired.Clear();
+        Interlocked.Exchange(ref _alertCount, 0);
     }
 
     private void OnTick(SystemMetrics m)

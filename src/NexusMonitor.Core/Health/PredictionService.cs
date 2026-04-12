@@ -26,7 +26,8 @@ public sealed class PredictionService : IDisposable
     private readonly SemaphoreSlim                                           _tickLock    = new(1, 1);
     private readonly BehaviorSubject<IReadOnlyList<ResourcePrediction>>      _predictions = new(Array.Empty<ResourcePrediction>());
     private Timer?  _timer;
-    private bool    _running;
+    private volatile bool _running;
+    private int _started; // 0 = not started, 1 = started — guarded by Interlocked
 
     // Fallback sampling rate when only 1 data point exists (never used in practice since MinDataPoints>1)
     private const double DefaultSamplesPerHour = 3600.0 / 30.0;
@@ -70,7 +71,7 @@ public sealed class PredictionService : IDisposable
 
     public void Start()
     {
-        if (_timer != null) return;
+        if (Interlocked.CompareExchange(ref _started, 1, 0) != 0) return;
         _running = true;
         // Fire once immediately, then every 5 minutes; re-arm happens at end of RunPredictionsAsync
         _timer = new Timer(_ => _ = RunPredictionsAsync(), null,
@@ -79,6 +80,7 @@ public sealed class PredictionService : IDisposable
 
     public void Stop()
     {
+        if (Interlocked.CompareExchange(ref _started, 0, 1) != 1) return;
         _running = false;
         _timer?.Dispose();
         _timer = null;

@@ -67,7 +67,7 @@ public sealed class ProBalanceService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
-        _ = RestoreAllAsync();
+        Task.Run(RestoreAllAsync).Wait();
         _events.OnNext(new ProBalanceEvent(
             ProBalanceEventType.Stopped, 0, string.Empty,
             ProcessPriority.Normal, ProcessPriority.Normal, DateTime.UtcNow));
@@ -163,8 +163,11 @@ public sealed class ProBalanceService : IDisposable
 
     private static ProcessPriority InferPriority(ProcessInfo p)
     {
-        // Without reading the actual priority class from Windows, assume Normal for user apps
-        return ProcessPriority.Normal;
+        // NOTE: ProcessInfo.BasePriority is an int (Windows base priority class), not a ProcessPriority
+        // enum. We can't map it reliably without a P/Invoke call, so we restore to Normal.
+        // Processes intentionally set to High/AboveNormal will be downgraded on restore.
+        // TODO: read actual priority class (OpenProcess + GetPriorityClass) before throttling.
+        return ProcessPriority.Normal; // TODO: read actual priority
     }
 
     private async Task RestoreAllAsync()

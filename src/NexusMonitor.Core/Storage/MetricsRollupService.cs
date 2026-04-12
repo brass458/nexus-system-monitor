@@ -1,4 +1,6 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NexusMonitor.Core.Storage;
 
@@ -12,6 +14,7 @@ public sealed class MetricsRollupService : IDisposable
 {
     private readonly MetricsDatabase    _db;
     private readonly MetricsStoreConfig _config;
+    private readonly ILogger<MetricsRollupService> _logger;
     private Timer?  _timer;
     private bool    _disposed;
 
@@ -22,10 +25,12 @@ public sealed class MetricsRollupService : IDisposable
     // Track when we last ran PRAGMA optimize (run once per hour)
     private DateTime _lastOptimize = DateTime.MinValue;
 
-    public MetricsRollupService(MetricsDatabase db, MetricsStoreConfig config)
+    public MetricsRollupService(MetricsDatabase db, MetricsStoreConfig config,
+        ILogger<MetricsRollupService>? logger = null)
     {
         _db     = db;
         _config = config;
+        _logger = logger ?? NullLogger<MetricsRollupService>.Instance;
     }
 
     public void Start()
@@ -60,7 +65,10 @@ public sealed class MetricsRollupService : IDisposable
                 _lastOptimize = DateTime.UtcNow;
             }
         }
-        catch { /* never crash the app */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Rollup cycle failed");
+        }
         finally
         {
             // Re-arm only after work completes — guarantees no overlapping callbacks

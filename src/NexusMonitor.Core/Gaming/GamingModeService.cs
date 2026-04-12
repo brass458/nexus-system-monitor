@@ -89,7 +89,9 @@ public sealed class GamingModeService : IDisposable
         _pollingSubscription = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(1))
             .Sample(TimeSpan.FromSeconds(2))
-            .Subscribe(processes => { _ = ThrottleBackgroundProcessesAsync(capturedGameProcess, processes); });
+            .Subscribe(
+                processes => { _ = ThrottleBackgroundProcessesAsync(capturedGameProcess, processes); },
+                ex => { _logger.LogError(ex, "GamingModeService stream faulted"); });
 
         _statusMessages.OnNext("Gaming Mode activated");
     }
@@ -125,7 +127,8 @@ public sealed class GamingModeService : IDisposable
         }
 
         // -- Restore process priorities ----------------------------------------
-        _ = RestoreAllAsync();
+        // Use Task.Run to avoid potential deadlock if called from the UI thread.
+        Task.Run(RestoreAllAsync).Wait();
 
         _statusMessages.OnNext("Gaming Mode deactivated");
     }
@@ -153,7 +156,10 @@ public sealed class GamingModeService : IDisposable
             {
                 try
                 {
-                    // Assume Normal; avoid reading the actual priority class for simplicity
+                    // NOTE: ProcessInfo.BasePriority is an int, not a ProcessPriority enum.
+                    // We restore to Normal since we can't read the actual priority class here.
+                    // Processes set to High/AboveNormal will be downgraded on restore.
+                    // TODO: read actual priority class before throttling.
                     _throttled[proc.Pid] = ProcessPriority.Normal;
                     await _processProvider.SetPriorityAsync(proc.Pid, ProcessPriority.BelowNormal);
                     _statusMessages.OnNext($"Throttled: {proc.Name} (PID {proc.Pid})");

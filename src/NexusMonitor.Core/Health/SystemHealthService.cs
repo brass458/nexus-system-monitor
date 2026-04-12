@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -14,6 +15,7 @@ public sealed class SystemHealthService : IDisposable
     private readonly ISystemMetricsProvider _metrics;
     private readonly IProcessProvider       _processes;
     private readonly AppSettings            _settings;
+    private readonly ILogger<SystemHealthService> _logger;
 
     private readonly BehaviorSubject<SystemHealthSnapshot> _subject =
         new(new SystemHealthSnapshot());
@@ -34,11 +36,13 @@ public sealed class SystemHealthService : IDisposable
     public SystemHealthService(
         ISystemMetricsProvider metrics,
         IProcessProvider       processes,
-        AppSettings            settings)
+        AppSettings            settings,
+        ILogger<SystemHealthService>? logger = null)
     {
         _metrics   = metrics;
         _processes = processes;
         _settings  = settings;
+        _logger    = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SystemHealthService>.Instance;
     }
 
     public void Start(TimeSpan interval)
@@ -51,7 +55,9 @@ public sealed class SystemHealthService : IDisposable
 
         _subscription = metricsObs
             .CombineLatest(processObs, (m, p) => (Metrics: m, Processes: p))
-            .Subscribe(data => Update(data.Metrics, data.Processes));
+            .Subscribe(
+                data => Update(data.Metrics, data.Processes),
+                ex => { _logger.LogError(ex, "SystemHealthService stream faulted"); });
     }
 
     public void Stop()

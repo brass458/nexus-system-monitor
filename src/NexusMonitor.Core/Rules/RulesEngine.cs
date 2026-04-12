@@ -72,6 +72,7 @@ public sealed class RulesEngine : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
+        _seenPids.Clear();
     }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)

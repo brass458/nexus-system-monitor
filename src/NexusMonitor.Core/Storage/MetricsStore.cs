@@ -23,6 +23,8 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     // This avoids SqliteConnection thread-safety issues when reader queries run on Task.Run threads
     // while FlushAll() is executing on the writer connection under _lock.
     private readonly SqliteConnection _readConn;
+    // Serializes concurrent Task.Run calls that share _readConn (SqliteConnection is not thread-safe).
+    private readonly SemaphoreSlim _readLock = new(1, 1);
 
     private IDisposable? _metricsSub;
     private IDisposable? _processSub;
@@ -64,6 +66,8 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     // ── Lifecycle ──────────────────────────────────────────────────────────────
     public void Start(TimeSpan interval)
     {
+        if (_metricsSub != null) return;
+
         _metricsSub = _metricsProvider
             .GetMetricsStream(interval)
             .Subscribe(OnMetricsTick);
@@ -384,7 +388,18 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     // ── IMetricsReader ─────────────────────────────────────────────────────────
     public Task<IReadOnlyList<MetricsDataPoint>> GetSystemMetricsAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<MetricsDataPoint>>(() => QuerySystemMetrics(from, to), ct);
+        Task.Run<IReadOnlyList<MetricsDataPoint>>(async () =>
+        {
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return QuerySystemMetrics(from, to);
+            }
+            finally
+            {
+                _readLock.Release();
+            }
+        }, ct);
 
     private IReadOnlyList<MetricsDataPoint> QuerySystemMetrics(DateTimeOffset from, DateTimeOffset to)
     {
@@ -472,160 +487,200 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
     public Task<IReadOnlyList<ProcessDataPoint>> GetProcessHistoryAsync(
         string processName, DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<ProcessDataPoint>>(() =>
+        Task.Run<IReadOnlyList<ProcessDataPoint>>(async () =>
         {
-            var result = new List<ProcessDataPoint>();
-            using var cmd = _readConn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT ts, pid, name, cpu_percent, mem_bytes,
-                       io_read_bps, io_write_bps, gpu_percent
-                FROM process_snapshots
-                WHERE name = $name AND ts >= $from AND ts <= $to
-                ORDER BY ts";
-            cmd.Parameters.AddWithValue("$name", processName);
-            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
-            cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
-                result.Add(new ProcessDataPoint(
-                    Timestamp:  DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
-                    Pid:        reader.GetInt32(1),
-                    Name:       reader.GetString(2),
-                    CpuPercent: reader.GetDouble(3),
-                    MemBytes:   reader.GetInt64(4),
-                    IoReadBps:  reader.IsDBNull(5) ? 0 : reader.GetInt64(5),
-                    IoWriteBps: reader.IsDBNull(6) ? 0 : reader.GetInt64(6),
-                    GpuPercent: reader.IsDBNull(7) ? 0 : reader.GetDouble(7)));
+                var result = new List<ProcessDataPoint>();
+                using var cmd = _readConn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT ts, pid, name, cpu_percent, mem_bytes,
+                           io_read_bps, io_write_bps, gpu_percent
+                    FROM process_snapshots
+                    WHERE name = $name AND ts >= $from AND ts <= $to
+                    ORDER BY ts";
+                cmd.Parameters.AddWithValue("$name", processName);
+                cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+                cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    result.Add(new ProcessDataPoint(
+                        Timestamp:  DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
+                        Pid:        reader.GetInt32(1),
+                        Name:       reader.GetString(2),
+                        CpuPercent: reader.GetDouble(3),
+                        MemBytes:   reader.GetInt64(4),
+                        IoReadBps:  reader.IsDBNull(5) ? 0 : reader.GetInt64(5),
+                        IoWriteBps: reader.IsDBNull(6) ? 0 : reader.GetInt64(6),
+                        GpuPercent: reader.IsDBNull(7) ? 0 : reader.GetDouble(7)));
+                }
+                return (IReadOnlyList<ProcessDataPoint>)result;
             }
-            return (IReadOnlyList<ProcessDataPoint>)result;
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     public Task<IReadOnlyList<NetworkDataPoint>> GetNetworkHistoryAsync(
         string? remoteAddress, int? remotePort,
         DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<NetworkDataPoint>>(() =>
+        Task.Run<IReadOnlyList<NetworkDataPoint>>(async () =>
         {
-            var result = new List<NetworkDataPoint>();
-            using var cmd = _readConn.CreateCommand();
-
-            var where = "ts >= $from AND ts <= $to";
-            if (remoteAddress != null) where += " AND remote_addr = $rAddr";
-            if (remotePort    != null) where += " AND remote_port = $rPort";
-
-            cmd.CommandText = $@"
-                SELECT ts, protocol, local_addr, local_port, remote_addr, remote_port,
-                       state, pid, process_name, send_bps, recv_bps
-                FROM network_snapshots
-                WHERE {where}
-                ORDER BY ts";
-            cmd.Parameters.AddWithValue("$from",  from.ToUnixTimeMilliseconds());
-            cmd.Parameters.AddWithValue("$to",    to.ToUnixTimeMilliseconds());
-            if (remoteAddress != null) cmd.Parameters.AddWithValue("$rAddr", remoteAddress);
-            if (remotePort    != null) cmd.Parameters.AddWithValue("$rPort", remotePort.Value);
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
-                result.Add(new NetworkDataPoint(
-                    Timestamp:   DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
-                    Protocol:    reader.GetInt32(1),
-                    LocalAddr:   reader.IsDBNull(2) ? "" : reader.GetString(2),
-                    LocalPort:   reader.IsDBNull(3) ? 0  : reader.GetInt32(3),
-                    RemoteAddr:  reader.IsDBNull(4) ? "" : reader.GetString(4),
-                    RemotePort:  reader.IsDBNull(5) ? 0  : reader.GetInt32(5),
-                    State:       reader.IsDBNull(6) ? 0  : reader.GetInt32(6),
-                    Pid:         reader.IsDBNull(7) ? 0  : reader.GetInt32(7),
-                    ProcessName: reader.IsDBNull(8) ? "" : reader.GetString(8),
-                    SendBps:     reader.IsDBNull(9) ? 0  : reader.GetInt64(9),
-                    RecvBps:     reader.IsDBNull(10) ? 0 : reader.GetInt64(10)));
+                var result = new List<NetworkDataPoint>();
+                using var cmd = _readConn.CreateCommand();
+
+                var where = "ts >= $from AND ts <= $to";
+                if (remoteAddress != null) where += " AND remote_addr = $rAddr";
+                if (remotePort    != null) where += " AND remote_port = $rPort";
+
+                cmd.CommandText = $@"
+                    SELECT ts, protocol, local_addr, local_port, remote_addr, remote_port,
+                           state, pid, process_name, send_bps, recv_bps
+                    FROM network_snapshots
+                    WHERE {where}
+                    ORDER BY ts";
+                cmd.Parameters.AddWithValue("$from",  from.ToUnixTimeMilliseconds());
+                cmd.Parameters.AddWithValue("$to",    to.ToUnixTimeMilliseconds());
+                if (remoteAddress != null) cmd.Parameters.AddWithValue("$rAddr", remoteAddress);
+                if (remotePort    != null) cmd.Parameters.AddWithValue("$rPort", remotePort.Value);
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    result.Add(new NetworkDataPoint(
+                        Timestamp:   DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
+                        Protocol:    reader.GetInt32(1),
+                        LocalAddr:   reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        LocalPort:   reader.IsDBNull(3) ? 0  : reader.GetInt32(3),
+                        RemoteAddr:  reader.IsDBNull(4) ? "" : reader.GetString(4),
+                        RemotePort:  reader.IsDBNull(5) ? 0  : reader.GetInt32(5),
+                        State:       reader.IsDBNull(6) ? 0  : reader.GetInt32(6),
+                        Pid:         reader.IsDBNull(7) ? 0  : reader.GetInt32(7),
+                        ProcessName: reader.IsDBNull(8) ? "" : reader.GetString(8),
+                        SendBps:     reader.IsDBNull(9) ? 0  : reader.GetInt64(9),
+                        RecvBps:     reader.IsDBNull(10) ? 0 : reader.GetInt64(10)));
+                }
+                return (IReadOnlyList<NetworkDataPoint>)result;
             }
-            return (IReadOnlyList<NetworkDataPoint>)result;
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     public Task<IReadOnlyList<StoredEvent>> GetEventsAsync(
         DateTimeOffset from, DateTimeOffset to,
         string? eventType = null, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<StoredEvent>>(() =>
+        Task.Run<IReadOnlyList<StoredEvent>>(async () =>
         {
-            var result = new List<StoredEvent>();
-            using var cmd = _readConn.CreateCommand();
-            var where = "ts >= $from AND ts <= $to";
-            if (eventType != null) where += " AND event_type = $type";
-
-            cmd.CommandText = $@"
-                SELECT id, ts, event_type, severity, metric_name, metric_value,
-                       threshold, description, metadata_json
-                FROM events
-                WHERE {where}
-                ORDER BY ts";
-            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
-            cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
-            if (eventType != null) cmd.Parameters.AddWithValue("$type", eventType);
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
-                result.Add(new StoredEvent(
-                    Id:           reader.GetInt64(0),
-                    Timestamp:    DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1)),
-                    EventType:    reader.GetString(2),
-                    Severity:     reader.GetInt32(3),
-                    MetricName:   reader.IsDBNull(4) ? null : reader.GetString(4),
-                    MetricValue:  reader.IsDBNull(5) ? null : reader.GetDouble(5),
-                    Threshold:    reader.IsDBNull(6) ? null : reader.GetDouble(6),
-                    Description:  reader.IsDBNull(7) ? null : reader.GetString(7),
-                    MetadataJson: reader.IsDBNull(8) ? null : reader.GetString(8)));
+                var result = new List<StoredEvent>();
+                using var cmd = _readConn.CreateCommand();
+                var where = "ts >= $from AND ts <= $to";
+                if (eventType != null) where += " AND event_type = $type";
+
+                cmd.CommandText = $@"
+                    SELECT id, ts, event_type, severity, metric_name, metric_value,
+                           threshold, description, metadata_json
+                    FROM events
+                    WHERE {where}
+                    ORDER BY ts";
+                cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+                cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
+                if (eventType != null) cmd.Parameters.AddWithValue("$type", eventType);
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    result.Add(new StoredEvent(
+                        Id:           reader.GetInt64(0),
+                        Timestamp:    DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1)),
+                        EventType:    reader.GetString(2),
+                        Severity:     reader.GetInt32(3),
+                        MetricName:   reader.IsDBNull(4) ? null : reader.GetString(4),
+                        MetricValue:  reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                        Threshold:    reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                        Description:  reader.IsDBNull(7) ? null : reader.GetString(7),
+                        MetadataJson: reader.IsDBNull(8) ? null : reader.GetString(8)));
+                }
+                return (IReadOnlyList<StoredEvent>)result;
             }
-            return (IReadOnlyList<StoredEvent>)result;
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     public Task<(DateTimeOffset oldest, DateTimeOffset newest)> GetDataRangeAsync(
         CancellationToken ct = default) =>
-        Task.Run(() =>
+        Task.Run(async () =>
         {
-            using var cmd = _readConn.CreateCommand();
-            cmd.CommandText = "SELECT MIN(ts), MAX(ts) FROM system_metrics";
-            using var reader = cmd.ExecuteReader();
-            if (!reader.Read() || reader.IsDBNull(0))
-                return (DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            return (
-                DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
-                DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1)));
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                using var cmd = _readConn.CreateCommand();
+                cmd.CommandText = "SELECT MIN(ts), MAX(ts) FROM system_metrics";
+                using var reader = cmd.ExecuteReader();
+                if (!reader.Read() || reader.IsDBNull(0))
+                    return (DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                return (
+                    DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
+                    DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1)));
+            }
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     public Task<IReadOnlyList<ProcessSummary>> GetTopProcessSummariesAsync(
         DateTimeOffset from, DateTimeOffset to, int topN = 10, CancellationToken ct = default) =>
-        Task.Run(() =>
+        Task.Run(async () =>
         {
-            var fromMs = from.ToUnixTimeMilliseconds();
-            var toMs   = to.ToUnixTimeMilliseconds();
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var fromMs = from.ToUnixTimeMilliseconds();
+                var toMs   = to.ToUnixTimeMilliseconds();
 
-            using var cmd = _readConn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT name,
-                       AVG(cpu_percent)      AS avg_cpu,
-                       MAX(cpu_percent)      AS peak_cpu,
-                       AVG(mem_bytes)/1048576.0 AS avg_mem_mb
-                FROM process_snapshots
-                WHERE ts >= $from AND ts < $to
-                GROUP BY name
-                ORDER BY avg_cpu DESC
-                LIMIT $topN";
-            cmd.Parameters.AddWithValue("$from",  fromMs);
-            cmd.Parameters.AddWithValue("$to",    toMs);
-            cmd.Parameters.AddWithValue("$topN",  topN);
+                using var cmd = _readConn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT name,
+                           AVG(cpu_percent)      AS avg_cpu,
+                           MAX(cpu_percent)      AS peak_cpu,
+                           AVG(mem_bytes)/1048576.0 AS avg_mem_mb
+                    FROM process_snapshots
+                    WHERE ts >= $from AND ts < $to
+                    GROUP BY name
+                    ORDER BY avg_cpu DESC
+                    LIMIT $topN";
+                cmd.Parameters.AddWithValue("$from",  fromMs);
+                cmd.Parameters.AddWithValue("$to",    toMs);
+                cmd.Parameters.AddWithValue("$topN",  topN);
 
-            var result = new List<ProcessSummary>();
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-                result.Add(new ProcessSummary(
-                    Name:          reader.GetString(0),
-                    AvgCpuPercent: reader.GetDouble(1),
-                    PeakCpuPercent:reader.GetDouble(2),
-                    AvgMemMb:      reader.GetDouble(3)));
-            return (IReadOnlyList<ProcessSummary>)result;
+                var result = new List<ProcessSummary>();
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    result.Add(new ProcessSummary(
+                        Name:          reader.GetString(0),
+                        AvgCpuPercent: reader.GetDouble(1),
+                        PeakCpuPercent:reader.GetDouble(2),
+                        AvgMemMb:      reader.GetDouble(3)));
+                return (IReadOnlyList<ProcessSummary>)result;
+            }
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     public long GetDatabaseSizeBytes() => _db.GetDatabaseSizeBytes();
@@ -660,31 +715,39 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
 
     public Task<IReadOnlyList<HealthDataPoint>> GetHealthHistoryAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<HealthDataPoint>>(() =>
+        Task.Run<IReadOnlyList<HealthDataPoint>>(async () =>
         {
-            var result = new List<HealthDataPoint>();
-            using var cmd = _readConn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT ts, overall, cpu, memory, disk, gpu, bottleneck
-                FROM health_snapshots
-                WHERE ts >= $from AND ts <= $to
-                ORDER BY ts";
-            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
-            cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            await _readLock.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
-                result.Add(new HealthDataPoint(
-                    Timestamp:  DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
-                    Overall:    reader.GetDouble(1),
-                    Cpu:        reader.GetDouble(2),
-                    Memory:     reader.GetDouble(3),
-                    Disk:       reader.GetDouble(4),
-                    Gpu:        reader.GetDouble(5),
-                    Bottleneck: reader.IsDBNull(6) ? null : reader.GetString(6)));
+                var result = new List<HealthDataPoint>();
+                using var cmd = _readConn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT ts, overall, cpu, memory, disk, gpu, bottleneck
+                    FROM health_snapshots
+                    WHERE ts >= $from AND ts <= $to
+                    ORDER BY ts";
+                cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+                cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    result.Add(new HealthDataPoint(
+                        Timestamp:  DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
+                        Overall:    reader.GetDouble(1),
+                        Cpu:        reader.GetDouble(2),
+                        Memory:     reader.GetDouble(3),
+                        Disk:       reader.GetDouble(4),
+                        Gpu:        reader.GetDouble(5),
+                        Bottleneck: reader.IsDBNull(6) ? null : reader.GetString(6)));
+                }
+                return (IReadOnlyList<HealthDataPoint>)result;
             }
-            return (IReadOnlyList<HealthDataPoint>)result;
+            finally
+            {
+                _readLock.Release();
+            }
         }, ct);
 
     // ── IDisposable ────────────────────────────────────────────────────────────
@@ -694,5 +757,6 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         _disposed = true;
         Stop();
         _readConn.Dispose();
+        _readLock.Dispose();
     }
 }

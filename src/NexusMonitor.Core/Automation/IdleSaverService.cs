@@ -131,6 +131,10 @@ public sealed class IdleSaverService : IDisposable
                         {
                             if (_actionLock.TryLock(proc.Pid, Owner))
                             {
+                                // NOTE: ProcessInfo.BasePriority is an int, not a ProcessPriority enum.
+                                // We restore to Normal since we can't read the actual priority class here.
+                                // Processes set to High/AboveNormal will be downgraded on restore.
+                                // TODO: read actual priority class before throttling.
                                 _savedPriorities[proc.Pid] = ProcessPriority.Normal;
                                 try
                                 {

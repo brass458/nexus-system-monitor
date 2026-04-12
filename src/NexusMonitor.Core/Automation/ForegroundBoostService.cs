@@ -111,7 +111,11 @@ public sealed class ForegroundBoostService : IDisposable
 
             if (!_actionLock.TryLock(fgPid, Owner)) return;
 
-            _savedPriorities[fgPid] = ProcessPriority.Normal; // assume Normal as baseline
+            // NOTE: ProcessInfo.BasePriority is an int (Windows base priority class value), not a
+            // ProcessPriority enum. We can't map it reliably without a P/Invoke call, so we restore
+            // to Normal. Processes intentionally set to High/AboveNormal will be downgraded on restore.
+            // TODO: read actual priority class before boosting.
+            _savedPriorities[fgPid] = ProcessPriority.Normal;
             try { await _processProvider.SetPriorityAsync(fgPid, ProcessPriority.AboveNormal); }
             catch
             {
