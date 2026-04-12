@@ -273,6 +273,8 @@ public partial class RulesViewModel : ViewModelBase
     {
         _editingId = Guid.Empty;
         EditorTitle = "New Rule";
+        // RefreshAvailableGroupNames must be called BEFORE setting EditGroupName/LoadRuleIntoEditor
+        // so the ComboBox can match the incoming value against its already-populated ItemsSource.
         RefreshAvailableGroupNames();
         SetEditorDefaults();
         IsEditorVisible = true;
@@ -284,6 +286,8 @@ public partial class RulesViewModel : ViewModelBase
         if (SelectedRule is null) return;
         _editingId  = SelectedRule.Id;
         EditorTitle = $"Edit Rule — {SelectedRule.Name}";
+        // RefreshAvailableGroupNames must be called BEFORE setting EditGroupName/LoadRuleIntoEditor
+        // so the ComboBox can match the incoming value against its already-populated ItemsSource.
         RefreshAvailableGroupNames();
         LoadRuleIntoEditor(SelectedRule);
         IsEditorVisible = true;
@@ -334,7 +338,7 @@ public partial class RulesViewModel : ViewModelBase
 
         rule.Name               = EditName.Trim();
         rule.ProcessNamePattern = EditPattern.Trim();
-        rule.GroupName          = string.IsNullOrEmpty(EditGroupName) ? null : EditGroupName;
+        rule.GroupName          = EditGroupName is "" or "(none)" ? null : EditGroupName;
         rule.IsEnabled          = EditEnabled;
         rule.Priority           = IndexToPriority(EditPriorityIndex);
         rule.IoPriority         = IndexToIoPriority(EditIoPriorityIndex);
@@ -430,7 +434,7 @@ public partial class RulesViewModel : ViewModelBase
     private void RefreshAvailableGroupNames()
     {
         AvailableGroupNames.Clear();
-        AvailableGroupNames.Add(""); // empty = no group targeting
+        AvailableGroupNames.Add("(none)"); // sentinel = no group targeting
         if (_groupStore is not null)
             foreach (var g in _groupStore.GetAll())
                 AvailableGroupNames.Add(g.Name);
@@ -440,7 +444,7 @@ public partial class RulesViewModel : ViewModelBase
     {
         EditName                   = "";
         EditPattern                = "";
-        EditGroupName              = "";
+        EditGroupName              = "(none)";
         EditEnabled                = true;
         EditPriorityIndex          = 0;
         EditIoPriorityIndex        = 0;
@@ -486,7 +490,7 @@ public partial class RulesViewModel : ViewModelBase
                                         ? string.Join(",", rule.CpuSetIds)
                                         : "";
         EditReduceCoreCount       = rule.ActionParams?.ReduceCoreCount?.ToString() ?? "";
-        EditGroupName             = rule.GroupName ?? "";
+        EditGroupName             = rule.GroupName is null or "" ? "(none)" : rule.GroupName;
         ValidationError           = "";
     }
 }
