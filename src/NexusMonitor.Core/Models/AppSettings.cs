@@ -141,6 +141,13 @@ public class AppSettings
     public string          QuietHoursEnd     { get; set; } = "07:00";  // HH:mm 24-hour
     public List<DayOfWeek> QuietHoursDays    { get; set; } = new();    // empty = every day
 
+    // Webhook Notifications (Phase 23)
+    public bool         WebhookEnabled { get; set; } = false;
+    public string       WebhookUrl     { get; set; } = "";
+    public string       WebhookSecret  { get; set; } = "";
+    /// <summary>Which event types to forward: "alerts", "anomalies"</summary>
+    public List<string> WebhookEvents  { get; set; } = new();
+
     // ── Session persistence ─────────────────────────────────────────────────────
     public string LastActiveTab    { get; set; } = string.Empty;
     public double LastWindowWidth  { get; set; } = 0;
