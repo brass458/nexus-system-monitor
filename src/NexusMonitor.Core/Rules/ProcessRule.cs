@@ -1,4 +1,5 @@
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Matching;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Core.Rules;
@@ -47,10 +48,8 @@ public class ProcessRule
         set
         {
             _processNamePattern = value;
-            // Pre-normalize once so MatchesWildcard never allocates per call
-            _normalizedPattern = (value ?? "")
-                .Replace(".exe", "", StringComparison.OrdinalIgnoreCase)
-                .ToLowerInvariant();
+            // Pre-normalize once so Matches never allocates per call
+            _normalizedPattern = WildcardMatcher.NormalizePattern(value ?? "");
         }
     }
     public bool   IsEnabled           { get; set; } = true;
@@ -95,23 +94,5 @@ public class ProcessRule
 
     public bool Matches(string processName) =>
         !string.IsNullOrWhiteSpace(_normalizedPattern) &&
-        MatchesWildcard(processName, _normalizedPattern);
-
-    private static bool MatchesWildcard(string input, string normalizedPattern)
-    {
-        // Input name: strip .exe and lowercase — the pattern is already normalized
-        var name = System.IO.Path.GetFileNameWithoutExtension(input).ToLowerInvariant();
-        if (!normalizedPattern.Contains('*')) return name == normalizedPattern;
-        // Simple wildcard: split on * and check that each part appears in order
-        var parts = normalizedPattern.Split('*');
-        int idx = 0;
-        foreach (var part in parts)
-        {
-            if (string.IsNullOrEmpty(part)) continue;
-            var found = name.IndexOf(part, idx, StringComparison.Ordinal);
-            if (found < 0) return false;
-            idx = found + part.Length;
-        }
-        return true;
-    }
+        WildcardMatcher.Matches(WildcardMatcher.NormalizeName(processName), _normalizedPattern);
 }
