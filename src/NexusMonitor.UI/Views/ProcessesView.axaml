@@ -117,6 +117,31 @@
       </Grid>
     </Border>
 
+    <!-- ===== GROUP SUMMARY STRIP ===== -->
+    <ItemsControl ItemsSource="{Binding GroupSummaries}"
+                  IsVisible="{Binding HasGroupSummaries}"
+                  DockPanel.Dock="Top"
+                  Margin="8,2">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel Orientation="Horizontal" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Border Background="{Binding Color, Converter={StaticResource HexBrush}}"
+                  CornerRadius="4" Padding="8,3" Margin="0,0,4,4">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+              <TextBlock Text="{Binding CpuDisplay}" FontSize="11" Foreground="White" Opacity="0.85"/>
+              <TextBlock Text="{Binding RamDisplay}" FontSize="11" Foreground="White" Opacity="0.85"/>
+              <TextBlock Text="{Binding Count, StringFormat='({0})'}" FontSize="11" Foreground="White" Opacity="0.7"/>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
     <!-- ===== STATUS BAR ===== -->
     <Border DockPanel.Dock="Bottom"
             Padding="16,6"

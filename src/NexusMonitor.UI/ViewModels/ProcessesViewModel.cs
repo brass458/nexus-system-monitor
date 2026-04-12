@@ -84,6 +84,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     /// <summary>True when the detail panel should be shown (has selection AND toggle is on).</summary>
     public bool IsDetailPanelShown => SelectedDetails is not null && IsDetailPanelVisible;
 
+    public ObservableCollection<GroupSummary> GroupSummaries { get; } = [];
+
+    /// <summary>True when there is at least one group summary to display.</summary>
+    public bool HasGroupSummaries => GroupSummaries.Count > 0;
+
     /// <summary>
     /// Tracks the set of PIDs shown in the last tree-mode render so we avoid
     /// clearing + rebuilding the list on every tick when nothing structural changed.
@@ -249,6 +254,35 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         TotalProcessCount = processes.Count;
         TotalThreadCount  = processes.Sum(p => p.ThreadCount);
         TotalCpuPercent   = Math.Round(processes.Sum(p => p.CpuPercent), 1);
+
+        // ── 3b. Update group summaries ────────────────────────────────────────
+        var summaries = _allRows.Values
+            .Where(r => !string.IsNullOrEmpty(r.GroupName))
+            .GroupBy(r => r.GroupName)
+            .Select(g =>
+            {
+                var first = g.First();
+                return new GroupSummary(
+                    g.Key,
+                    first.GroupColor,
+                    g.Count(),
+                    g.Sum(r => r.CpuPercent),
+                    g.Sum(r => r.WorkingSetBytes));
+            })
+            .OrderBy(s => s.Name)
+            .ToList();
+
+        // Sync to ObservableCollection (avoid full clear+re-add to reduce flicker)
+        for (int i = GroupSummaries.Count - 1; i >= 0; i--)
+            if (!summaries.Any(s => s.Name == GroupSummaries[i].Name))
+                GroupSummaries.RemoveAt(i);
+        foreach (var s in summaries)
+        {
+            var idx = GroupSummaries.IndexOf(GroupSummaries.FirstOrDefault(x => x.Name == s.Name)!);
+            if (idx >= 0) GroupSummaries[idx] = s;
+            else GroupSummaries.Add(s);
+        }
+        OnPropertyChanged(nameof(HasGroupSummaries));
 
         // ── 4. Sync the visible collection with the current filter ────────────
         ApplyFilter();
@@ -1024,4 +1058,37 @@ public class ProcessDetailViewModel : INotifyPropertyChanged, IDisposable
             return pts;
         }
     }
+}
+
+/// <summary>
+/// Immutable snapshot of aggregate CPU and RAM for a single process group,
+/// used to populate the summary strip above the process list.
+/// </summary>
+public sealed class GroupSummary : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+{
+    public string Name     { get; }
+    public string Color    { get; }
+    public int    Count    { get; }
+    public double CpuPct   { get; }
+    public long   RamBytes { get; }
+
+    public string CpuDisplay => $"{CpuPct:F1}%";
+    public string RamDisplay => FormatBytes(RamBytes);
+
+    public GroupSummary(string name, string color, int count, double cpuPct, long ramBytes)
+    {
+        Name     = name;
+        Color    = color;
+        Count    = count;
+        CpuPct   = cpuPct;
+        RamBytes = ramBytes;
+    }
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
+        >= 1_048_576     => $"{bytes / 1_048_576.0:F1} MB",
+        >= 1_024         => $"{bytes / 1_024.0:F1} KB",
+        _                => $"{bytes} B"
+    };
 }
