@@ -152,6 +152,9 @@ public class AppSettings
     /// </summary>
     public List<string> WebhookEvents  { get; set; } = new();
 
+    // Resource Predictions (Phase 23)
+    public bool PredictionsEnabled { get; set; } = false;
+
     // ── Session persistence ─────────────────────────────────────────────────────
     public string LastActiveTab    { get; set; } = string.Empty;
     public double LastWindowWidth  { get; set; } = 0;
