@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using NexusMonitor.Core.Alerts;
+using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
@@ -31,6 +32,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly ThemePresetService           _presetService;
     private readonly ProcessPreferenceStore?      _preferenceStore;
     private readonly WebhookNotificationService   _webhookService;
+    private readonly PredictionService?           _predictionService;
 
     // ── Saved Process Preferences ────────────────────────────────────────────
     public ObservableCollection<ProcessPreference> SavedPreferences { get; } = new();
@@ -297,6 +299,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         GlassAdaptiveService         glassAdaptive,
         ThemePresetService           presetService,
         WebhookNotificationService   webhookService,
+        PredictionService?           predictionService = null,
         ProcessPreferenceStore?      preferenceStore = null)
     {
         Title             = "Settings";
@@ -306,8 +309,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _anomalyConfig    = anomalyConfig;
         _glassAdaptive    = glassAdaptive;
         _presetService    = presetService;
-        _webhookService   = webhookService;
-        _preferenceStore  = preferenceStore;
+        _webhookService    = webhookService;
+        _predictionService = predictionService;
+        _preferenceStore   = preferenceStore;
 
         // Load saved preferences
         if (preferenceStore is not null)
@@ -769,7 +773,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     partial void OnWebhookSecretChanged(string value)     { _settings.Current.WebhookSecret      = value; _settings.Save(); }
     partial void OnWebhookAlertsChanged(bool value)       { SyncWebhookEvents(); _settings.Save(); }
     partial void OnWebhookAnomaliesChanged(bool value)    { SyncWebhookEvents(); _settings.Save(); }
-    partial void OnPredictionsEnabledChanged(bool value)  { _settings.Current.PredictionsEnabled = value; _settings.Save(); }
+    partial void OnPredictionsEnabledChanged(bool value)
+    {
+        _settings.Current.PredictionsEnabled = value;
+        _settings.Save();
+        if (value)
+            _predictionService?.Start();
+        else
+            _predictionService?.Stop();
+    }
 
     private void SyncWebhookEvents()
     {

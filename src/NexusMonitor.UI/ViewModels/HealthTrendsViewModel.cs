@@ -197,6 +197,7 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
         _liveSubscription?.Dispose();
         _loadCts?.Dispose();
     }
