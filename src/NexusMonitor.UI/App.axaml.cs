@@ -396,6 +396,7 @@ public class App : Application
         services.AddSingleton<GlassAdaptiveService>();
 
         // -- ViewModels --
+        services.AddSingleton<HealthTrendsViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<ProcessesViewModel>();

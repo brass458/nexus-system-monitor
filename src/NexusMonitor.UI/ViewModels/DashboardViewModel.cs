@@ -49,11 +49,16 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<RecommendationViewModel> Recommendations { get; } = new();
 
-    public DashboardViewModel(SystemHealthService healthService, MemoryLeakDetectionService leakService, AppSettings settings)
+    // ── Health Trends ─────────────────────────────────────────────────────────
+
+    public HealthTrendsViewModel HealthTrendsViewModel { get; }
+
+    public DashboardViewModel(SystemHealthService healthService, MemoryLeakDetectionService leakService, AppSettings settings, HealthTrendsViewModel healthTrendsViewModel)
     {
-        _healthService = healthService;
-        _leakService   = leakService;
-        _settings      = settings;
+        _healthService      = healthService;
+        _leakService        = leakService;
+        _settings           = settings;
+        HealthTrendsViewModel = healthTrendsViewModel;
 
         _subscription = _healthService.HealthStream
             .ObserveOn(RxApp.MainThreadScheduler)

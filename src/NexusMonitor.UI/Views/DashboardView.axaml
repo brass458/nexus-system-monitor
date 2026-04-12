@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
+             xmlns:views="using:NexusMonitor.UI.Views"
              x:Class="NexusMonitor.UI.Views.DashboardView"
              x:DataType="vm:DashboardViewModel"
              x:CompileBindings="False">
@@ -469,6 +470,9 @@
             </ItemsControl>
           </StackPanel>
         </Border>
+
+        <!-- ── Health Trends ────────────────────────────────────────────────── -->
+        <views:HealthTrendsView DataContext="{Binding HealthTrendsViewModel}"/>
 
         <!-- Bottom spacer so last card isn't flush with window edge -->
         <Border Height="16"/>
