@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Alerts;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Services;
 using NexusMonitor.Core.Storage;
@@ -22,13 +23,14 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase, IDisposable
 {
-    private readonly SettingsService         _settings;
-    private readonly PrometheusExporter      _exporter;
-    private readonly AnomalyDetectionService _anomalyService;
-    private readonly AnomalyDetectionConfig  _anomalyConfig;
-    private readonly GlassAdaptiveService    _glassAdaptive;
-    private readonly ThemePresetService      _presetService;
-    private readonly ProcessPreferenceStore? _preferenceStore;
+    private readonly SettingsService              _settings;
+    private readonly PrometheusExporter           _exporter;
+    private readonly AnomalyDetectionService      _anomalyService;
+    private readonly AnomalyDetectionConfig       _anomalyConfig;
+    private readonly GlassAdaptiveService         _glassAdaptive;
+    private readonly ThemePresetService           _presetService;
+    private readonly ProcessPreferenceStore?      _preferenceStore;
+    private readonly WebhookNotificationService   _webhookService;
 
     // ── Saved Process Preferences ────────────────────────────────────────────
     public ObservableCollection<ProcessPreference> SavedPreferences { get; } = new();
@@ -220,6 +222,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     public string TelegrafConfig      => TelegrafConfigGenerator.Generate((int)PrometheusPort);
     public string GrafanaDashboardJson => GrafanaDashboard.Json;
 
+    // ── Webhook Notifications ─────────────────────────────────────────────────
+    [ObservableProperty] private bool   _webhookEnabled;
+    [ObservableProperty] private string _webhookUrl     = "";
+    [ObservableProperty] private string _webhookSecret  = "";
+    [ObservableProperty] private bool   _webhookAlerts;
+    [ObservableProperty] private bool   _webhookAnomalies;
+    [ObservableProperty] private string _webhookTestStatus = "";
+
     // ── Static lists ─────────────────────────────────────────────────────────
 
     public static IReadOnlyList<string> AccentPresets { get; } =
@@ -277,13 +287,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     // ── Constructor ──────────────────────────────────────────────────────────
 
     public SettingsViewModel(
-        SettingsService         settings,
-        PrometheusExporter      exporter,
-        AnomalyDetectionService anomalyService,
-        AnomalyDetectionConfig  anomalyConfig,
-        GlassAdaptiveService    glassAdaptive,
-        ThemePresetService      presetService,
-        ProcessPreferenceStore? preferenceStore = null)
+        SettingsService              settings,
+        PrometheusExporter           exporter,
+        AnomalyDetectionService      anomalyService,
+        AnomalyDetectionConfig       anomalyConfig,
+        GlassAdaptiveService         glassAdaptive,
+        ThemePresetService           presetService,
+        WebhookNotificationService   webhookService,
+        ProcessPreferenceStore?      preferenceStore = null)
     {
         Title             = "Settings";
         _settings         = settings;
@@ -292,6 +303,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _anomalyConfig    = anomalyConfig;
         _glassAdaptive    = glassAdaptive;
         _presetService    = presetService;
+        _webhookService   = webhookService;
         _preferenceStore  = preferenceStore;
 
         // Load saved preferences
@@ -354,6 +366,13 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         // ── Telemetry ────────────────────────────────────────────────────────
         _prometheusEnabled = settings.Current.PrometheusEnabled;
         _prometheusPort    = settings.Current.PrometheusPort;
+
+        // ── Webhook Notifications ─────────────────────────────────────────────
+        _webhookEnabled   = settings.Current.WebhookEnabled;
+        _webhookUrl       = settings.Current.WebhookUrl;
+        _webhookSecret    = settings.Current.WebhookSecret;
+        _webhookAlerts    = settings.Current.WebhookEvents.Contains("alerts");
+        _webhookAnomalies = settings.Current.WebhookEvents.Contains("anomalies");
 
         // ── Theme preset list ──────────────────────────────────────────────────
         RebuildPresetNames();
@@ -737,6 +756,29 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             _exporter.Stop();
             _exporter.Start((int)value);
         }
+    }
+
+    partial void OnWebhookEnabledChanged(bool value)   { _settings.Current.WebhookEnabled = value; _settings.Save(); }
+    partial void OnWebhookUrlChanged(string value)     { _settings.Current.WebhookUrl     = value; _settings.Save(); }
+    partial void OnWebhookSecretChanged(string value)  { _settings.Current.WebhookSecret  = value; _settings.Save(); }
+    partial void OnWebhookAlertsChanged(bool value)    { SyncWebhookEvents(); _settings.Save(); }
+    partial void OnWebhookAnomaliesChanged(bool value) { SyncWebhookEvents(); _settings.Save(); }
+
+    private void SyncWebhookEvents()
+    {
+        var events = new List<string>();
+        if (WebhookAlerts)    events.Add("alerts");
+        if (WebhookAnomalies) events.Add("anomalies");
+        _settings.Current.WebhookEvents = events;
+    }
+
+    [RelayCommand]
+    private async Task SendTestWebhook()
+    {
+        var ok = await _webhookService.SendTestAsync();
+        WebhookTestStatus = ok
+            ? "✓ Test webhook sent successfully"
+            : "✗ Test webhook failed — check URL and connectivity";
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────

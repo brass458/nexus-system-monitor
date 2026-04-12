@@ -1228,6 +1228,75 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== WEBHOOK NOTIFICATIONS ===== -->
+    <Border Padding="16"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Webhook Notifications" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Enable toggle -->
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Enable Webhook" FontSize="{DynamicResource NxFont13}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Send alert events via HTTP POST to Discord, Slack, or any webhook endpoint"
+                       FontSize="{DynamicResource NxFont11}" Foreground="{DynamicResource TextTertiaryBrush}"
+                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+          </StackPanel>
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
+                        IsChecked="{Binding WebhookEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- URL -->
+        <StackPanel Spacing="4" IsEnabled="{Binding WebhookEnabled}">
+          <TextBlock Text="Webhook URL" FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
+          <TextBox Text="{Binding WebhookUrl}"
+                   Watermark="https://discord.com/api/webhooks/..."
+                   FontSize="{DynamicResource NxFont12}"/>
+        </StackPanel>
+
+        <!-- Secret -->
+        <StackPanel Spacing="4" IsEnabled="{Binding WebhookEnabled}">
+          <TextBlock Text="Secret Header (optional)" FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
+          <TextBox Text="{Binding WebhookSecret}"
+                   PasswordChar="&#x2022;"
+                   Watermark="Sent as X-Webhook-Secret header"
+                   FontSize="{DynamicResource NxFont12}"/>
+        </StackPanel>
+
+        <!-- Event type checkboxes -->
+        <StackPanel Spacing="6" IsEnabled="{Binding WebhookEnabled}">
+          <TextBlock Text="Forward Events" FontSize="{DynamicResource NxFont12}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"/>
+          <CheckBox IsChecked="{Binding WebhookAlerts}"
+                    Content="Threshold alerts" FontSize="{DynamicResource NxFont12}"/>
+          <CheckBox IsChecked="{Binding WebhookAnomalies}"
+                    Content="Anomaly detections" FontSize="{DynamicResource NxFont12}"/>
+        </StackPanel>
+
+        <!-- Test button + status -->
+        <StackPanel Spacing="6">
+          <Button Classes="nx-btn" Command="{Binding SendTestWebhookCommand}"
+                  IsEnabled="{Binding WebhookEnabled}"
+                  HorizontalAlignment="Left">
+            <TextBlock Text="Send Test Webhook" FontSize="{DynamicResource NxFont11}"/>
+          </Button>
+          <TextBlock Text="{Binding WebhookTestStatus}"
+                     FontSize="{DynamicResource NxFont11}"
+                     Foreground="{DynamicResource TextTertiaryBrush}"
+                     IsVisible="{Binding WebhookTestStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <!-- ===== SAVED PROCESS PREFERENCES ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

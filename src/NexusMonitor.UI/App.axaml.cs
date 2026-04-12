@@ -13,6 +13,7 @@ using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Alerts;
 using System.Reactive;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using NexusMonitor.Core.Gaming;
 using NexusMonitor.Core.Rules;
 using NexusMonitor.Core.Services;
@@ -184,6 +185,7 @@ public class App : Application
                 // Infrastructure
                 Services.GetService<GlassAdaptiveService>()?.Stop();
                 Services.GetService<PrometheusExporter>()?.Stop();
+                (Services.GetService<WebhookNotificationService>() as IDisposable)?.Dispose();
 
                 _subscriptions.Dispose();
                 (Services as IDisposable)?.Dispose();
@@ -256,6 +258,32 @@ public class App : Application
                         AutoDismiss: TimeSpan.FromSeconds(5)));
                 }
             }));
+
+            // Wire alert events → webhook
+            var webhookService = Services.GetRequiredService<WebhookNotificationService>();
+            _subscriptions.Add(alertsService.Events
+                .Where(_ => saved.Current.WebhookEnabled && saved.Current.WebhookEvents.Contains("alerts"))
+                .Subscribe(alert => _ = webhookService.SendAsync(new WebhookPayload(
+                    Alert:     alert.Description,
+                    Severity:  alert.Rule.Severity.ToString().ToLowerInvariant(),
+                    Timestamp: DateTimeOffset.UtcNow.ToString("O"),
+                    Hostname:  Environment.MachineName,
+                    Metrics:   new Dictionary<string, object> { [alert.Rule.Metric.ToString()] = alert.Value }))));
+
+            // Wire anomaly events → webhook
+            _subscriptions.Add(anomalyService.AnomalyDetected
+                .Where(_ => saved.Current.WebhookEnabled && saved.Current.WebhookEvents.Contains("anomalies"))
+                .Subscribe(evt => _ = webhookService.SendAsync(new WebhookPayload(
+                    Alert:     evt.Description ?? evt.EventType,
+                    Severity:  evt.Severity switch
+                    {
+                        EventSeverity.Critical => "critical",
+                        EventSeverity.Warning  => "warning",
+                        _                      => "info"
+                    },
+                    Timestamp: DateTimeOffset.UtcNow.ToString("O"),
+                    Hostname:  Environment.MachineName,
+                    Metrics:   null))));
 
             // System-tray icon (only if enabled)
             if (saved.Current.MinimizeToTray)

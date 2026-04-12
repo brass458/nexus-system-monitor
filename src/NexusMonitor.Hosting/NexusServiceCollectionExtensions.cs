@@ -185,6 +185,7 @@ public static class NexusServiceCollectionExtensions
         // Gaming and Alerts services
         services.AddSingleton<GamingModeService>();
         services.AddSingleton<AlertsService>();
+        services.AddSingleton<WebhookNotificationService>();
 
         // Network tools
         services.AddSingleton<NmapScannerService>();
