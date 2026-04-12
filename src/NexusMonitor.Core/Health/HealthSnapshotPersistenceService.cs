@@ -73,8 +73,8 @@ public sealed class HealthSnapshotPersistenceService : IDisposable
 
     private void OnTick(SystemHealthSnapshot snapshot)
     {
-        _tickCount++;
-        if (_tickCount % DownsampleEvery == 0)
+        var tick = Interlocked.Increment(ref _tickCount); // First write at tick DownsampleEvery (30 s); increment is atomic for thread-safety
+        if (tick % DownsampleEvery == 0)
             _ = _writeSnapshot(snapshot);
     }
 }

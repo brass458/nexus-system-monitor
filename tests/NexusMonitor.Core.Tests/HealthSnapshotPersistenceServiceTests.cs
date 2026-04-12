@@ -108,6 +108,8 @@ public class HealthSnapshotPersistenceServiceTests
 
         written.Should().HaveCount(1,
             "writes after Stop() should be discarded");
+
+        svc.Dispose();
     }
 
     [Fact]

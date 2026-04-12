@@ -137,10 +137,6 @@ public static class NexusServiceCollectionExtensions
         services.AddSingleton<IMetricsReader>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<IEventWriter>(sp => sp.GetRequiredService<MetricsStore>());
         services.AddSingleton<MetricsRollupService>();
-        services.AddSingleton<HealthSnapshotPersistenceService>(sp =>
-            new HealthSnapshotPersistenceService(
-                sp.GetRequiredService<SystemHealthService>().HealthStream,
-                sp.GetRequiredService<NexusMonitor.Core.Storage.MetricsStore>().WriteHealthSnapshotAsync));
 
         // Resource incident repository
         services.AddSingleton<EventRepository>();
@@ -195,6 +191,7 @@ public static class NexusServiceCollectionExtensions
 
         // Health service
         services.AddSingleton<SystemHealthService>();
+        services.AddSingleton<HealthSnapshotPersistenceService>();
 
         // Memory leak detection
         services.AddSingleton<MemoryLeakDetectionService>();
