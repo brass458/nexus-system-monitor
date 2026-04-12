@@ -16,6 +16,7 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     private readonly MemoryLeakDetectionService _leakService;
     private readonly AppSettings                _settings;
     private IDisposable?                        _subscription;
+    private IDisposable?                        _predictionsSubscription;
 
     // ── Overall health ────────────────────────────────────────────────────────
 
@@ -49,11 +50,16 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<RecommendationViewModel> Recommendations { get; } = new();
 
+    // ── Resource Predictions ──────────────────────────────────────────────────
+
+    public ObservableCollection<PredictionCardViewModel> PredictionCards { get; } = new();
+    [ObservableProperty] private bool _hasPredictions;
+
     // ── Health Trends ─────────────────────────────────────────────────────────
 
     public HealthTrendsViewModel HealthTrendsViewModel { get; }
 
-    public DashboardViewModel(SystemHealthService healthService, MemoryLeakDetectionService leakService, AppSettings settings, HealthTrendsViewModel healthTrendsViewModel)
+    public DashboardViewModel(SystemHealthService healthService, MemoryLeakDetectionService leakService, AppSettings settings, HealthTrendsViewModel healthTrendsViewModel, PredictionService? predictionService = null)
     {
         _healthService      = healthService;
         _leakService        = leakService;
@@ -64,11 +70,26 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(ApplySnapshot);
 
+        if (predictionService != null)
+        {
+            _predictionsSubscription = predictionService.Predictions
+                .ObserveOn(RxApp.MainThreadScheduler)
+                .Subscribe(UpdatePredictions);
+        }
+
         // Restart health service when the user changes the metrics polling interval
         WeakReferenceMessenger.Default.Register<MetricsIntervalChangedMessage>(this, (_, msg) =>
         {
             _healthService.Start(msg.Interval);
         });
+    }
+
+    private void UpdatePredictions(IReadOnlyList<ResourcePrediction> predictions)
+    {
+        PredictionCards.Clear();
+        foreach (var p in predictions)
+            PredictionCards.Add(new PredictionCardViewModel(p));
+        HasPredictions = PredictionCards.Count > 0;
     }
 
     private void ApplySnapshot(SystemHealthSnapshot snapshot)
@@ -169,6 +190,8 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _subscription?.Dispose();
         _subscription = null;
+        _predictionsSubscription?.Dispose();
+        _predictionsSubscription = null;
     }
 }
 

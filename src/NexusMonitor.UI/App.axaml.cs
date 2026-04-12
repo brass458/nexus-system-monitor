@@ -109,6 +109,8 @@ public class App : Application
                 Services.GetRequiredService<MetricsRollupService>().Start();
                 Services.GetRequiredService<EventMonitorService>().Start();
                 Services.GetRequiredService<HealthSnapshotPersistenceService>().Start();
+                if (saved.Current.PredictionsEnabled)
+                    Services.GetRequiredService<PredictionService>().Start();
             }
 
             // Start anomaly detection if enabled
@@ -177,6 +179,7 @@ public class App : Application
 
                 // Data persistence (flush buffers last)
                 Services.GetRequiredService<EventMonitorService>().Stop();
+                Services.GetService<PredictionService>()?.Stop();
                 Services.GetService<HealthSnapshotPersistenceService>()?.Stop();
                 Services.GetService<MetricsRollupService>()?.Stop();
                 Services.GetRequiredService<MetricsStore>().Stop();

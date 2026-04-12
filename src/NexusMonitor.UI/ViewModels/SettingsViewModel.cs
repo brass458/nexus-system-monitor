@@ -230,6 +230,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool   _webhookAnomalies;
     [ObservableProperty] private string _webhookTestStatus = "";
 
+    // ── Resource Predictions ──────────────────────────────────────────────────
+    [ObservableProperty] private bool _predictionsEnabled;
+
     // ── Static lists ─────────────────────────────────────────────────────────
 
     public static IReadOnlyList<string> AccentPresets { get; } =
@@ -373,6 +376,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _webhookSecret    = settings.Current.WebhookSecret;
         _webhookAlerts    = settings.Current.WebhookEvents.Contains("alerts");
         _webhookAnomalies = settings.Current.WebhookEvents.Contains("anomalies");
+
+        // ── Resource Predictions ──────────────────────────────────────────────
+        _predictionsEnabled = settings.Current.PredictionsEnabled;
 
         // ── Theme preset list ──────────────────────────────────────────────────
         RebuildPresetNames();
@@ -758,11 +764,12 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
     }
 
-    partial void OnWebhookEnabledChanged(bool value)   { _settings.Current.WebhookEnabled = value; _settings.Save(); }
-    partial void OnWebhookUrlChanged(string value)     { _settings.Current.WebhookUrl     = value; _settings.Save(); }
-    partial void OnWebhookSecretChanged(string value)  { _settings.Current.WebhookSecret  = value; _settings.Save(); }
-    partial void OnWebhookAlertsChanged(bool value)    { SyncWebhookEvents(); _settings.Save(); }
-    partial void OnWebhookAnomaliesChanged(bool value) { SyncWebhookEvents(); _settings.Save(); }
+    partial void OnWebhookEnabledChanged(bool value)      { _settings.Current.WebhookEnabled     = value; _settings.Save(); }
+    partial void OnWebhookUrlChanged(string value)        { _settings.Current.WebhookUrl         = value; _settings.Save(); }
+    partial void OnWebhookSecretChanged(string value)     { _settings.Current.WebhookSecret      = value; _settings.Save(); }
+    partial void OnWebhookAlertsChanged(bool value)       { SyncWebhookEvents(); _settings.Save(); }
+    partial void OnWebhookAnomaliesChanged(bool value)    { SyncWebhookEvents(); _settings.Save(); }
+    partial void OnPredictionsEnabledChanged(bool value)  { _settings.Current.PredictionsEnabled = value; _settings.Save(); }
 
     private void SyncWebhookEvents()
     {

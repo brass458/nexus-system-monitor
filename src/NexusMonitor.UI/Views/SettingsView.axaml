@@ -1297,6 +1297,33 @@
       </StackPanel>
     </Border>
 
+    <!-- ===== RESOURCE PREDICTIONS ===== -->
+    <Border Padding="20,16" Margin="0,4,0,0"
+            Background="{DynamicResource BgElevatedBrush}"
+            BorderBrush="{DynamicResource GlassBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource CornerLG}">
+      <StackPanel Spacing="12">
+        <TextBlock Text="RESOURCE PREDICTIONS"
+                   FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextTertiaryBrush}"/>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="2">
+            <TextBlock Text="Enable Resource Predictions"
+                       FontSize="{DynamicResource NxFont13}" FontWeight="Medium"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Forecast disk and memory depletion from historical trends (requires metrics collection)"
+                       FontSize="{DynamicResource NxFont12}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"/>
+          </StackPanel>
+          <ToggleSwitch Grid.Column="1"
+                        IsChecked="{Binding PredictionsEnabled}"
+                        VerticalAlignment="Center"/>
+        </Grid>
+      </StackPanel>
+    </Border>
+
     <!-- ===== SAVED PROCESS PREFERENCES ===== -->
     <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"

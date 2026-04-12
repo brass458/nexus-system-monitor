@@ -193,6 +193,7 @@ public static class NexusServiceCollectionExtensions
         // Health service
         services.AddSingleton<SystemHealthService>();
         services.AddSingleton<HealthSnapshotPersistenceService>();
+        services.AddSingleton<PredictionService>();
 
         // Memory leak detection
         services.AddSingleton<MemoryLeakDetectionService>();
