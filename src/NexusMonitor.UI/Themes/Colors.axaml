@@ -202,6 +202,7 @@
   <Color x:Key="HeatHigh">#FF453A</Color>
 
   <!-- ===== SHARED BRUSHES (non-theme) ===== -->
+  <SolidColorBrush x:Key="AccentBrush"          Color="{StaticResource AccentBlue}" />
   <SolidColorBrush x:Key="AccentBlueBrush"      Color="{StaticResource AccentBlue}" />
   <SolidColorBrush x:Key="AccentBlueDimBrush"   Color="{StaticResource AccentBlueDim}" />
   <SolidColorBrush x:Key="AccentBlueHoverBrush" Color="{StaticResource AccentBlueHover}" />
