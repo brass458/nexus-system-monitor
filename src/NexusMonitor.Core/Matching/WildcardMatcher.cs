@@ -19,7 +19,7 @@ public static class WildcardMatcher
     /// and lowercases.
     /// </summary>
     public static string NormalizeName(string input) =>
-        Path.GetFileNameWithoutExtension(input).ToLowerInvariant();
+        Path.GetFileNameWithoutExtension(input ?? "").ToLowerInvariant();
 
     /// <summary>
     /// Returns true if <paramref name="normalizedName"/> matches <paramref name="normalizedPattern"/>.
@@ -29,6 +29,7 @@ public static class WildcardMatcher
     /// </summary>
     public static bool Matches(string normalizedName, string normalizedPattern)
     {
+        if (string.IsNullOrWhiteSpace(normalizedPattern)) return false;
         if (!normalizedPattern.Contains('*')) return normalizedName == normalizedPattern;
         // Split on * and verify each part appears in order
         var parts = normalizedPattern.Split('*');
