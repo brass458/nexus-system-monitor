@@ -74,6 +74,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _isDetailPanelVisible = false;
 
+    [ObservableProperty]
+    private bool _isGroupPanelVisible = false;
+
     /// <summary>True when the selected process has a saved persistent preference.</summary>
     [ObservableProperty]
     private bool _hasPreference;
@@ -118,17 +121,21 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     /// <summary>Sort direction persisted here so it survives tab switches.</summary>
     public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
 
+    public ProcessGroupsViewModel? GroupsViewModel { get; }
+
     public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
         IPlatformCapabilities? platformCapabilities = null,
         ProcessPreferenceStore? preferenceStore = null,
         MemoryLeakDetectionService? leakService = null,
-        ProcessGroupStore? groupStore = null)
+        ProcessGroupStore? groupStore = null,
+        ProcessGroupsViewModel? groupsViewModel = null)
     {
         _processProvider  = processProvider;
         _appSettings      = appSettings;
         _preferenceStore  = preferenceStore;
         _leakService      = leakService;
         _groupStore       = groupStore;
+        GroupsViewModel   = groupsViewModel;
         Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);

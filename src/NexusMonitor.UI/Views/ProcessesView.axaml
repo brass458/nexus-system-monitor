@@ -3,6 +3,7 @@
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
              xmlns:models="using:NexusMonitor.Core.Models"
+             xmlns:views="using:NexusMonitor.UI.Views"
              x:Class="NexusMonitor.UI.Views.ProcessesView"
              x:DataType="vm:ProcessesViewModel"
              x:CompileBindings="False">
@@ -25,7 +26,7 @@
             Background="{DynamicResource BgSecondaryBrush}"
             BorderBrush="{DynamicResource BorderSubtleBrush}"
             BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
 
         <!-- Search -->
         <Border Grid.Column="0"
@@ -108,10 +109,19 @@
         <!-- Detail panel toggle -->
         <ToggleButton Grid.Column="6"
                       Classes="nx-toggle"
-                      Margin="0"
+                      Margin="0,0,4,0"
                       IsChecked="{Binding IsDetailPanelVisible}"
                       ToolTip.Tip="Show/hide process details panel">
           <TextBlock Text="Info Panel" FontSize="{DynamicResource NxFont11}"/>
+        </ToggleButton>
+
+        <!-- Groups panel toggle -->
+        <ToggleButton Grid.Column="7"
+                      Classes="nx-toggle"
+                      Margin="0"
+                      IsChecked="{Binding IsGroupPanelVisible}"
+                      ToolTip.Tip="Show/hide process groups manager">
+          <TextBlock Text="Groups" FontSize="{DynamicResource NxFont11}"/>
         </ToggleButton>
 
       </Grid>
@@ -191,8 +201,8 @@
       </DockPanel>
     </Border>
 
-    <!-- ===== MAIN CONTENT: list + details side panel ===== -->
-    <Grid ColumnDefinitions="*,Auto,Auto">
+    <!-- ===== MAIN CONTENT: list + details side panel + groups panel ===== -->
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
 
       <!-- ── PROCESS LIST ── -->
       <DataGrid Grid.Column="0"
@@ -705,6 +715,22 @@
 
           </StackPanel>
         </ScrollViewer>
+      </Border>
+
+      <!-- ── GROUPS PANEL SPLITTER ── -->
+      <GridSplitter Grid.Column="3"
+                    Width="4"
+                    Background="{DynamicResource BorderSubtleBrush}"
+                    ResizeDirection="Columns"
+                    IsVisible="{Binding IsGroupPanelVisible}"/>
+
+      <!-- ── GROUPS PANEL ── -->
+      <!-- Width="440" on the Border causes the Auto column to collapse to 0 when IsVisible=false -->
+      <Border Grid.Column="4"
+              Width="440"
+              Background="{DynamicResource BgSecondaryBrush}"
+              IsVisible="{Binding IsGroupPanelVisible}">
+        <views:ProcessGroupsView DataContext="{Binding GroupsViewModel}"/>
       </Border>
 
     </Grid>
