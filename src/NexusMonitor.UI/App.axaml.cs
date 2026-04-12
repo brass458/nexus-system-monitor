@@ -135,7 +135,8 @@ public class App : Application
                 Services.GetRequiredService<CpuLimiterService>().Start();
             if (saved.Current.InstanceBalancerEnabled)
                 Services.GetRequiredService<InstanceBalancerService>().Start();
-            Services.GetRequiredService<QuietHoursService>().Start();
+            if (saved.Current.QuietHoursEnabled)
+                Services.GetRequiredService<QuietHoursService>().Start();
 
             // Start smart glass adaptive service if enabled
             if (saved.Current.SmartTintEnabled)

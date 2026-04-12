@@ -1,6 +1,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Alerts;
@@ -22,7 +23,8 @@ public class AlertsServiceTests
         metricsProvider.Setup(m => m.GetMetricsStream(It.IsAny<TimeSpan>()))
                        .Returns(subject.AsObservable());
         var notifMock = new Mock<INotificationService>();
-        var svc = new AlertsService(metricsProvider.Object, settings ?? new AppSettings(), notifMock.Object);
+        var svc = new AlertsService(metricsProvider.Object, settings ?? new AppSettings(), notifMock.Object,
+                                    NullLogger<AlertsService>.Instance);
         return (svc, subject, notifMock);
     }
 

@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Models;
@@ -16,6 +17,7 @@ public sealed class AlertsService : IDisposable
     private readonly ISystemMetricsProvider  _metrics;
     private readonly AppSettings             _settings;
     private readonly INotificationService    _notifications;
+    private readonly ILogger<AlertsService>  _logger;
     private readonly QuietHoursService?      _quietHours;
 
     // Sustain tracking: first moment this rule's value crossed the threshold
@@ -34,11 +36,13 @@ public sealed class AlertsService : IDisposable
 
     public AlertsService(ISystemMetricsProvider metrics, AppSettings settings,
                         INotificationService notifications,
+                        ILogger<AlertsService> logger,
                         QuietHoursService? quietHours = null)
     {
         _metrics       = metrics;
         _settings      = settings;
         _notifications = notifications;
+        _logger        = logger;
         _quietHours    = quietHours;
     }
 
@@ -49,7 +53,11 @@ public sealed class AlertsService : IDisposable
         _running = true;
         _subscription = _metrics
             .GetMetricsStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnTick, ex => { _running = false; });
+            .Subscribe(OnTick, ex =>
+            {
+                _logger.LogError(ex, "AlertsService stream faulted");
+                _running = false;
+            });
     }
 
     /// <summary>Stop the monitoring loop.</summary>
