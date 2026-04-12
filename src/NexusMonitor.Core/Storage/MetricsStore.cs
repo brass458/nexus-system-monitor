@@ -631,9 +631,10 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     public long GetDatabaseSizeBytes() => _db.GetDatabaseSizeBytes();
 
     // ── Health snapshots ───────────────────────────────────────────────────────
-    public async Task WriteHealthSnapshotAsync(SystemHealthSnapshot snapshot)
+    public Task WriteHealthSnapshotAsync(SystemHealthSnapshot snapshot)
     {
-        await Task.Run(() =>
+        if (_disposed) return Task.CompletedTask;
+        return Task.Run(() =>
         {
             lock (_lock)
             {
@@ -649,7 +650,7 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
                     cmd.Parameters.AddWithValue("$memory",     snapshot.Memory.Score);
                     cmd.Parameters.AddWithValue("$disk",       snapshot.Disk.Score);
                     cmd.Parameters.AddWithValue("$gpu",        snapshot.Gpu.Score);
-                    cmd.Parameters.AddWithValue("$bottleneck", (object?)snapshot.Bottleneck?.ToString() ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("$bottleneck", (object?)snapshot.Bottleneck?.Bottleneck.ToString() ?? DBNull.Value);
                     cmd.ExecuteNonQuery();
                 }
                 catch (Exception ex) { _logger.LogWarning(ex, "MetricsStore: WriteHealthSnapshotAsync failed"); }
