@@ -24,10 +24,11 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class ProcessesViewModel : ViewModelBase, IDisposable
 {
-    private readonly IProcessProvider           _processProvider;
-    private readonly AppSettings                _appSettings;
-    private readonly ProcessPreferenceStore?    _preferenceStore;
+    private readonly IProcessProvider            _processProvider;
+    private readonly AppSettings                 _appSettings;
+    private readonly ProcessPreferenceStore?     _preferenceStore;
     private readonly MemoryLeakDetectionService? _leakService;
+    private readonly ProcessGroupStore?          _groupStore;
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Exposes platform capability flags for binding in the View.</summary>
@@ -115,12 +116,14 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
         IPlatformCapabilities? platformCapabilities = null,
         ProcessPreferenceStore? preferenceStore = null,
-        MemoryLeakDetectionService? leakService = null)
+        MemoryLeakDetectionService? leakService = null,
+        ProcessGroupStore? groupStore = null)
     {
         _processProvider  = processProvider;
         _appSettings      = appSettings;
         _preferenceStore  = preferenceStore;
         _leakService      = leakService;
+        _groupStore       = groupStore;
         Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);
@@ -205,6 +208,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         {
             var impact     = ImpactScoreCalculator.Calculate(info, totals);
             var activeRule = _appSettings.Rules.FirstOrDefault(r => r.IsEnabled && r.Matches(info.Name));
+            var group      = _groupStore?.FindGroupForProcess(info.Name);
 
             if (_allRows.TryGetValue(pid, out var row))
             {
@@ -219,6 +223,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 row.ImpactScore     = impact;
                 row.HasActiveRule   = activeRule is not null;
                 row.RuleSummary     = activeRule?.Summary ?? string.Empty;
+                row.GroupName       = group?.Name  ?? string.Empty;
+                row.GroupColor      = group?.Color ?? string.Empty;
             }
             else
             {
@@ -227,6 +233,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                     ImpactScore   = impact,
                     HasActiveRule = activeRule is not null,
                     RuleSummary   = activeRule?.Summary ?? string.Empty,
+                    GroupName     = group?.Name  ?? string.Empty,
+                    GroupColor    = group?.Color ?? string.Empty,
                 };
                 _allRows[pid] = newRow;
             }
@@ -263,7 +271,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                     .Where(r =>
                         r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)        ||
                         r.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                        r.Pid.ToString().Contains(SearchText))
+                        r.Pid.ToString().Contains(SearchText)                                  ||
+                        r.GroupName.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
                     .Select(r => r.Pid));
 
         if (IsTreeViewActive)
@@ -832,6 +841,10 @@ public partial class ProcessRowViewModel : ObservableObject
             result[i] = _cpuHistory[(start + i) % 60];
         return result;
     }
+
+    // ── Process group membership ──────────────────────────────────────────────
+    [ObservableProperty] private string _groupName  = string.Empty;
+    [ObservableProperty] private string _groupColor = string.Empty;
 
     // ── Memory leak indicators ────────────────────────────────────────────────
     [ObservableProperty] private double _leakRateMbPerHour;
