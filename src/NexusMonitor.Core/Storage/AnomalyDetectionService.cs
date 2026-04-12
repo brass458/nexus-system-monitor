@@ -110,15 +110,18 @@ public sealed class AnomalyDetectionService : IDisposable
             : 0;
         double gpu = m.Gpus.Count > 0 ? m.Gpus[0].UsagePercent : -1;
 
-        // Check anomalies BEFORE pushing (compare new value against existing baseline)
-        CheckMetric(EventType.CpuHigh, "cpu", cpu, _cpuStats, _config.SigmaCpu, _config.CpuCeiling);
-        CheckMetric(EventType.MemHigh, "mem", mem, _memStats, _config.SigmaMem, _config.MemCeiling);
-        if (gpu >= 0)
-            CheckMetric(EventType.GpuHigh, "gpu", gpu, _gpuStats, _config.SigmaGpu, _config.GpuCeiling);
+        lock (_statsLock)
+        {
+            // Check anomalies BEFORE pushing (compare new value against existing baseline)
+            CheckMetric(EventType.CpuHigh, "cpu", cpu, _cpuStats, _config.SigmaCpu, _config.CpuCeiling);
+            CheckMetric(EventType.MemHigh, "mem", mem, _memStats, _config.SigmaMem, _config.MemCeiling);
+            if (gpu >= 0)
+                CheckMetric(EventType.GpuHigh, "gpu", gpu, _gpuStats, _config.SigmaGpu, _config.GpuCeiling);
 
-        _cpuStats.Push(cpu);
-        _memStats.Push(mem);
-        if (gpu >= 0) _gpuStats.Push(gpu);
+            _cpuStats.Push(cpu);
+            _memStats.Push(mem);
+            if (gpu >= 0) _gpuStats.Push(gpu);
+        }
     }
 
     private void CheckMetric(string eventType, string metricName, double value,
@@ -229,10 +232,15 @@ public sealed class AnomalyDetectionService : IDisposable
     private void OnNetworkTick(IReadOnlyList<NetworkConnection> conns)
     {
         // ── Aggregate bandwidth anomaly ──────────────────────────────────
-        double totalBps   = conns.Sum(c => c.SendBytesPerSec + c.RecvBytesPerSec);
-        bool isNetAnomaly = _netStats.IsAnomaly(totalBps, _config.SigmaNet);
-        double netBaseline = _netStats.Mean();
-        _netStats.Push(totalBps);
+        double totalBps = conns.Sum(c => c.SendBytesPerSec + c.RecvBytesPerSec);
+        bool   isNetAnomaly;
+        double netBaseline;
+        lock (_statsLock)
+        {
+            isNetAnomaly = _netStats.IsAnomaly(totalBps, _config.SigmaNet);
+            netBaseline  = _netStats.Mean();
+            _netStats.Push(totalBps);
+        }
 
         if (isNetAnomaly && IsCooldownElapsed(EventType.NetAnomaly, "net_bw"))
         {

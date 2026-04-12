@@ -34,6 +34,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly WebhookNotificationService              _webhookService;
     private readonly PredictionService?                      _predictionService;
     private readonly HealthSnapshotPersistenceService?       _healthSnapshotService;
+    private readonly EventMonitorService?                    _eventMonitorService;
 
     // ── Saved Process Preferences ────────────────────────────────────────────
     public ObservableCollection<ProcessPreference> SavedPreferences { get; } = new();
@@ -302,7 +303,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         WebhookNotificationService   webhookService,
         PredictionService?                      predictionService = null,
         ProcessPreferenceStore?                 preferenceStore = null,
-        HealthSnapshotPersistenceService?       healthSnapshotService = null)
+        HealthSnapshotPersistenceService?       healthSnapshotService = null,
+        EventMonitorService?                    eventMonitorService = null)
     {
         Title             = "Settings";
         _settings         = settings;
@@ -315,6 +317,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _predictionService     = predictionService;
         _preferenceStore       = preferenceStore;
         _healthSnapshotService = healthSnapshotService;
+        _eventMonitorService   = eventMonitorService;
 
         // Load saved preferences
         if (preferenceStore is not null)
@@ -711,6 +714,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             store.Start(TimeSpan.FromMilliseconds(_settings.Current.UpdateIntervalMs));
             rollup.Start();
             _healthSnapshotService?.Start();
+            _eventMonitorService?.Start();
             if (_settings.Current.PredictionsEnabled)
                 _predictionService?.Start();
         }
@@ -719,6 +723,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             store.Stop();
             rollup.Stop();
             _healthSnapshotService?.Stop();
+            _eventMonitorService?.Stop();
             _predictionService?.Stop();
         }
         WeakReferenceMessenger.Default.Send(new MetricsEnabledChangedMessage(value));
