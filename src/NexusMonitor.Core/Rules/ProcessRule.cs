@@ -54,6 +54,12 @@ public class ProcessRule
     }
     public bool   IsEnabled           { get; set; } = true;
 
+    /// <summary>
+    /// When set, this rule also matches all processes belonging to the named group.
+    /// If both GroupName and ProcessNamePattern are set, either match suffices.
+    /// </summary>
+    public string? GroupName { get; set; }
+
     // ── Persistent actions (applied on every process launch) ──────────────
     public ProcessPriority? Priority       { get; set; }
     public long?            AffinityMask   { get; set; }
