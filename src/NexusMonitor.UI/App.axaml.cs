@@ -185,9 +185,8 @@ public class App : Application
                 // Infrastructure
                 Services.GetService<GlassAdaptiveService>()?.Stop();
                 Services.GetService<PrometheusExporter>()?.Stop();
-                (Services.GetService<WebhookNotificationService>() as IDisposable)?.Dispose();
-
                 _subscriptions.Dispose();
+                (Services.GetService<WebhookNotificationService>() as IDisposable)?.Dispose();
                 (Services as IDisposable)?.Dispose();
             };
 
