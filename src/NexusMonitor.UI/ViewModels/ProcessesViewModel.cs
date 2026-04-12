@@ -285,7 +285,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 GroupSummaries.RemoveAt(i);
         foreach (var s in summaries)
         {
-            var idx = GroupSummaries.IndexOf(GroupSummaries.FirstOrDefault(x => x.Name == s.Name)!);
+            var idx = -1;
+            for (int i = 0; i < GroupSummaries.Count; i++)
+                if (GroupSummaries[i].Name == s.Name) { idx = i; break; }
             if (idx >= 0) GroupSummaries[idx] = s;
             else GroupSummaries.Add(s);
         }

@@ -323,13 +323,15 @@ public partial class RulesViewModel : ViewModelBase
     {
         ValidationError = "";
 
-        if (string.IsNullOrWhiteSpace(EditPattern))
+        bool hasPattern = !string.IsNullOrWhiteSpace(EditPattern);
+        bool hasGroup   = EditGroupName is not ("" or "(none)");
+        if (!hasPattern && !hasGroup)
         {
-            ValidationError = "Process name pattern is required.";
+            ValidationError = "A process name pattern or a target group is required.";
             return;
         }
         if (string.IsNullOrWhiteSpace(EditName))
-            EditName = EditPattern;
+            EditName = hasPattern ? EditPattern : EditGroupName;
 
         var rule = _editingId == Guid.Empty
             ? new ProcessRule { Id = Guid.NewGuid() }

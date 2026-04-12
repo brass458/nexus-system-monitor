@@ -107,6 +107,7 @@ public sealed class ProcessGroupStore
     /// Returns the first group (by ascending CreatedUtc) whose patterns match processName,
     /// or null if no group matches.
     /// </summary>
+    /// <remarks>First match wins by ascending <see cref="ProcessGroup.CreatedUtc"/>.</remarks>
     public ProcessGroup? FindGroupForProcess(string processName)
     {
         lock (_lock)
