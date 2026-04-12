@@ -16,9 +16,9 @@ public class PredictionServiceTests
     private static readonly DateTime FixedNow = new DateTime(2026, 4, 12, 12, 0, 0, DateTimeKind.Utc);
 
     private (PredictionService svc, Mock<IMetricsReader> reader) CreateService(
-        AppSettings?       settings    = null,
-        QuietHoursService? quietHours  = null,
-        Func<DateTime>?    clock       = null)
+        AppSettings?             settings    = null,
+        QuietHoursService?       quietHours  = null,
+        Func<DateTimeOffset>?    clock       = null)
     {
         var reader = new Mock<IMetricsReader>();
         var svc = new PredictionService(
@@ -26,7 +26,7 @@ public class PredictionServiceTests
             settings ?? new AppSettings { PredictionsEnabled = true },
             NullLogger<PredictionService>.Instance,
             quietHours,
-            clock ?? (() => FixedNow));
+            clock ?? (() => new DateTimeOffset(FixedNow)));
         return (svc, reader);
     }
 

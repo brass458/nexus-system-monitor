@@ -20,7 +20,7 @@ public sealed class PredictionService : IDisposable
     private readonly AppSettings                     _settings;
     private readonly ILogger<PredictionService>      _logger;
     private readonly QuietHoursService?              _quietHours;
-    private readonly Func<DateTime>                  _clock;
+    private readonly Func<DateTimeOffset>             _clock;
 
     // ── State ──────────────────────────────────────────────────────────────
     private readonly SemaphoreSlim                                           _tickLock    = new(1, 1);
@@ -50,7 +50,7 @@ public sealed class PredictionService : IDisposable
         AppSettings                settings,
         ILogger<PredictionService> logger,
         QuietHoursService?         quietHours = null)
-        : this(metricsReader, settings, logger, quietHours, () => DateTime.UtcNow) { }
+        : this(metricsReader, settings, logger, quietHours, () => DateTimeOffset.UtcNow) { }
 
     /// <summary>Testable constructor — accepts clock injection.</summary>
     public PredictionService(
@@ -58,7 +58,7 @@ public sealed class PredictionService : IDisposable
         AppSettings                settings,
         ILogger<PredictionService> logger,
         QuietHoursService?         quietHours,
-        Func<DateTime>             clock)
+        Func<DateTimeOffset>       clock)
     {
         _metricsReader = metricsReader;
         _settings      = settings;
@@ -133,7 +133,7 @@ public sealed class PredictionService : IDisposable
             return;
         }
 
-        var now  = new DateTimeOffset(DateTime.SpecifyKind(_clock(), DateTimeKind.Utc));
+        var now  = _clock();
         var from = now.AddHours(-24);
 
         IReadOnlyList<HealthDataPoint> points;

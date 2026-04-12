@@ -86,17 +86,21 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         });
     }
 
+    private void OnPredictionCardPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PredictionCardViewModel.IsDismissed))
+            HasPredictions = PredictionCards.Any(c => !c.IsDismissed);
+    }
+
     private void UpdatePredictions(IReadOnlyList<ResourcePrediction> predictions)
     {
+        foreach (var existing in PredictionCards)
+            existing.PropertyChanged -= OnPredictionCardPropertyChanged;
         PredictionCards.Clear();
         foreach (var p in predictions)
         {
             var card = new PredictionCardViewModel(p, _dismissedResources);
-            card.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(PredictionCardViewModel.IsDismissed))
-                    HasPredictions = PredictionCards.Any(c => !c.IsDismissed);
-            };
+            card.PropertyChanged += OnPredictionCardPropertyChanged;
             PredictionCards.Add(card);
         }
         HasPredictions = PredictionCards.Any(c => !c.IsDismissed);
