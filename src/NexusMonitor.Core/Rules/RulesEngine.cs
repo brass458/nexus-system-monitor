@@ -17,6 +17,7 @@ public sealed class RulesEngine : IDisposable
     private readonly IProcessProvider        _processProvider;
     private readonly AppSettings             _settings;
     private readonly ProcessPreferenceStore? _preferenceStore;
+    private readonly ProcessGroupStore?      _groupStore;
     private readonly ILogger<RulesEngine>    _logger;
     private readonly HashSet<int> _seenPids = new();
     // watchdog tracking: (pid, ruleId) → first-seen-over-threshold time
@@ -42,12 +43,14 @@ public sealed class RulesEngine : IDisposable
 
     public RulesEngine(IProcessProvider processProvider, AppSettings settings,
         ILogger<RulesEngine> logger,
-        ProcessPreferenceStore? preferenceStore = null)
+        ProcessPreferenceStore? preferenceStore = null,
+        ProcessGroupStore? groupStore = null)
     {
         _processProvider  = processProvider;
         _settings         = settings;
         _logger           = logger;
         _preferenceStore  = preferenceStore;
+        _groupStore       = groupStore;
     }
 
     public void Start()
@@ -92,7 +95,7 @@ public sealed class RulesEngine : IDisposable
         {
             bool isNew = _seenPids.Add(proc.Pid);
             bool ruleMatched = false;
-            foreach (var rule in rules.Where(r => r.Matches(proc.Name)))
+            foreach (var rule in rules.Where(r => RuleMatchesProcess(r, proc)))
             {
                 // ── Disallowed: terminate immediately ─────────────────────
                 if (rule.Disallowed && isNew)
@@ -188,6 +191,23 @@ public sealed class RulesEngine : IDisposable
         finally { _tickLock.Release(); }
     }
 
+    // ── Rule matching ────────────────────────────────────────────────────────
+
+    private bool RuleMatchesProcess(ProcessRule rule, ProcessInfo proc)
+    {
+        // Direct pattern match (existing behavior)
+        if (rule.Matches(proc.Name)) return true;
+        // Group-based match (new)
+        if (!string.IsNullOrEmpty(rule.GroupName) && _groupStore is not null)
+        {
+            var group = _groupStore.FindGroupForProcess(proc.Name);
+            if (group is not null &&
+                group.Name.Equals(rule.GroupName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
     // ── KeepRunning ──────────────────────────────────────────────────────────
 
     private Task EvaluateKeepRunning(
@@ -258,7 +278,7 @@ public sealed class RulesEngine : IDisposable
         {
             var max = rule.MaxInstances!.Value;
             var matching = processes
-                .Where(p => rule.Matches(p.Name))
+                .Where(p => RuleMatchesProcess(rule, p))
                 .OrderBy(p => p.StartTime)    // oldest first → kill newest excess
                 .ToList();
 

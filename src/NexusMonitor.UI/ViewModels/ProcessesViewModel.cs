@@ -24,10 +24,11 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class ProcessesViewModel : ViewModelBase, IDisposable
 {
-    private readonly IProcessProvider           _processProvider;
-    private readonly AppSettings                _appSettings;
-    private readonly ProcessPreferenceStore?    _preferenceStore;
+    private readonly IProcessProvider            _processProvider;
+    private readonly AppSettings                 _appSettings;
+    private readonly ProcessPreferenceStore?     _preferenceStore;
     private readonly MemoryLeakDetectionService? _leakService;
+    private readonly ProcessGroupStore?          _groupStore;
     private readonly CancellationTokenSource _cts = new();
 
     /// <summary>Exposes platform capability flags for binding in the View.</summary>
@@ -73,6 +74,9 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _isDetailPanelVisible = false;
 
+    [ObservableProperty]
+    private bool _isGroupPanelVisible = false;
+
     /// <summary>True when the selected process has a saved persistent preference.</summary>
     [ObservableProperty]
     private bool _hasPreference;
@@ -82,6 +86,11 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
 
     /// <summary>True when the detail panel should be shown (has selection AND toggle is on).</summary>
     public bool IsDetailPanelShown => SelectedDetails is not null && IsDetailPanelVisible;
+
+    public ObservableCollection<GroupSummary> GroupSummaries { get; } = [];
+
+    /// <summary>True when there is at least one group summary to display.</summary>
+    public bool HasGroupSummaries => GroupSummaries.Count > 0;
 
     /// <summary>
     /// Tracks the set of PIDs shown in the last tree-mode render so we avoid
@@ -112,15 +121,21 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     /// <summary>Sort direction persisted here so it survives tab switches.</summary>
     public System.ComponentModel.ListSortDirection SortDirection { get; set; } = System.ComponentModel.ListSortDirection.Ascending;
 
+    public ProcessGroupsViewModel? GroupsViewModel { get; }
+
     public ProcessesViewModel(IProcessProvider processProvider, AppSettings appSettings,
         IPlatformCapabilities? platformCapabilities = null,
         ProcessPreferenceStore? preferenceStore = null,
-        MemoryLeakDetectionService? leakService = null)
+        MemoryLeakDetectionService? leakService = null,
+        ProcessGroupStore? groupStore = null,
+        ProcessGroupsViewModel? groupsViewModel = null)
     {
         _processProvider  = processProvider;
         _appSettings      = appSettings;
         _preferenceStore  = preferenceStore;
         _leakService      = leakService;
+        _groupStore       = groupStore;
+        GroupsViewModel   = groupsViewModel;
         Platform          = platformCapabilities ?? new MockPlatformCapabilities();
         Title = "Processes";
         StartMonitoring(_appSettings.UpdateIntervalMs);
@@ -205,6 +220,7 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         {
             var impact     = ImpactScoreCalculator.Calculate(info, totals);
             var activeRule = _appSettings.Rules.FirstOrDefault(r => r.IsEnabled && r.Matches(info.Name));
+            var group      = _groupStore?.FindGroupForProcess(info.Name);
 
             if (_allRows.TryGetValue(pid, out var row))
             {
@@ -219,6 +235,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                 row.ImpactScore     = impact;
                 row.HasActiveRule   = activeRule is not null;
                 row.RuleSummary     = activeRule?.Summary ?? string.Empty;
+                row.GroupName       = group?.Name  ?? string.Empty;
+                row.GroupColor      = group?.Color ?? string.Empty;
             }
             else
             {
@@ -227,6 +245,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                     ImpactScore   = impact,
                     HasActiveRule = activeRule is not null,
                     RuleSummary   = activeRule?.Summary ?? string.Empty,
+                    GroupName     = group?.Name  ?? string.Empty,
+                    GroupColor    = group?.Color ?? string.Empty,
                 };
                 _allRows[pid] = newRow;
             }
@@ -241,6 +261,37 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
         TotalProcessCount = processes.Count;
         TotalThreadCount  = processes.Sum(p => p.ThreadCount);
         TotalCpuPercent   = Math.Round(processes.Sum(p => p.CpuPercent), 1);
+
+        // ── 3b. Update group summaries ────────────────────────────────────────
+        var summaries = _allRows.Values
+            .Where(r => !string.IsNullOrEmpty(r.GroupName))
+            .GroupBy(r => r.GroupName)
+            .Select(g =>
+            {
+                var first = g.First();
+                return new GroupSummary(
+                    g.Key,
+                    first.GroupColor,
+                    g.Count(),
+                    g.Sum(r => r.CpuPercent),
+                    g.Sum(r => r.WorkingSetBytes));
+            })
+            .OrderBy(s => s.Name)
+            .ToList();
+
+        // Sync to ObservableCollection (avoid full clear+re-add to reduce flicker)
+        for (int i = GroupSummaries.Count - 1; i >= 0; i--)
+            if (!summaries.Any(s => s.Name == GroupSummaries[i].Name))
+                GroupSummaries.RemoveAt(i);
+        foreach (var s in summaries)
+        {
+            var idx = -1;
+            for (int i = 0; i < GroupSummaries.Count; i++)
+                if (GroupSummaries[i].Name == s.Name) { idx = i; break; }
+            if (idx >= 0) GroupSummaries[idx] = s;
+            else GroupSummaries.Add(s);
+        }
+        OnPropertyChanged(nameof(HasGroupSummaries));
 
         // ── 4. Sync the visible collection with the current filter ────────────
         ApplyFilter();
@@ -263,7 +314,8 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
                     .Where(r =>
                         r.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)        ||
                         r.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                        r.Pid.ToString().Contains(SearchText))
+                        r.Pid.ToString().Contains(SearchText)                                  ||
+                        r.GroupName.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
                     .Select(r => r.Pid));
 
         if (IsTreeViewActive)
@@ -833,6 +885,10 @@ public partial class ProcessRowViewModel : ObservableObject
         return result;
     }
 
+    // ── Process group membership ──────────────────────────────────────────────
+    [ObservableProperty] private string _groupName  = string.Empty;
+    [ObservableProperty] private string _groupColor = string.Empty;
+
     // ── Memory leak indicators ────────────────────────────────────────────────
     [ObservableProperty] private double _leakRateMbPerHour;
     [ObservableProperty] private bool   _isLeakCritical;
@@ -1010,5 +1066,30 @@ public class ProcessDetailViewModel : INotifyPropertyChanged, IDisposable
             }
             return pts;
         }
+    }
+}
+
+/// <summary>
+/// Immutable snapshot of aggregate CPU and RAM for a single process group,
+/// used to populate the summary strip above the process list.
+/// </summary>
+public sealed class GroupSummary
+{
+    public string Name     { get; }
+    public string Color    { get; }
+    public int    Count    { get; }
+    public double CpuPct   { get; }
+    public long   RamBytes { get; }
+
+    public string CpuDisplay => $"{CpuPct:F1}%";
+    public string RamDisplay => ProcessRowViewModel.FormatBytes(RamBytes);
+
+    public GroupSummary(string name, string color, int count, double cpuPct, long ramBytes)
+    {
+        Name     = name;
+        Color    = color;
+        Count    = count;
+        CpuPct   = cpuPct;
+        RamBytes = ramBytes;
     }
 }

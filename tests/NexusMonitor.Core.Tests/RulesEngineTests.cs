@@ -4,6 +4,7 @@ using Moq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Rules;
+using NexusMonitor.Core.Storage;
 using NexusMonitor.Core.Tests.Helpers;
 using TestHelpers = NexusMonitor.Core.Tests.Helpers.MockFactory;
 using Xunit;
@@ -979,5 +980,187 @@ public class RulesEngineTests : IDisposable
         _mockProvider.Verify(
             p => p.SetPriorityAsync(1, ProcessPriority.High, It.IsAny<CancellationToken>()),
             Times.Exactly(2));
+    }
+}
+
+/// <summary>
+/// Group-based rule matching tests for <see cref="RulesEngine"/>.
+/// Verifies that rules with <see cref="ProcessRule.GroupName"/> match processes
+/// that belong to the named group, with and without a <see cref="ProcessGroupStore"/>.
+/// </summary>
+public class RulesEngineGroupMatchingTests : IDisposable
+{
+    private readonly Mock<IProcessProvider> _mockProvider;
+    private readonly AppSettings _settings;
+
+    public RulesEngineGroupMatchingTests()
+    {
+        _mockProvider = TestHelpers.CreateProcessProvider();
+        _settings = new AppSettings();
+    }
+
+    public void Dispose() { }
+
+    private RulesEngine CreateEngineWithGroupStore(ProcessRule rule, ProcessGroupStore groupStore)
+    {
+        _settings.Rules = new List<ProcessRule> { rule };
+        return new RulesEngine(
+            _mockProvider.Object,
+            _settings,
+            TestHelpers.CreateLogger<RulesEngine>().Object,
+            preferenceStore: null,
+            groupStore: groupStore);
+    }
+
+    private RulesEngine CreateEngineWithoutGroupStore(ProcessRule rule)
+    {
+        _settings.Rules = new List<ProcessRule> { rule };
+        return new RulesEngine(
+            _mockProvider.Object,
+            _settings,
+            TestHelpers.CreateLogger<RulesEngine>().Object);
+    }
+
+    private static ProcessInfo MakeProcess(int pid, string name) =>
+        new() { Pid = pid, Name = name, StartTime = DateTime.UtcNow };
+
+    private static async Task EmitAndWait(
+        Subject<IReadOnlyList<ProcessInfo>> subject,
+        IReadOnlyList<ProcessInfo> processes,
+        int waitMs = 300)
+    {
+        subject.OnNext(processes);
+        await Task.Delay(waitMs);
+    }
+
+    // ── 1. Rule with GroupName matches process in group ───────────────────────
+
+    [Fact]
+    public async Task Rule_WithGroupName_MatchesProcessInGroup()
+    {
+        var subject = new Subject<IReadOnlyList<ProcessInfo>>();
+        _mockProvider.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>()))
+                     .Returns(subject);
+
+        using var db = new TestMetricsDatabase();
+        var groupStore = new ProcessGroupStore(db.Database);
+        groupStore.Upsert(new ProcessGroup { Name = "Browsers", Patterns = ["chrome*"] });
+
+        // Rule has GroupName only — no ProcessNamePattern
+        var rule = new ProcessRule
+        {
+            ProcessNamePattern = "",
+            GroupName = "Browsers",
+            Priority = ProcessPriority.BelowNormal,
+            IsEnabled = true
+        };
+
+        using var engine = CreateEngineWithGroupStore(rule, groupStore);
+        engine.Start();
+
+        await EmitAndWait(subject, new[] { MakeProcess(1, "chrome") });
+
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(1, ProcessPriority.BelowNormal, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ── 2. Rule with GroupName does NOT match process outside group ───────────
+
+    [Fact]
+    public async Task Rule_WithGroupName_DoesNotMatchProcessOutsideGroup()
+    {
+        var subject = new Subject<IReadOnlyList<ProcessInfo>>();
+        _mockProvider.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>()))
+                     .Returns(subject);
+
+        using var db = new TestMetricsDatabase();
+        var groupStore = new ProcessGroupStore(db.Database);
+        groupStore.Upsert(new ProcessGroup { Name = "Browsers", Patterns = ["chrome*"] });
+
+        var rule = new ProcessRule
+        {
+            ProcessNamePattern = "",
+            GroupName = "Browsers",
+            Priority = ProcessPriority.BelowNormal,
+            IsEnabled = true
+        };
+
+        using var engine = CreateEngineWithGroupStore(rule, groupStore);
+        engine.Start();
+
+        // "notepad" is not in the Browsers group
+        await EmitAndWait(subject, new[] { MakeProcess(2, "notepad") });
+
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(It.IsAny<int>(), It.IsAny<ProcessPriority>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ── 3. Rule with both pattern and GroupName matches either ────────────────
+
+    [Fact]
+    public async Task Rule_WithBothPatternAndGroup_MatchesEither()
+    {
+        var subject = new Subject<IReadOnlyList<ProcessInfo>>();
+        _mockProvider.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>()))
+                     .Returns(subject);
+
+        using var db = new TestMetricsDatabase();
+        var groupStore = new ProcessGroupStore(db.Database);
+        groupStore.Upsert(new ProcessGroup { Name = "Browsers", Patterns = ["chrome*"] });
+
+        // Rule matches "notepad" by pattern AND "chrome" by group
+        var rule = new ProcessRule
+        {
+            ProcessNamePattern = "notepad",
+            GroupName = "Browsers",
+            Priority = ProcessPriority.BelowNormal,
+            IsEnabled = true
+        };
+
+        using var engine = CreateEngineWithGroupStore(rule, groupStore);
+        engine.Start();
+
+        // "notepad" matches via pattern
+        await EmitAndWait(subject, new[] { MakeProcess(1, "notepad") });
+        // "chrome" matches via group
+        await EmitAndWait(subject, new[] { MakeProcess(2, "chrome") });
+
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(1, ProcessPriority.BelowNormal, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(2, ProcessPriority.BelowNormal, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ── 4. Rule with GroupName but no store — falls back to pattern only ──────
+
+    [Fact]
+    public async Task Rule_WithGroupName_NullGroupStore_FallsBackToPatternOnly()
+    {
+        var subject = new Subject<IReadOnlyList<ProcessInfo>>();
+        _mockProvider.Setup(p => p.GetProcessStream(It.IsAny<TimeSpan>()))
+                     .Returns(subject);
+
+        // No group store passed to engine
+        var rule = new ProcessRule
+        {
+            ProcessNamePattern = "",
+            GroupName = "Browsers",
+            Priority = ProcessPriority.BelowNormal,
+            IsEnabled = true
+        };
+
+        using var engine = CreateEngineWithoutGroupStore(rule);
+        engine.Start();
+
+        // "chrome" would match via group, but there's no store — no action expected
+        await EmitAndWait(subject, new[] { MakeProcess(1, "chrome") });
+
+        _mockProvider.Verify(
+            p => p.SetPriorityAsync(It.IsAny<int>(), It.IsAny<ProcessPriority>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

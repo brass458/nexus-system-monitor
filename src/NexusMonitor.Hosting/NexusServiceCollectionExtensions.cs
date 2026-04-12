@@ -166,6 +166,7 @@ public static class NexusServiceCollectionExtensions
 
         // Process preferences store
         services.AddSingleton<ProcessPreferenceStore>();
+        services.AddSingleton<ProcessGroupStore>();
 
         // Automation services
         services.AddSingleton<ProcessActionLock>();

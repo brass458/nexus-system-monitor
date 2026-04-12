@@ -380,6 +380,7 @@ public class App : Application
         services.AddSingleton<PerformanceProfilesViewModel>();
         services.AddSingleton<AutomationViewModel>();
         services.AddSingleton<DiagnosticsViewModel>();
+        services.AddSingleton<ProcessGroupsViewModel>();
 
         return services.BuildServiceProvider();
     }
