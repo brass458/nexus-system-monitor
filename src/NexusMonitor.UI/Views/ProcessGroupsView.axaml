@@ -118,7 +118,7 @@
       <StackPanel Spacing="12" MaxWidth="360">
 
         <!-- Editor title -->
-        <TextBlock Text="Edit Group"
+        <TextBlock Text="{Binding EditorTitle}"
                    FontSize="{DynamicResource NxFont13}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"/>

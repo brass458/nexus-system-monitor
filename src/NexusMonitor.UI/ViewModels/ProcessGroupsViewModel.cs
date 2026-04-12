@@ -16,6 +16,7 @@ public partial class ProcessGroupsViewModel : ViewModelBase
 
     // ── Editor state ──────────────────────────────────────────────────────────
     [ObservableProperty] private bool   _isEditorVisible;
+    [ObservableProperty] private string _editorTitle  = "New Group";
     [ObservableProperty] private string _editName     = "";
     [ObservableProperty] private string _editColor    = "#5B9BD5";
     [ObservableProperty] private string _editPatterns = "";
@@ -44,6 +45,7 @@ public partial class ProcessGroupsViewModel : ViewModelBase
     private void NewGroup()
     {
         _editId          = null;
+        EditorTitle      = "New Group";
         EditName         = "";
         EditColor        = "#5B9BD5";
         EditPatterns     = "";
@@ -56,6 +58,7 @@ public partial class ProcessGroupsViewModel : ViewModelBase
     private void EditGroup(ProcessGroup group)
     {
         _editId          = group.Id;
+        EditorTitle      = "Edit Group";
         EditName         = group.Name;
         EditColor        = group.Color;
         EditPatterns     = string.Join("\n", group.Patterns);
@@ -89,13 +92,19 @@ public partial class ProcessGroupsViewModel : ViewModelBase
         {
             // Update existing
             var existing = _store.Get(_editId.Value);
-            if (existing is not null)
+            if (existing is null)
             {
-                existing.Name     = EditName.Trim();
-                existing.Color    = string.IsNullOrWhiteSpace(EditColor) ? "#5B9BD5" : EditColor.Trim();
-                existing.Patterns = patterns;
-                _store.Upsert(existing);
+                HasValidationError = true;
+                ValidationMessage  = "This group was deleted before saving. Please create a new group.";
+                LoadGroups();
+                IsEditorVisible = false;
+                return;
             }
+
+            existing.Name     = EditName.Trim();
+            existing.Color    = string.IsNullOrWhiteSpace(EditColor) ? "#5B9BD5" : EditColor.Trim();
+            existing.Patterns = patterns;
+            _store.Upsert(existing);
         }
         else
         {
