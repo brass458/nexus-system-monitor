@@ -1064,7 +1064,7 @@ public class ProcessDetailViewModel : INotifyPropertyChanged, IDisposable
 /// Immutable snapshot of aggregate CPU and RAM for a single process group,
 /// used to populate the summary strip above the process list.
 /// </summary>
-public sealed class GroupSummary : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public sealed class GroupSummary
 {
     public string Name     { get; }
     public string Color    { get; }
@@ -1073,7 +1073,7 @@ public sealed class GroupSummary : CommunityToolkit.Mvvm.ComponentModel.Observab
     public long   RamBytes { get; }
 
     public string CpuDisplay => $"{CpuPct:F1}%";
-    public string RamDisplay => FormatBytes(RamBytes);
+    public string RamDisplay => ProcessRowViewModel.FormatBytes(RamBytes);
 
     public GroupSummary(string name, string color, int count, double cpuPct, long ramBytes)
     {
@@ -1083,12 +1083,4 @@ public sealed class GroupSummary : CommunityToolkit.Mvvm.ComponentModel.Observab
         CpuPct   = cpuPct;
         RamBytes = ramBytes;
     }
-
-    private static string FormatBytes(long bytes) => bytes switch
-    {
-        >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
-        >= 1_048_576     => $"{bytes / 1_048_576.0:F1} MB",
-        >= 1_024         => $"{bytes / 1_024.0:F1} KB",
-        _                => $"{bytes} B"
-    };
 }
