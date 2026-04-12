@@ -192,6 +192,16 @@ CREATE TABLE IF NOT EXISTS process_preferences (
     modified_utc    TEXT    NOT NULL
 );
 
+-- Process groups (Phase 22b)
+CREATE TABLE IF NOT EXISTS process_groups (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    color         TEXT NOT NULL DEFAULT '#5B9BD5',
+    patterns_json TEXT NOT NULL DEFAULT '[]',
+    created_utc   TEXT NOT NULL,
+    modified_utc  TEXT NOT NULL
+);
+
 INSERT OR IGNORE INTO meta (key, value) VALUES
     ('schema_version',    '1'),
     ('last_rollup_1m_ts', '0'),
