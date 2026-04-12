@@ -11,8 +11,9 @@ namespace NexusMonitor.UI.ViewModels;
 
 public partial class AutomationViewModel : ViewModelBase
 {
-    private readonly AppSettings      _settings;
-    private readonly SettingsService  _settingsService;
+    private readonly AppSettings        _settings;
+    private readonly SettingsService    _settingsService;
+    private readonly QuietHoursService? _quietHoursService;
 
     /// <summary>Exposes platform capability flags for binding in the View.</summary>
     public IPlatformCapabilities Platform { get; }
@@ -44,13 +45,29 @@ public partial class AutomationViewModel : ViewModelBase
     public ObservableCollection<InstanceBalancerRule> InstanceBalancerRules { get; } = [];
     [ObservableProperty] private InstanceBalancerRule? _selectedInstanceBalancerRule;
 
+    // ── Quiet Hours ─────────────────────────────────────────────────────────
+    [ObservableProperty] private bool   _quietHoursEnabled;
+    [ObservableProperty] private string _quietHoursStart = "22:00";
+    [ObservableProperty] private string _quietHoursEnd   = "07:00";
+
+    // Day-of-week checkboxes (bound individually for simplicity)
+    [ObservableProperty] private bool _quietHoursMon;
+    [ObservableProperty] private bool _quietHoursTue;
+    [ObservableProperty] private bool _quietHoursWed;
+    [ObservableProperty] private bool _quietHoursThu;
+    [ObservableProperty] private bool _quietHoursFri;
+    [ObservableProperty] private bool _quietHoursSat;
+    [ObservableProperty] private bool _quietHoursSun;
+
     public AutomationViewModel(AppSettings settings, SettingsService settingsService,
-        IPlatformCapabilities? platformCapabilities = null)
+        IPlatformCapabilities? platformCapabilities = null,
+        QuietHoursService? quietHoursService = null)
     {
-        Title             = "Automation";
-        _settings         = settings;
-        _settingsService  = settingsService;
-        Platform          = platformCapabilities ?? new MockPlatformCapabilities();
+        Title               = "Automation";
+        _settings           = settings;
+        _settingsService    = settingsService;
+        _quietHoursService  = quietHoursService;
+        Platform            = platformCapabilities ?? new MockPlatformCapabilities();
 
         LoadFromSettings();
     }
@@ -80,6 +97,18 @@ public partial class AutomationViewModel : ViewModelBase
         InstanceBalancerRules.Clear();
         foreach (var r in _settings.InstanceBalancerRules)
             InstanceBalancerRules.Add(r);
+
+        QuietHoursEnabled  = _settings.QuietHoursEnabled;
+        QuietHoursStart    = _settings.QuietHoursStart;
+        QuietHoursEnd      = _settings.QuietHoursEnd;
+        var qDays = _settings.QuietHoursDays;
+        QuietHoursMon = qDays.Contains(DayOfWeek.Monday);
+        QuietHoursTue = qDays.Contains(DayOfWeek.Tuesday);
+        QuietHoursWed = qDays.Contains(DayOfWeek.Wednesday);
+        QuietHoursThu = qDays.Contains(DayOfWeek.Thursday);
+        QuietHoursFri = qDays.Contains(DayOfWeek.Friday);
+        QuietHoursSat = qDays.Contains(DayOfWeek.Saturday);
+        QuietHoursSun = qDays.Contains(DayOfWeek.Sunday);
     }
 
     [RelayCommand]
@@ -105,7 +134,21 @@ public partial class AutomationViewModel : ViewModelBase
         _settings.InstanceBalancerEnabled = InstanceBalancerEnabled;
         _settings.InstanceBalancerRules   = InstanceBalancerRules.ToList();
 
+        _settings.QuietHoursEnabled = QuietHoursEnabled;
+        _settings.QuietHoursStart   = QuietHoursStart;
+        _settings.QuietHoursEnd     = QuietHoursEnd;
+        var newDays = new List<DayOfWeek>();
+        if (QuietHoursMon) newDays.Add(DayOfWeek.Monday);
+        if (QuietHoursTue) newDays.Add(DayOfWeek.Tuesday);
+        if (QuietHoursWed) newDays.Add(DayOfWeek.Wednesday);
+        if (QuietHoursThu) newDays.Add(DayOfWeek.Thursday);
+        if (QuietHoursFri) newDays.Add(DayOfWeek.Friday);
+        if (QuietHoursSat) newDays.Add(DayOfWeek.Saturday);
+        if (QuietHoursSun) newDays.Add(DayOfWeek.Sunday);
+        _settings.QuietHoursDays = newDays;
+
         _settingsService.Save();
+        _quietHoursService?.EvaluateCurrent();
     }
 
     // ── CPU Limiter CRUD ────────────────────────────────────────────────────

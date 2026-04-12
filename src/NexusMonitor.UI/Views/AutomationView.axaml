@@ -293,6 +293,74 @@
           </StackPanel>
         </Border>
 
+        <!-- ══ Quiet Hours ══════════════════════════════════════════════════ -->
+        <Border Padding="16"
+                Background="{DynamicResource BgElevatedBrush}"
+                BorderBrush="{DynamicResource GlassBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource CornerLG}">
+          <StackPanel Spacing="12">
+            <DockPanel>
+              <ToggleSwitch DockPanel.Dock="Right"
+                            IsChecked="{Binding QuietHoursEnabled}"
+                            VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Left" Spacing="2">
+                <TextBlock Text="QUIET HOURS" FontSize="{DynamicResource NxFont10}"
+                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                           LetterSpacing="1.5"/>
+                <TextBlock Text="Suppress notifications during scheduled time windows."
+                           FontSize="{DynamicResource NxFont11}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+              </StackPanel>
+            </DockPanel>
+
+            <StackPanel IsVisible="{Binding QuietHoursEnabled}" Spacing="10">
+
+              <!-- Time range -->
+              <Grid ColumnDefinitions="Auto,8,120,16,Auto,8,120" RowDefinitions="Auto">
+                <TextBlock Grid.Column="0" Text="From"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2"
+                         Text="{Binding QuietHoursStart}"
+                         Watermark="HH:mm"
+                         Classes="nx-input"
+                         FontSize="{DynamicResource NxFont12}"/>
+                <TextBlock Grid.Column="4" Text="To"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Column="6"
+                         Text="{Binding QuietHoursEnd}"
+                         Watermark="HH:mm"
+                         Classes="nx-input"
+                         FontSize="{DynamicResource NxFont12}"/>
+              </Grid>
+
+              <TextBlock Text="Enter times in 24-hour format (e.g., 22:00 to 07:00). Overnight windows are supported."
+                         FontSize="{DynamicResource NxFont10}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextTertiaryBrush}"/>
+
+              <!-- Days of week -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="Active days (leave all unchecked for every day):"
+                           FontSize="{DynamicResource NxFont11}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <WrapPanel Orientation="Horizontal">
+                  <CheckBox Content="Mon" IsChecked="{Binding QuietHoursMon}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Tue" IsChecked="{Binding QuietHoursTue}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Wed" IsChecked="{Binding QuietHoursWed}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Thu" IsChecked="{Binding QuietHoursThu}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Fri" IsChecked="{Binding QuietHoursFri}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Sat" IsChecked="{Binding QuietHoursSat}" FontSize="{DynamicResource NxFont11}" Margin="0,0,8,4"/>
+                  <CheckBox Content="Sun" IsChecked="{Binding QuietHoursSun}" FontSize="{DynamicResource NxFont11}" Margin="0,0,0,4"/>
+                </WrapPanel>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- Bottom padding -->
         <Border Height="16"/>
 
