@@ -202,6 +202,19 @@ CREATE TABLE IF NOT EXISTS process_groups (
     modified_utc  TEXT NOT NULL
 );
 
+-- Health score snapshots (Phase 23)
+CREATE TABLE IF NOT EXISTS health_snapshots (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts         INTEGER NOT NULL,
+    overall    REAL NOT NULL,
+    cpu        REAL NOT NULL,
+    memory     REAL NOT NULL,
+    disk       REAL NOT NULL,
+    gpu        REAL NOT NULL,
+    bottleneck TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_hs_ts ON health_snapshots(ts);
+
 INSERT OR IGNORE INTO meta (key, value) VALUES
     ('schema_version',    '1'),
     ('last_rollup_1m_ts', '0'),

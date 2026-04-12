@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
+using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
 
 namespace NexusMonitor.Core.Storage;
@@ -628,6 +629,62 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
         }, ct);
 
     public long GetDatabaseSizeBytes() => _db.GetDatabaseSizeBytes();
+
+    // ── Health snapshots ───────────────────────────────────────────────────────
+    public async Task WriteHealthSnapshotAsync(SystemHealthSnapshot snapshot)
+    {
+        await Task.Run(() =>
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    using var cmd = _db.Connection.CreateCommand();
+                    cmd.CommandText = @"
+                        INSERT INTO health_snapshots (ts, overall, cpu, memory, disk, gpu, bottleneck)
+                        VALUES ($ts, $overall, $cpu, $memory, $disk, $gpu, $bottleneck)";
+                    cmd.Parameters.AddWithValue("$ts",         DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    cmd.Parameters.AddWithValue("$overall",    snapshot.OverallScore);
+                    cmd.Parameters.AddWithValue("$cpu",        snapshot.Cpu.Score);
+                    cmd.Parameters.AddWithValue("$memory",     snapshot.Memory.Score);
+                    cmd.Parameters.AddWithValue("$disk",       snapshot.Disk.Score);
+                    cmd.Parameters.AddWithValue("$gpu",        snapshot.Gpu.Score);
+                    cmd.Parameters.AddWithValue("$bottleneck", (object?)snapshot.Bottleneck?.ToString() ?? DBNull.Value);
+                    cmd.ExecuteNonQuery();
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "MetricsStore: WriteHealthSnapshotAsync failed"); }
+            }
+        });
+    }
+
+    public Task<IReadOnlyList<HealthDataPoint>> GetHealthHistoryAsync(
+        DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<HealthDataPoint>>(() =>
+        {
+            var result = new List<HealthDataPoint>();
+            using var cmd = _readConn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT ts, overall, cpu, memory, disk, gpu, bottleneck
+                FROM health_snapshots
+                WHERE ts >= $from AND ts <= $to
+                ORDER BY ts";
+            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+            cmd.Parameters.AddWithValue("$to",   to.ToUnixTimeMilliseconds());
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(new HealthDataPoint(
+                    Timestamp:  DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(0)),
+                    Overall:    reader.GetDouble(1),
+                    Cpu:        reader.GetDouble(2),
+                    Memory:     reader.GetDouble(3),
+                    Disk:       reader.GetDouble(4),
+                    Gpu:        reader.GetDouble(5),
+                    Bottleneck: reader.IsDBNull(6) ? null : reader.GetString(6)));
+            }
+            return (IReadOnlyList<HealthDataPoint>)result;
+        }, ct);
 
     // ── IDisposable ────────────────────────────────────────────────────────────
     public void Dispose()

@@ -43,6 +43,10 @@ public interface IMetricsReader
     Task<IReadOnlyList<ProcessSummary>> GetTopProcessSummariesAsync(
         DateTimeOffset from, DateTimeOffset to, int topN = 10, CancellationToken ct = default);
 
+    /// <summary>Returns persisted health score snapshots for the given time range.</summary>
+    Task<IReadOnlyList<HealthDataPoint>> GetHealthHistoryAsync(
+        DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default);
+
     /// <summary>Returns the current size of the metrics.db file in bytes.</summary>
     long GetDatabaseSizeBytes();
 }

@@ -228,6 +228,7 @@ public sealed class MetricsRollupService : IDisposable
         var cutoff5m    = now - (long)_config.Rollup5mRetention.TotalMilliseconds;
         var cutoff1h    = now - (long)_config.Rollup1hRetention.TotalMilliseconds;
         var cutoffEvents = now - (long)_config.EventsRetention.TotalMilliseconds;
+        var cutoffHealth = now - (long)_config.Rollup1mRetention.TotalMilliseconds;
 
         using var tx  = _db.Connection.BeginTransaction();
         using var cmd = _db.Connection.CreateCommand();
@@ -240,6 +241,7 @@ public sealed class MetricsRollupService : IDisposable
         Execute(cmd, "DELETE FROM rollups_5m        WHERE ts < $c", cutoff5m);
         Execute(cmd, "DELETE FROM rollups_1h        WHERE ts < $c", cutoff1h);
         Execute(cmd, "DELETE FROM events            WHERE ts < $c", cutoffEvents);
+        Execute(cmd, "DELETE FROM health_snapshots  WHERE ts < $c", cutoffHealth);
 
         tx.Commit();
     }
