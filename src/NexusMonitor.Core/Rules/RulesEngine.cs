@@ -278,7 +278,7 @@ public sealed class RulesEngine : IDisposable
         {
             var max = rule.MaxInstances!.Value;
             var matching = processes
-                .Where(p => rule.Matches(p.Name))
+                .Where(p => RuleMatchesProcess(rule, p))
                 .OrderBy(p => p.StartTime)    // oldest first → kill newest excess
                 .ToList();
 
