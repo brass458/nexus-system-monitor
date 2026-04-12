@@ -1,4 +1,5 @@
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
 
@@ -13,11 +14,12 @@ namespace NexusMonitor.Core.Storage;
 /// </summary>
 public sealed class AnomalyDetectionService : IDisposable
 {
-    private readonly AnomalyDetectionConfig      _config;
-    private readonly IEventWriter                _writer;
-    private readonly ISystemMetricsProvider      _metricsProvider;
-    private readonly IProcessProvider            _processProvider;
-    private readonly INetworkConnectionsProvider _networkProvider;
+    private readonly AnomalyDetectionConfig           _config;
+    private readonly IEventWriter                     _writer;
+    private readonly ISystemMetricsProvider           _metricsProvider;
+    private readonly IProcessProvider                 _processProvider;
+    private readonly INetworkConnectionsProvider      _networkProvider;
+    private readonly ILogger<AnomalyDetectionService> _logger;
 
     // ── Statistical sliding windows ────────────────────────────────────────
     private readonly SlidingStats _cpuStats = new(60);
@@ -57,17 +59,19 @@ public sealed class AnomalyDetectionService : IDisposable
     private bool _disposed;
 
     public AnomalyDetectionService(
-        AnomalyDetectionConfig      config,
-        IEventWriter                writer,
-        ISystemMetricsProvider      metricsProvider,
-        IProcessProvider            processProvider,
-        INetworkConnectionsProvider networkProvider)
+        AnomalyDetectionConfig           config,
+        IEventWriter                     writer,
+        ISystemMetricsProvider           metricsProvider,
+        IProcessProvider                 processProvider,
+        INetworkConnectionsProvider      networkProvider,
+        ILogger<AnomalyDetectionService> logger)
     {
         _config          = config;
         _writer          = writer;
         _metricsProvider = metricsProvider;
         _processProvider = processProvider;
         _networkProvider = networkProvider;
+        _logger          = logger;
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -80,15 +84,15 @@ public sealed class AnomalyDetectionService : IDisposable
 
         _metricsSub = _metricsProvider
             .GetMetricsStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnMetricsTick, _ => { _running = false; });
+            .Subscribe(OnMetricsTick, ex => { _logger.LogError(ex, "AnomalyDetectionService metrics stream faulted"); _running = false; });
 
         _processSub = _processProvider
             .GetProcessStream(TimeSpan.FromSeconds(2))
-            .Subscribe(OnProcessTick, _ => { });
+            .Subscribe(OnProcessTick, ex => { _logger.LogError(ex, "AnomalyDetectionService process stream faulted"); _running = false; });
 
         _networkSub = _networkProvider
             .GetConnectionStream(TimeSpan.FromSeconds(5))
-            .Subscribe(OnNetworkTick, _ => { });
+            .Subscribe(OnNetworkTick, ex => { _logger.LogError(ex, "AnomalyDetectionService network stream faulted"); _running = false; });
     }
 
     public void Stop()

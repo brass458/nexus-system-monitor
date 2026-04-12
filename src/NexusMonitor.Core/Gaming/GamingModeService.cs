@@ -91,7 +91,7 @@ public sealed class GamingModeService : IDisposable
             .Sample(TimeSpan.FromSeconds(2))
             .Subscribe(
                 processes => { _ = ThrottleBackgroundProcessesAsync(capturedGameProcess, processes); },
-                ex => { _logger.LogError(ex, "GamingModeService stream faulted"); });
+                ex => { _logger.LogError(ex, "GamingModeService stream faulted"); _active = false; });
 
         _statusMessages.OnNext("Gaming Mode activated");
     }

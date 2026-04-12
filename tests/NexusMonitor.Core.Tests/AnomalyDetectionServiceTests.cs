@@ -1,5 +1,6 @@
 using System.Reactive.Subjects;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
@@ -58,7 +59,8 @@ public class AnomalyDetectionServiceTests
 
         var svc = new AnomalyDetectionService(
             config, writer.Object,
-            mockMetrics.Object, mockProcess.Object, mockNetwork.Object);
+            mockMetrics.Object, mockProcess.Object, mockNetwork.Object,
+            NullLogger<AnomalyDetectionService>.Instance);
         svc.Start();
 
         return (svc, metricsSubject, writer);
