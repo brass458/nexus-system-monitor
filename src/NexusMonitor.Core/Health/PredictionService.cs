@@ -125,6 +125,12 @@ public sealed class PredictionService : IDisposable
 
     private async Task ComputeAndEmitAsync()
     {
+        if (!_settings.PredictionsEnabled)
+        {
+            _predictions.OnNext(Array.Empty<ResourcePrediction>());
+            return;
+        }
+
         var now  = new DateTimeOffset(_clock());
         var from = now.AddHours(-24);
 

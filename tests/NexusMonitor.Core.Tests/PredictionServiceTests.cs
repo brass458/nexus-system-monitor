@@ -239,6 +239,29 @@ public class PredictionServiceTests
     }
 
     [Fact]
+    public async Task RunPredictions_ReturnsEmpty_WhenPredictionsDisabled()
+    {
+        var settings = new AppSettings { PredictionsEnabled = false };
+        var (svc, reader) = CreateService(settings: settings);
+
+        IReadOnlyList<ResourcePrediction>? emitted = null;
+        svc.Predictions.Subscribe(p => emitted = p);
+
+        await svc.RunPredictionsAsync();
+
+        emitted.Should().NotBeNull();
+        emitted!.Should().BeEmpty("disabled predictions should short-circuit and emit an empty list");
+
+        // The DB should never have been queried when PredictionsEnabled = false
+        reader.Verify(
+            r => r.GetHealthHistoryAsync(It.IsAny<DateTimeOffset>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "GetHealthHistoryAsync must not be called when PredictionsEnabled is false");
+
+        svc.Dispose();
+    }
+
+    [Fact]
     public void Start_IsIdempotent()
     {
         var (svc, reader) = CreateService();
