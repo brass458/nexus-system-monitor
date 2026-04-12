@@ -55,7 +55,7 @@ public sealed class ProcessGroupStore
         lock (_lock) return _cache.Values.OrderBy(g => g.Name).ToList();
     }
 
-    /// <summary>Saves or updates a group and refreshes the cache.</summary>
+    /// <summary>Saves or updates a group and refreshes the cache. Mutates <paramref name="group"/>.ModifiedUtc.</summary>
     public void Upsert(ProcessGroup group)
     {
         group.ModifiedUtc = DateTime.UtcNow;

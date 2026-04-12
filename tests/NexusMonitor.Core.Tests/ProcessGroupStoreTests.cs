@@ -119,6 +119,27 @@ public class ProcessGroupStoreTests
         store.GetAll().Should().HaveCount(1);
     }
 
+    [Fact]
+    public void Upsert_Update_AdvancesModifiedUtc_PreservesCreatedUtc()
+    {
+        using var db = new TestMetricsDatabase();
+        var store = new ProcessGroupStore(db.Database);
+        var group = new ProcessGroup { Name = "TimingTest" };
+        store.Upsert(group);
+
+        var after1 = store.Get(group.Id)!;
+        var createdSnapshot  = after1.CreatedUtc;
+        var modifiedSnapshot = after1.ModifiedUtc;
+
+        Thread.Sleep(10); // ensure clock advances
+        group.Name = "Updated";
+        store.Upsert(group);
+
+        var after2 = store.Get(group.Id)!;
+        after2.CreatedUtc.Should().Be(createdSnapshot);
+        after2.ModifiedUtc.Should().BeAfter(modifiedSnapshot);
+    }
+
     // ── Delete ────────────────────────────────────────────────────────────────
 
     [Fact]
