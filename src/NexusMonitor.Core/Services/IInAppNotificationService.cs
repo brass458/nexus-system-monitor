@@ -24,6 +24,9 @@ public interface IInAppNotificationService
     /// <summary>Push a notification to the in-app overlay.</summary>
     void Show(InAppNotification notification);
 
+    /// <summary>When true, Show() silently drops notifications. Set by QuietHoursService.</summary>
+    bool IsSuppressed { get; set; }
+
     /// <summary>Observable stream of notifications as they are pushed.</summary>
     IObservable<InAppNotification> Notifications { get; }
 }

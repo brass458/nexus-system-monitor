@@ -13,7 +13,14 @@ public sealed class InAppNotificationService : IInAppNotificationService, IDispo
 
     public IObservable<InAppNotification> Notifications => _subject;
 
-    public void Show(InAppNotification notification) => _subject.OnNext(notification);
+    /// <inheritdoc/>
+    public bool IsSuppressed { get; set; }
+
+    public void Show(InAppNotification notification)
+    {
+        if (IsSuppressed) return;
+        _subject.OnNext(notification);
+    }
 
     public void Dispose() => _subject.Dispose();
 }
