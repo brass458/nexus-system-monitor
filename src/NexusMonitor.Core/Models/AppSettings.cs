@@ -135,6 +135,12 @@ public class AppSettings
     public double LeakRateThresholdMbPerHour   { get; set; } = 50;
     public double HandleLeakThresholdPerHour   { get; set; } = 100;
 
+    // Quiet Hours (Phase 22c)
+    public bool            QuietHoursEnabled { get; set; } = false;
+    public string          QuietHoursStart   { get; set; } = "22:00";  // HH:mm 24-hour
+    public string          QuietHoursEnd     { get; set; } = "07:00";  // HH:mm 24-hour
+    public List<DayOfWeek> QuietHoursDays    { get; set; } = new();    // empty = every day
+
     // ── Session persistence ─────────────────────────────────────────────────────
     public string LastActiveTab    { get; set; } = string.Empty;
     public double LastWindowWidth  { get; set; } = 0;
