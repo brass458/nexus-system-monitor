@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:NexusMonitor.UI.ViewModels"
              xmlns:conv="using:NexusMonitor.UI.Converters"
+             xmlns:core="clr-namespace:NexusMonitor.Core.Models;assembly=NexusMonitor.Core"
              x:Class="NexusMonitor.UI.Views.ProcessGroupsView"
              x:DataType="vm:ProcessGroupsViewModel"
              x:CompileBindings="False">
@@ -34,7 +35,7 @@
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Groups}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:ProcessGroupsViewModel">
+            <DataTemplate x:DataType="core:ProcessGroup">
               <Border Padding="8,6"
                       BorderBrush="{DynamicResource BorderSubtleBrush}"
                       BorderThickness="0,0,0,1">
@@ -117,7 +118,7 @@
       <StackPanel Spacing="12" MaxWidth="360">
 
         <!-- Editor title -->
-        <TextBlock Text="{Binding EditId, StringFormat='Edit Group'}"
+        <TextBlock Text="Edit Group"
                    FontSize="{DynamicResource NxFont13}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"/>
