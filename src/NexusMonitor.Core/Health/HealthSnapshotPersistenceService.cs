@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace NexusMonitor.Core.Health;
 
 /// <summary>
@@ -8,6 +11,7 @@ public sealed class HealthSnapshotPersistenceService : IDisposable
 {
     private readonly IObservable<SystemHealthSnapshot>          _healthStream;
     private readonly Func<SystemHealthSnapshot, Task>           _writeSnapshot;
+    private readonly ILogger<HealthSnapshotPersistenceService>  _logger;
 
     private IDisposable? _subscription;
     private int          _tickCount;
@@ -26,8 +30,9 @@ public sealed class HealthSnapshotPersistenceService : IDisposable
     /// </summary>
     public HealthSnapshotPersistenceService(
         SystemHealthService                              healthService,
-        NexusMonitor.Core.Storage.MetricsStore          metricsStore)
-        : this(healthService.HealthStream, metricsStore.WriteHealthSnapshotAsync)
+        NexusMonitor.Core.Storage.MetricsStore          metricsStore,
+        ILogger<HealthSnapshotPersistenceService>?       logger = null)
+        : this(healthService.HealthStream, metricsStore.WriteHealthSnapshotAsync, logger)
     { }
 
     // ── Testable constructor ──────────────────────────────────────────────
@@ -38,11 +43,13 @@ public sealed class HealthSnapshotPersistenceService : IDisposable
     /// and a mock write delegate without constructing real infrastructure objects.
     /// </summary>
     public HealthSnapshotPersistenceService(
-        IObservable<SystemHealthSnapshot> healthStream,
-        Func<SystemHealthSnapshot, Task>  writeSnapshot)
+        IObservable<SystemHealthSnapshot>               healthStream,
+        Func<SystemHealthSnapshot, Task>                writeSnapshot,
+        ILogger<HealthSnapshotPersistenceService>?      logger = null)
     {
         _healthStream  = healthStream  ?? throw new ArgumentNullException(nameof(healthStream));
         _writeSnapshot = writeSnapshot ?? throw new ArgumentNullException(nameof(writeSnapshot));
+        _logger        = logger ?? NullLogger<HealthSnapshotPersistenceService>.Instance;
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
@@ -74,7 +81,20 @@ public sealed class HealthSnapshotPersistenceService : IDisposable
     private void OnTick(SystemHealthSnapshot snapshot)
     {
         var tick = Interlocked.Increment(ref _tickCount); // First write at tick DownsampleEvery (30 s); increment is atomic for thread-safety
-        if (tick % DownsampleEvery == 0)
-            _ = _writeSnapshot(snapshot);
+        if (tick % DownsampleEvery != 0) return;
+
+        _ = WriteSnapshotAsync(snapshot);
+    }
+
+    private async Task WriteSnapshotAsync(SystemHealthSnapshot snapshot)
+    {
+        try
+        {
+            await _writeSnapshot(snapshot).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "HealthSnapshotPersistenceService: failed to write snapshot");
+        }
     }
 }

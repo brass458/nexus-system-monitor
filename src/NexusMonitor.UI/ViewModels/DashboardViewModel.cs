@@ -92,6 +92,11 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         foreach (var p in predictions)
         {
             var card = new PredictionCardViewModel(p, _dismissedResources);
+            card.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(PredictionCardViewModel.IsDismissed))
+                    HasPredictions = PredictionCards.Any(c => !c.IsDismissed);
+            };
             PredictionCards.Add(card);
         }
         HasPredictions = PredictionCards.Any(c => !c.IsDismissed);

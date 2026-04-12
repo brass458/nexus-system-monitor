@@ -157,13 +157,11 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
     private void AppendLive(SystemHealthSnapshot snapshot)
     {
         if (SelectedRange != "24h") return;
-        Dispatcher.UIThread.Post(() =>
-        {
-            var cutoff = DateTime.UtcNow.AddHours(-24);
-            while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
-                _pts.RemoveAt(0);
-            _pts.Add(new DateTimePoint(DateTime.UtcNow, snapshot.OverallScore));
-        });
+        // Already on the UI thread via .ObserveOn(RxApp.MainThreadScheduler) in the subscription
+        var cutoff = DateTime.UtcNow.AddHours(-24);
+        while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
+            _pts.RemoveAt(0);
+        _pts.Add(new DateTimePoint(DateTime.UtcNow, snapshot.OverallScore));
     }
 
     // ── Factory helpers ──────────────────────────────────────────────────────

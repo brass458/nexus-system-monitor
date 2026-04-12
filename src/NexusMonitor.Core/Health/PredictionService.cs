@@ -133,7 +133,7 @@ public sealed class PredictionService : IDisposable
             return;
         }
 
-        var now  = new DateTimeOffset(_clock());
+        var now  = new DateTimeOffset(DateTime.SpecifyKind(_clock(), DateTimeKind.Utc));
         var from = now.AddHours(-24);
 
         IReadOnlyList<HealthDataPoint> points;

@@ -48,6 +48,7 @@ public sealed class QuietHoursService : IDisposable
     {
         _timer?.Dispose();
         _timer = null;
+        _isActive = false;
     }
 
     public void EvaluateCurrent()
