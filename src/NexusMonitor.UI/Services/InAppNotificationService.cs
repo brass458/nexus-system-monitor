@@ -14,7 +14,12 @@ public sealed class InAppNotificationService : IInAppNotificationService, IDispo
     public IObservable<InAppNotification> Notifications => _subject;
 
     /// <inheritdoc/>
-    public bool IsSuppressed { get; set; }
+    private volatile bool _isSuppressed;
+    public bool IsSuppressed
+    {
+        get => _isSuppressed;
+        set => _isSuppressed = value;
+    }
 
     public void Show(InAppNotification notification)
     {

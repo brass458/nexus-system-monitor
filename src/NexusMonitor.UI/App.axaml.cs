@@ -135,6 +135,7 @@ public class App : Application
                 Services.GetRequiredService<CpuLimiterService>().Start();
             if (saved.Current.InstanceBalancerEnabled)
                 Services.GetRequiredService<InstanceBalancerService>().Start();
+            Services.GetRequiredService<QuietHoursService>().Start();
 
             // Start smart glass adaptive service if enabled
             if (saved.Current.SmartTintEnabled)
@@ -159,6 +160,7 @@ public class App : Application
                 Services.GetService<SmartTrimService>()?.Stop();
                 Services.GetService<CpuLimiterService>()?.Stop();
                 Services.GetService<InstanceBalancerService>()?.Stop();
+                Services.GetService<QuietHoursService>()?.Stop();
                 Services.GetService<SleepPreventionService>()?.Stop();
                 Services.GetService<GamingModeService>()?.Stop();
                 Services.GetService<ProBalanceService>()?.Stop();
@@ -214,6 +216,11 @@ public class App : Application
             // Wire anomaly detection → Prometheus counter + OS + in-app notifications
             var notificationService     = Services.GetRequiredService<INotificationService>();
             var inAppNotifications      = Services.GetRequiredService<IInAppNotificationService>();
+
+            // Wire QuietHoursService → IsSuppressed on IInAppNotificationService
+            var quietHours = Services.GetRequiredService<QuietHoursService>();
+            inAppNotifications.IsSuppressed = quietHours.IsActive;
+            _subscriptions.Add(quietHours.IsActiveChanged.Subscribe(active => inAppNotifications.IsSuppressed = active));
 
             _subscriptions.Add(anomalyService.AnomalyDetected.Subscribe(evt =>
             {

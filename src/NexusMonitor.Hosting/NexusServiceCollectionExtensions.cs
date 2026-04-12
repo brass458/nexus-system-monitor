@@ -180,6 +180,7 @@ public static class NexusServiceCollectionExtensions
         services.AddSingleton<SmartTrimService>();
         services.AddSingleton<CpuLimiterService>();
         services.AddSingleton<InstanceBalancerService>();
+        services.AddSingleton<QuietHoursService>();
 
         // Gaming and Alerts services
         services.AddSingleton<GamingModeService>();
