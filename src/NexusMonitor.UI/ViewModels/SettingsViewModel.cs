@@ -31,8 +31,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly GlassAdaptiveService         _glassAdaptive;
     private readonly ThemePresetService           _presetService;
     private readonly ProcessPreferenceStore?      _preferenceStore;
-    private readonly WebhookNotificationService   _webhookService;
-    private readonly PredictionService?           _predictionService;
+    private readonly WebhookNotificationService              _webhookService;
+    private readonly PredictionService?                      _predictionService;
+    private readonly HealthSnapshotPersistenceService?       _healthSnapshotService;
 
     // ── Saved Process Preferences ────────────────────────────────────────────
     public ObservableCollection<ProcessPreference> SavedPreferences { get; } = new();
@@ -299,8 +300,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         GlassAdaptiveService         glassAdaptive,
         ThemePresetService           presetService,
         WebhookNotificationService   webhookService,
-        PredictionService?           predictionService = null,
-        ProcessPreferenceStore?      preferenceStore = null)
+        PredictionService?                      predictionService = null,
+        ProcessPreferenceStore?                 preferenceStore = null,
+        HealthSnapshotPersistenceService?       healthSnapshotService = null)
     {
         Title             = "Settings";
         _settings         = settings;
@@ -309,9 +311,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         _anomalyConfig    = anomalyConfig;
         _glassAdaptive    = glassAdaptive;
         _presetService    = presetService;
-        _webhookService    = webhookService;
-        _predictionService = predictionService;
-        _preferenceStore   = preferenceStore;
+        _webhookService        = webhookService;
+        _predictionService     = predictionService;
+        _preferenceStore       = preferenceStore;
+        _healthSnapshotService = healthSnapshotService;
 
         // Load saved preferences
         if (preferenceStore is not null)
@@ -707,11 +710,16 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         {
             store.Start(TimeSpan.FromMilliseconds(_settings.Current.UpdateIntervalMs));
             rollup.Start();
+            _healthSnapshotService?.Start();
+            if (_settings.Current.PredictionsEnabled)
+                _predictionService?.Start();
         }
         else
         {
             store.Stop();
             rollup.Stop();
+            _healthSnapshotService?.Stop();
+            _predictionService?.Stop();
         }
         WeakReferenceMessenger.Default.Send(new MetricsEnabledChangedMessage(value));
     }

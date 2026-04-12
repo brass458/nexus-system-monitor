@@ -110,7 +110,7 @@ public sealed class WebhookNotificationService : IDisposable
         if (!string.IsNullOrEmpty(_settings.WebhookSecret))
             request.Headers.TryAddWithoutValidation("X-Webhook-Secret", _settings.WebhookSecret);
 
-        var response = await _http.SendAsync(request).ConfigureAwait(false);
+        using var response = await _http.SendAsync(request).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
             _logger.LogWarning("Webhook POST returned {StatusCode}", (int)response.StatusCode);

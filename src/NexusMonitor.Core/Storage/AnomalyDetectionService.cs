@@ -40,6 +40,7 @@ public sealed class AnomalyDetectionService : IDisposable
     // ── Cooldown tracking: tuple key avoids string interpolation allocation per call ──
     private readonly Dictionary<(string EventType, string MetricName), DateTime> _lastFired = new();
     private readonly object _cooldownLock = new();
+    private readonly object _statsLock = new();
     private bool _running;
 
     // ── Subscriptions ──────────────────────────────────────────────────────
@@ -151,31 +152,38 @@ public sealed class AnomalyDetectionService : IDisposable
     {
         foreach (var p in procs)
         {
-            if (!_procStats.TryGetValue(p.Name, out var entry))
-                entry = new ProcStatsEntry { Stats = new SlidingStats(_config.WindowSize) };
-
+            bool shouldFire = false;
             double cpu = p.CpuPercent;
+            double baseline = 0;
 
-            // Skip anomaly detection for idle processes (CPU < 0.5%) — they can't spike
-            // from below this threshold by enough to exceed ProcessSpikeMinDeltaCpu anyway.
-            // Still push the value to keep the sliding window populated.
-            if (cpu < 0.5)
+            lock (_statsLock)
             {
-                entry.Stats.Push(cpu);
+                if (!_procStats.TryGetValue(p.Name, out var entry))
+                    entry = new ProcStatsEntry { Stats = new SlidingStats(_config.WindowSize) };
+
+                // Skip anomaly detection for idle processes (CPU < 0.5%) — they can't spike
+                // from below this threshold by enough to exceed ProcessSpikeMinDeltaCpu anyway.
+                // Still push the value to keep the sliding window populated.
+                if (cpu < 0.5)
+                {
+                    entry.Stats.Push(cpu);
+                    entry.LastUpdated = DateTime.UtcNow;
+                    _procStats[p.Name] = entry;
+                    continue;
+                }
+
+                bool isAnomaly = entry.Stats.IsAnomaly(cpu, _config.SigmaProcess);
+                baseline = entry.Stats.Mean();
+
+                entry.Stats.Push(cpu);   // push AFTER checking
                 entry.LastUpdated = DateTime.UtcNow;
                 _procStats[p.Name] = entry;
-                continue;
+
+                if (isAnomaly && cpu - baseline >= _config.ProcessSpikeMinDeltaCpu)
+                    shouldFire = true;
             }
 
-            bool isAnomaly  = entry.Stats.IsAnomaly(cpu, _config.SigmaProcess);
-            double baseline = entry.Stats.Mean();
-
-            entry.Stats.Push(cpu);   // push AFTER checking
-            entry.LastUpdated = DateTime.UtcNow;
-            _procStats[p.Name] = entry;
-
-            if (!isAnomaly) continue;
-            if (cpu - baseline < _config.ProcessSpikeMinDeltaCpu) continue;
+            if (!shouldFire) continue;
             if (!IsCooldownElapsed(EventType.ProcessSpike, p.Name)) continue;
 
             MarkCooldown(EventType.ProcessSpike, p.Name);
@@ -188,22 +196,31 @@ public sealed class AnomalyDetectionService : IDisposable
         }
 
         // Trim: remove the 100 oldest entries by LastUpdated to keep memory bounded
-        if (_procStats.Count > 500)
+        lock (_statsLock)
         {
-            var toDrop = _procStats
-                .OrderBy(kv => kv.Value.LastUpdated)
-                .Take(100)
-                .Select(kv => kv.Key)
-                .ToList();
-            foreach (var k in toDrop) _procStats.Remove(k);
+            if (_procStats.Count > 500)
+            {
+                var toDrop = _procStats
+                    .OrderBy(kv => kv.Value.LastUpdated)
+                    .Take(100)
+                    .Select(kv => kv.Key)
+                    .ToList();
+                foreach (var k in toDrop) _procStats.Remove(k);
+            }
+        }
 
-            // Also prune stale _lastFired cooldown entries (unbounded without pruning)
-            var cutoff = DateTime.UtcNow - TimeSpan.FromSeconds(_config.CooldownSeconds * 2);
-            var staleKeys = _lastFired
-                .Where(kv => kv.Value < cutoff)
-                .Select(kv => kv.Key)
-                .ToList();
-            foreach (var k in staleKeys) _lastFired.Remove(k);
+        // Also prune stale _lastFired cooldown entries (unbounded without pruning)
+        lock (_cooldownLock)
+        {
+            if (_lastFired.Count > 500)
+            {
+                var cutoff = DateTime.UtcNow - TimeSpan.FromSeconds(_config.CooldownSeconds * 2);
+                var staleKeys = _lastFired
+                    .Where(kv => kv.Value < cutoff)
+                    .Select(kv => kv.Key)
+                    .ToList();
+                foreach (var k in staleKeys) _lastFired.Remove(k);
+            }
         }
     }
 
@@ -233,12 +250,15 @@ public sealed class AnomalyDetectionService : IDisposable
         if (inGrace)
         {
             // Seed seen-endpoints during grace period without firing events
-            foreach (var c in conns)
+            lock (_statsLock)
             {
-                if (c.State != TcpConnectionState.Established) continue;
-                if (string.IsNullOrEmpty(c.RemoteAddress)) continue;
-                if (_seenEndpoints.Count < _config.NewConnectionMaxTracked)
-                    _seenEndpoints.Add($"{c.RemoteAddress}:{c.RemotePort}");
+                foreach (var c in conns)
+                {
+                    if (c.State != TcpConnectionState.Established) continue;
+                    if (string.IsNullOrEmpty(c.RemoteAddress)) continue;
+                    if (_seenEndpoints.Count < _config.NewConnectionMaxTracked)
+                        _seenEndpoints.Add($"{c.RemoteAddress}:{c.RemotePort}");
+                }
             }
             return;
         }
@@ -249,11 +269,16 @@ public sealed class AnomalyDetectionService : IDisposable
             if (string.IsNullOrEmpty(c.RemoteAddress) || c.RemoteAddress == "0.0.0.0") continue;
 
             var endpointKey = $"{c.RemoteAddress}:{c.RemotePort}";
-            if (_seenEndpoints.Contains(endpointKey)) continue;
 
-            if (_seenEndpoints.Count < _config.NewConnectionMaxTracked)
-                _seenEndpoints.Add(endpointKey);
+            bool isNew;
+            lock (_statsLock)
+            {
+                isNew = !_seenEndpoints.Contains(endpointKey);
+                if (isNew && _seenEndpoints.Count < _config.NewConnectionMaxTracked)
+                    _seenEndpoints.Add(endpointKey);
+            }
 
+            if (!isNew) continue;
             if (!IsCooldownElapsed(EventType.NewConnection, endpointKey)) continue;
             MarkCooldown(EventType.NewConnection, endpointKey);
 

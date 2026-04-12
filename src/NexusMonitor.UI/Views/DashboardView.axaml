@@ -261,11 +261,14 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <Border Grid.Column="1" Height="6" CornerRadius="3"
-                        Background="{DynamicResource BorderSubtleBrush}">
-                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
-                          Background="{DynamicResource AccentBrush}"
-                          Width="{Binding CpuPercent}"
-                          MaxWidth="300"/>
+                        Background="{DynamicResource BorderSubtleBrush}"
+                        ClipToBounds="True">
+                  <ProgressBar Value="{Binding CpuPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Background="Transparent"
+                               Foreground="{DynamicResource AccentBrush}"
+                               CornerRadius="3"/>
                 </Border>
                 <TextBlock Grid.Column="2"
                            Text="{Binding CpuPercent, StringFormat={}{0:F0}%}"
@@ -281,11 +284,14 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <Border Grid.Column="1" Height="6" CornerRadius="3"
-                        Background="{DynamicResource BorderSubtleBrush}">
-                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
-                          Background="{DynamicResource AccentBrush}"
-                          Width="{Binding GpuPercent}"
-                          MaxWidth="300"/>
+                        Background="{DynamicResource BorderSubtleBrush}"
+                        ClipToBounds="True">
+                  <ProgressBar Value="{Binding GpuPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Background="Transparent"
+                               Foreground="{DynamicResource AccentBrush}"
+                               CornerRadius="3"/>
                 </Border>
                 <TextBlock Grid.Column="2"
                            Text="{Binding GpuPercent, StringFormat={}{0:F0}%}"
@@ -301,11 +307,14 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <Border Grid.Column="1" Height="6" CornerRadius="3"
-                        Background="{DynamicResource BorderSubtleBrush}">
-                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
-                          Background="{DynamicResource AccentBrush}"
-                          Width="{Binding VramPercent}"
-                          MaxWidth="300"/>
+                        Background="{DynamicResource BorderSubtleBrush}"
+                        ClipToBounds="True">
+                  <ProgressBar Value="{Binding VramPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Background="Transparent"
+                               Foreground="{DynamicResource AccentBrush}"
+                               CornerRadius="3"/>
                 </Border>
                 <TextBlock Grid.Column="2"
                            Text="{Binding VramPercent, StringFormat={}{0:F0}%}"
@@ -321,11 +330,14 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <Border Grid.Column="1" Height="6" CornerRadius="3"
-                        Background="{DynamicResource BorderSubtleBrush}">
-                  <Border HorizontalAlignment="Left" Height="6" CornerRadius="3"
-                          Background="{DynamicResource AccentBrush}"
-                          Width="{Binding MemPercent}"
-                          MaxWidth="300"/>
+                        Background="{DynamicResource BorderSubtleBrush}"
+                        ClipToBounds="True">
+                  <ProgressBar Value="{Binding MemPercent}"
+                               Minimum="0" Maximum="100"
+                               Height="6"
+                               Background="Transparent"
+                               Foreground="{DynamicResource AccentBrush}"
+                               CornerRadius="3"/>
                 </Border>
                 <TextBlock Grid.Column="2"
                            Text="{Binding MemPercent, StringFormat={}{0:F0}%}"
@@ -399,11 +411,14 @@
                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
                       <!-- Impact bar -->
                       <Border Height="4" CornerRadius="2"
-                              Background="{DynamicResource BorderSubtleBrush}">
-                        <Border HorizontalAlignment="Left"
-                                Height="4" CornerRadius="2"
-                                Background="{DynamicResource AccentBrush}"
-                                Width="{Binding BarWidth}"/>
+                              Background="{DynamicResource BorderSubtleBrush}"
+                              ClipToBounds="True">
+                        <ProgressBar Value="{Binding BarWidth}"
+                                     Minimum="0" Maximum="100"
+                                     Height="4"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     CornerRadius="2"/>
                       </Border>
                     </StackPanel>
                     <!-- CPU% -->
