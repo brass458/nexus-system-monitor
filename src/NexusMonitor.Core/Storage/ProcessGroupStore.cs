@@ -15,6 +15,7 @@ public sealed class ProcessGroupStore
     private readonly SqliteConnection _conn;
     private readonly object _lock = new();
     private Dictionary<Guid, ProcessGroup> _cache = new();
+    private List<ProcessGroup> _sortedGroups = [];
 
     public ProcessGroupStore(MetricsDatabase db)
     {
@@ -23,6 +24,12 @@ public sealed class ProcessGroupStore
     }
 
     // ── Cache ──────────────────────────────────────────────────────────────────
+
+    private void RebuildSortedGroups()
+    {
+        // Called inside _lock — caller holds _lock
+        _sortedGroups = _cache.Values.OrderBy(g => g.CreatedUtc).ToList();
+    }
 
     private void LoadCache()
     {
@@ -38,6 +45,7 @@ public sealed class ProcessGroupStore
                 result[group.Id] = group;
             }
             _cache = result;
+            RebuildSortedGroups();
         }
     }
 
@@ -77,6 +85,7 @@ public sealed class ProcessGroupStore
             cmd.ExecuteNonQuery();
 
             _cache[group.Id] = group;
+            RebuildSortedGroups();
         }
     }
 
@@ -90,6 +99,7 @@ public sealed class ProcessGroupStore
             cmd.Parameters.AddWithValue("$id", id.ToString());
             cmd.ExecuteNonQuery();
             _cache.Remove(id);
+            RebuildSortedGroups();
         }
     }
 
@@ -100,11 +110,7 @@ public sealed class ProcessGroupStore
     public ProcessGroup? FindGroupForProcess(string processName)
     {
         lock (_lock)
-        {
-            return _cache.Values
-                .OrderBy(g => g.CreatedUtc)
-                .FirstOrDefault(g => g.Matches(processName));
-        }
+            return _sortedGroups.FirstOrDefault(g => g.Matches(processName));
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
