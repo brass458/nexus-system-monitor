@@ -1298,15 +1298,17 @@
     </Border>
 
     <!-- ===== RESOURCE PREDICTIONS ===== -->
-    <Border Padding="20,16" Margin="0,4,0,0"
+    <Border Padding="16"
             Background="{DynamicResource BgElevatedBrush}"
             BorderBrush="{DynamicResource GlassBorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource CornerLG}">
       <StackPanel Spacing="12">
-        <TextBlock Text="RESOURCE PREDICTIONS"
-                   FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextTertiaryBrush}"/>
+        <TextBlock Text="Resource Predictions" FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <Separator/>
+
+        <!-- Enable toggle -->
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Spacing="2">
             <TextBlock Text="Enable Resource Predictions"
@@ -1317,7 +1319,7 @@
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"/>
           </StackPanel>
-          <ToggleSwitch Grid.Column="1"
+          <ToggleButton Grid.Column="1" Classes="nx-toggle"
                         IsChecked="{Binding PredictionsEnabled}"
                         VerticalAlignment="Center"/>
         </Grid>

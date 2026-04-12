@@ -265,14 +265,16 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private static readonly string[] _closeActionValues = ["", "Tray", "Exit"];
 
     public static IReadOnlyList<string> DefaultTabLabels { get; } =
-        ["(Last Used)", "Dashboard", "Performance", "Processes", "Services",
-         "Startup", "System Info", "Automation", "Disk Analyzer", "Gaming Mode",
-         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History"];
+        ["(Last Used)", "Dashboard", "Network", "Performance", "Processes", "Services",
+         "Startup", "System Info", "Automation", "Diagnostics", "Disk Analyzer", "Gaming Mode",
+         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History",
+         "Rules", "Settings"];
 
     private static readonly string[] _defaultTabValues =
-        ["", "Dashboard", "Performance", "Processes", "Services",
-         "Startup", "System Info", "Automation", "Disk Analyzer", "Gaming Mode",
-         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History"];
+        ["", "Dashboard", "Network", "Performance", "Processes", "Services",
+         "Startup", "System Info", "Automation", "Diagnostics", "Disk Analyzer", "Gaming Mode",
+         "LAN Scanner", "Optimization", "Profiles", "ProBalance", "Alerts", "History",
+         "Rules", "Settings"];
 
     /// <summary>All system font families — enumerated lazily on first access (deferred past startup).</summary>
     private static readonly Lazy<IReadOnlyList<string>> _lazySystemFonts = new(LoadSystemFonts);

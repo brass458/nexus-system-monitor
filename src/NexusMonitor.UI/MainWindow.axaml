@@ -209,7 +209,7 @@
                                  Classes="nav-grip"
                                  IsVisible="{Binding !IsPinned}"
                                  Text="&#x2807;"
-                                 FontSize="12"
+                                 FontSize="{DynamicResource NxFont12}"
                                  HorizontalAlignment="Center"
                                  VerticalAlignment="Center"
                                  Foreground="{DynamicResource TextTertiaryBrush}"
@@ -229,7 +229,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                           <TextBlock Text="{Binding Icon}"
                                      FontFamily="{StaticResource NexusIcons}"
-                                     FontSize="16"
+                                     FontSize="{DynamicResource NxFont16}"
                                      Width="20"
                                      TextAlignment="Center"
                                      VerticalAlignment="Center"/>
@@ -239,7 +239,7 @@
                           <!-- Status badge (e.g. 🌙 for Quiet Hours) -->
                           <TextBlock Text="{Binding StatusBadge}"
                                      IsVisible="{Binding HasStatusBadge}"
-                                     FontSize="10"
+                                     FontSize="{DynamicResource NxFont10}"
                                      Margin="4,0,0,0"
                                      VerticalAlignment="Center"
                                      Foreground="{DynamicResource AccentBrush}"/>

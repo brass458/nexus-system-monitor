@@ -61,6 +61,10 @@
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45FFFFFF" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25FFFFFF" />
 
+      <!-- ── Semantic danger brushes — Dark ── -->
+      <SolidColorBrush x:Key="DangerBgBrush"   Color="#20FF453A" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="#FF6B35"   />
+
       <!-- ── DataGrid brushes — Dark ── -->
       <SolidColorBrush x:Key="DataGridHeaderFgBrush" Color="#A0A0B0" />
       <SolidColorBrush x:Key="DataGridCellFgBrush"   Color="#DDDDE8" />
@@ -142,6 +146,10 @@
       </LinearGradientBrush>
       <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#45000000" />
       <SolidColorBrush x:Key="SeparatorBrush"         Color="#25000000" />
+
+      <!-- ── Semantic danger brushes — Light ── -->
+      <SolidColorBrush x:Key="DangerBgBrush"   Color="#20C0392B" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="#C0392B"   />
 
       <!-- ── DataGrid brushes — Light ── -->
       <SolidColorBrush x:Key="DataGridHeaderFgBrush" Color="#6B6B80" />

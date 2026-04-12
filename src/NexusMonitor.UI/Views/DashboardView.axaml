@@ -40,11 +40,11 @@
                     Background="{DynamicResource BgPrimaryBrush}">
               <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
                 <TextBlock Text="{Binding OverallScore, StringFormat={}{0:F0}}"
-                           FontSize="28" FontWeight="Bold"
+                           FontSize="{DynamicResource NxFont28}" FontWeight="Bold"
                            Foreground="{Binding HealthRingBrush}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="{Binding TrendArrow}"
-                           FontSize="16"
+                           FontSize="{DynamicResource NxFont16}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            HorizontalAlignment="Center"/>
               </StackPanel>
@@ -80,7 +80,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding CpuCard.Icon}"
                            FontFamily="{StaticResource NexusIcons}"
-                           FontSize="16"
+                           FontSize="{DynamicResource NxFont16}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding CpuCard.Name}"
@@ -88,7 +88,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding CpuCard.TrendArrow}"
-                           FontSize="13"
+                           FontSize="{DynamicResource NxFont13}"
                            Foreground="{Binding CpuCard.LevelBrush}"
                            VerticalAlignment="Center"
                            Margin="4,0,0,0"/>
@@ -114,7 +114,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding MemoryCard.Icon}"
                            FontFamily="{StaticResource NexusIcons}"
-                           FontSize="16"
+                           FontSize="{DynamicResource NxFont16}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding MemoryCard.Name}"
@@ -122,7 +122,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding MemoryCard.TrendArrow}"
-                           FontSize="13"
+                           FontSize="{DynamicResource NxFont13}"
                            Foreground="{Binding MemoryCard.LevelBrush}"
                            VerticalAlignment="Center"
                            Margin="4,0,0,0"/>
@@ -148,7 +148,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding DiskCard.Icon}"
                            FontFamily="{StaticResource NexusIcons}"
-                           FontSize="16"
+                           FontSize="{DynamicResource NxFont16}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding DiskCard.Name}"
@@ -156,7 +156,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding DiskCard.TrendArrow}"
-                           FontSize="13"
+                           FontSize="{DynamicResource NxFont13}"
                            Foreground="{Binding DiskCard.LevelBrush}"
                            VerticalAlignment="Center"
                            Margin="4,0,0,0"/>
@@ -182,7 +182,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding GpuCard.Icon}"
                            FontFamily="{StaticResource NexusIcons}"
-                           FontSize="16"
+                           FontSize="{DynamicResource NxFont16}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding GpuCard.Name}"
@@ -190,7 +190,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding GpuCard.TrendArrow}"
-                           FontSize="13"
+                           FontSize="{DynamicResource NxFont13}"
                            Foreground="{Binding GpuCard.LevelBrush}"
                            VerticalAlignment="Center"
                            Margin="4,0,0,0"/>
@@ -219,7 +219,7 @@
             <!-- Header row -->
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="{Binding BottleneckIcon}"
-                         FontSize="20" VerticalAlignment="Center"/>
+                         FontSize="{DynamicResource NxFont20}" VerticalAlignment="Center"/>
               <StackPanel Spacing="2">
                 <TextBlock Text="Performance Bottleneck Analysis"
                            FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
@@ -357,11 +357,11 @@
               </StackPanel>
 
               <Border Padding="10,8" CornerRadius="{StaticResource CornerSM}"
-                      Background="#20FF3B30"
+                      Background="{DynamicResource DangerBgBrush}"
                       IsVisible="{Binding ShowThermalWarning}">
                 <TextBlock Text="⚠ Thermal throttling detected — your hardware is running slower than it should due to heat."
                            FontSize="{DynamicResource NxFont11}"
-                           Foreground="#FF6B35"
+                           Foreground="{DynamicResource DangerTextBrush}"
                            TextWrapping="Wrap"/>
               </Border>
             </StackPanel>
@@ -465,7 +465,7 @@
                       <!-- Icon -->
                       <TextBlock Text="{Binding Icon}"
                                  FontFamily="{StaticResource NexusIcons}"
-                                 FontSize="18"
+                                 FontSize="{DynamicResource NxFont18}"
                                  Foreground="{Binding IconBrush}"
                                  VerticalAlignment="Top"/>
                       <!-- Text -->
@@ -532,7 +532,7 @@
                       <Button Grid.Column="1"
                               Content="&#x2715;"
                               Command="{Binding DismissCommand}"
-                              FontSize="12"
+                              FontSize="{DynamicResource NxFont12}"
                               VerticalAlignment="Top"
                               Padding="6,4"
                               Background="Transparent"
