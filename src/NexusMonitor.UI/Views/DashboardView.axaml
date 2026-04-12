@@ -488,7 +488,7 @@
 
             <ItemsControl ItemsSource="{Binding PredictionCards}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:PredictionCardViewModel">
                   <Border Padding="12,10" Margin="0,3,0,0"
                           IsVisible="{Binding !IsDismissed}"
                           Background="{DynamicResource BgPrimaryBrush}"

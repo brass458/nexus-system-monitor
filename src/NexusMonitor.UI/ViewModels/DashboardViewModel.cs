@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reactive.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,6 +18,7 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     private readonly AppSettings                _settings;
     private IDisposable?                        _subscription;
     private IDisposable?                        _predictionsSubscription;
+    private readonly HashSet<string>            _dismissedResources = new();
 
     // ── Overall health ────────────────────────────────────────────────────────
 
@@ -88,8 +90,11 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     {
         PredictionCards.Clear();
         foreach (var p in predictions)
-            PredictionCards.Add(new PredictionCardViewModel(p));
-        HasPredictions = PredictionCards.Count > 0;
+        {
+            var card = new PredictionCardViewModel(p, _dismissedResources);
+            PredictionCards.Add(card);
+        }
+        HasPredictions = PredictionCards.Any(c => !c.IsDismissed);
     }
 
     private void ApplySnapshot(SystemHealthSnapshot snapshot)

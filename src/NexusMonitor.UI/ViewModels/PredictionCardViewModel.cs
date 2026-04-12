@@ -10,20 +10,27 @@ public partial class PredictionCardViewModel : ObservableObject
 
     [ObservableProperty] private bool _isDismissed;
 
+    private readonly HashSet<string>? _dismissedResources;
+
     public string Resource       => Prediction.Resource;
     public string Description    => Prediction.Description;
     public string DepletionLabel => Prediction.DepletionEstimate.HasValue
         ? $"Estimated depletion: {Prediction.DepletionEstimate.Value:MMM d, yyyy HH:mm}"
         : string.Empty;
     public string SeverityLabel  => Prediction.Severity.ToString();
-    public bool   IsCritical     => Prediction.Severity == RecommendationSeverity.Critical;
-    public bool   IsWarning      => Prediction.Severity == RecommendationSeverity.Warning;
 
     [RelayCommand]
-    private void Dismiss() => IsDismissed = true;
-
-    public PredictionCardViewModel(ResourcePrediction prediction)
+    private void Dismiss()
     {
-        Prediction = prediction;
+        IsDismissed = true;
+        _dismissedResources?.Add(Prediction.Resource);
+    }
+
+    public PredictionCardViewModel(ResourcePrediction prediction, HashSet<string>? dismissedResources = null)
+    {
+        Prediction          = prediction;
+        _dismissedResources = dismissedResources;
+        // Restore dismissed state if this resource was previously dismissed
+        _isDismissed = dismissedResources?.Contains(prediction.Resource) ?? false;
     }
 }
