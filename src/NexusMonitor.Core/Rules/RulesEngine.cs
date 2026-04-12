@@ -72,7 +72,13 @@ public sealed class RulesEngine : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
-        _seenPids.Clear();
+        // Clear _seenPids while holding _tickLock so an in-flight async tick cannot race on it.
+        Task.Run(async () =>
+        {
+            await _tickLock.WaitAsync();
+            try { _seenPids.Clear(); }
+            finally { _tickLock.Release(); }
+        });
     }
 
     private async void OnTick(IReadOnlyList<ProcessInfo> processes)

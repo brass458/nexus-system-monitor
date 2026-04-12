@@ -87,8 +87,11 @@ public sealed class MetricsStore : IMetricsReader, IEventWriter, IDisposable
     public void Stop()
     {
         _metricsSub?.Dispose();
+        _metricsSub = null;
         _processSub?.Dispose();
+        _processSub = null;
         _networkSub?.Dispose();
+        _networkSub = null;
         lock (_lock) FlushAll();
     }
 

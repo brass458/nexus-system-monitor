@@ -29,6 +29,7 @@ public sealed class SystemHealthService : IDisposable
     private readonly Queue<double> _diskHistory   = new(HistorySize);
     private readonly Queue<double> _gpuHistory    = new(HistorySize);
     private readonly Queue<double> _overallHistory = new(HistorySize);
+    private readonly object _histLock = new();
 
     public IObservable<SystemHealthSnapshot> HealthStream => _subject.AsObservable();
     public SystemHealthSnapshot Current => _subject.Value;
@@ -86,11 +87,14 @@ public sealed class SystemHealthService : IDisposable
         var overall     = HealthScoring.CompositeScore(cpuScore, memScore, diskScore, gpuScore, thermalScore);
 
         // ── History + trends ─────────────────────────────────────────────────
-        Enqueue(_cpuHistory,     cpuScore);
-        Enqueue(_memHistory,     memScore);
-        Enqueue(_diskHistory,    diskScore);
-        Enqueue(_gpuHistory,     gpuScore);
-        Enqueue(_overallHistory, overall);
+        lock (_histLock)
+        {
+            Enqueue(_cpuHistory,     cpuScore);
+            Enqueue(_memHistory,     memScore);
+            Enqueue(_diskHistory,    diskScore);
+            Enqueue(_gpuHistory,     gpuScore);
+            Enqueue(_overallHistory, overall);
+        }
 
         // ── Top consumers (by impact) ─────────────────────────────────────────
         var totals = ImpactScoreCalculator.ComputeTotals(processes);

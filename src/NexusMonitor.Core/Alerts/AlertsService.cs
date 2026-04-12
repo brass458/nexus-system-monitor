@@ -29,6 +29,7 @@ public sealed class AlertsService : IDisposable
     private IDisposable? _subscription;
     private volatile bool _running;
     private int  _alertCount;
+    private int  _startedGuard;
 
     public IObservable<AlertEvent> Events     => _events.AsObservable();
     public bool                    IsRunning  => _running;
@@ -49,7 +50,7 @@ public sealed class AlertsService : IDisposable
     /// <summary>Start the monitoring loop. Safe to call multiple times.</summary>
     public void Start()
     {
-        if (_running) return;
+        if (Interlocked.CompareExchange(ref _startedGuard, 1, 0) != 0) return;
         _running = true;
         _subscription = _metrics
             .GetMetricsStream(TimeSpan.FromSeconds(2))
@@ -65,6 +66,7 @@ public sealed class AlertsService : IDisposable
     {
         if (!_running) return;
         _running = false;
+        Interlocked.Exchange(ref _startedGuard, 0);
         _subscription?.Dispose();
         _subscription = null;
         _firstSeen.Clear();

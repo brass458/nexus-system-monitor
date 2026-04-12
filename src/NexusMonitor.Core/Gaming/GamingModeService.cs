@@ -127,8 +127,7 @@ public sealed class GamingModeService : IDisposable
         }
 
         // -- Restore process priorities ----------------------------------------
-        // Use Task.Run to avoid potential deadlock if called from the UI thread.
-        Task.Run(RestoreAllAsync).Wait();
+        _ = RestoreAllAsync(); // best-effort restore on shutdown
 
         _statusMessages.OnNext("Gaming Mode deactivated");
     }

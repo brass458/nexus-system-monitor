@@ -343,7 +343,7 @@ public sealed class AnomalyDetectionService : IDisposable
 
             _anomalyDetected.OnNext(stored);
         }
-        catch { /* swallow — never crash the monitoring loop */ }
+        catch (Exception ex) { _logger.LogWarning(ex, "AnomalyDetectionService: failed to persist event type {Type}", eventType); }
     }
 
     // ── IDisposable ────────────────────────────────────────────────────────

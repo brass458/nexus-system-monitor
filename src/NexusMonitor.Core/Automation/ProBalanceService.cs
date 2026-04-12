@@ -67,7 +67,7 @@ public sealed class ProBalanceService : IDisposable
         _running = false;
         _subscription?.Dispose();
         _subscription = null;
-        Task.Run(RestoreAllAsync).Wait();
+        _ = RestoreAllAsync(); // best-effort restore on shutdown — non-critical if processes exit shortly after
         _events.OnNext(new ProBalanceEvent(
             ProBalanceEventType.Stopped, 0, string.Empty,
             ProcessPriority.Normal, ProcessPriority.Normal, DateTime.UtcNow));
