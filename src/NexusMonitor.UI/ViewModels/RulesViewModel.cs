@@ -3,12 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Rules;
+using NexusMonitor.Core.Storage;
 
 namespace NexusMonitor.UI.ViewModels;
 
 public partial class RulesViewModel : ViewModelBase
 {
     private readonly RulesPersistence _persistence;
+    private readonly ProcessGroupStore? _groupStore;
     private Guid _editingId = Guid.Empty; // Empty = creating a new rule
 
     // ── Rules list ────────────────────────────────────────────────────────────
@@ -33,7 +35,10 @@ public partial class RulesViewModel : ViewModelBase
     [ObservableProperty] private int _editMemPriorityIndex = 0;
     [ObservableProperty] private int _editEfficiencyIndex  = 0; // 0=none, 1=enable, 2=disable
 
+    [ObservableProperty] private string _editGroupName   = "";
     [ObservableProperty] private string _editAffinityHex = "";
+
+    public ObservableCollection<string> AvailableGroupNames { get; } = [];
 
     // Watchdog / condition
     [ObservableProperty] private int    _editConditionTypeIndex     = 0; // 0=Always 1=CpuAbove 2=RamAbove
@@ -243,10 +248,12 @@ public partial class RulesViewModel : ViewModelBase
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public RulesViewModel(RulesPersistence persistence,
-        IPlatformCapabilities? platformCapabilities = null)
+        IPlatformCapabilities? platformCapabilities = null,
+        ProcessGroupStore? groupStore = null)
     {
         Title        = "Rules";
         _persistence = persistence;
+        _groupStore  = groupStore;
         Platform     = platformCapabilities ?? new MockPlatformCapabilities();
         LoadRules();
     }
@@ -266,6 +273,7 @@ public partial class RulesViewModel : ViewModelBase
     {
         _editingId = Guid.Empty;
         EditorTitle = "New Rule";
+        RefreshAvailableGroupNames();
         SetEditorDefaults();
         IsEditorVisible = true;
     }
@@ -276,6 +284,7 @@ public partial class RulesViewModel : ViewModelBase
         if (SelectedRule is null) return;
         _editingId  = SelectedRule.Id;
         EditorTitle = $"Edit Rule — {SelectedRule.Name}";
+        RefreshAvailableGroupNames();
         LoadRuleIntoEditor(SelectedRule);
         IsEditorVisible = true;
     }
@@ -325,6 +334,7 @@ public partial class RulesViewModel : ViewModelBase
 
         rule.Name               = EditName.Trim();
         rule.ProcessNamePattern = EditPattern.Trim();
+        rule.GroupName          = string.IsNullOrEmpty(EditGroupName) ? null : EditGroupName;
         rule.IsEnabled          = EditEnabled;
         rule.Priority           = IndexToPriority(EditPriorityIndex);
         rule.IoPriority         = IndexToIoPriority(EditIoPriorityIndex);
@@ -417,10 +427,20 @@ public partial class RulesViewModel : ViewModelBase
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private void RefreshAvailableGroupNames()
+    {
+        AvailableGroupNames.Clear();
+        AvailableGroupNames.Add(""); // empty = no group targeting
+        if (_groupStore is not null)
+            foreach (var g in _groupStore.GetAll())
+                AvailableGroupNames.Add(g.Name);
+    }
+
     private void SetEditorDefaults()
     {
         EditName                   = "";
         EditPattern                = "";
+        EditGroupName              = "";
         EditEnabled                = true;
         EditPriorityIndex          = 0;
         EditIoPriorityIndex        = 0;
@@ -466,6 +486,7 @@ public partial class RulesViewModel : ViewModelBase
                                         ? string.Join(",", rule.CpuSetIds)
                                         : "";
         EditReduceCoreCount       = rule.ActionParams?.ReduceCoreCount?.ToString() ?? "";
+        EditGroupName             = rule.GroupName ?? "";
         ValidationError           = "";
     }
 }

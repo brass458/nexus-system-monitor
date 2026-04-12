@@ -256,6 +256,18 @@
                                  FontSize="{DynamicResource NxFont10}" Foreground="{DynamicResource TextTertiaryBrush}"/>
                     </StackPanel>
                   </Grid>
+                  <!-- Group targeting -->
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="Target Group (optional)" FontSize="{DynamicResource NxFont12}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <ComboBox ItemsSource="{Binding AvailableGroupNames}"
+                              SelectedItem="{Binding EditGroupName}"
+                              PlaceholderText="(no group targeting)"
+                              Width="200" HorizontalAlignment="Left"/>
+                    <TextBlock Text="Rule will match all processes in this group"
+                               FontSize="11" Opacity="0.7" Margin="0,2,0,8"/>
+                  </StackPanel>
+
                   <WrapPanel Orientation="Horizontal">
                     <CheckBox Margin="0,0,12,4"
                               IsChecked="{Binding EditEnabled}"
