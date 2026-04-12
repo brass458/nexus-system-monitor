@@ -14,6 +14,7 @@
     <conv:CpuHeatBrushConverter x:Key="CpuHeat" />
     <conv:NullToBoolConverter x:Key="NullToBool" />
     <conv:DepthToMarginConverter x:Key="DepthMargin" />
+    <conv:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
   </UserControl.Resources>
 
   <DockPanel>
@@ -369,6 +370,22 @@
                            IsVisible="{Binding HasActiveRule}"
                            ToolTip.Tip="{Binding RuleSummary}"
                            Foreground="{DynamicResource AccentBrush}"/>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <!-- Group badge column (Phase 22b) -->
+          <DataGridTemplateColumn Header="Group" Width="Auto" SortMemberPath="GroupName" MinWidth="60">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Border Background="{Binding GroupColor, Converter={StaticResource HexColorToBrushConverter}}"
+                        CornerRadius="4" Padding="5,2" Margin="2,0"
+                        IsVisible="{Binding GroupName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        VerticalAlignment="Center" HorizontalAlignment="Left">
+                  <TextBlock Text="{Binding GroupName}"
+                             FontSize="11" Foreground="White"
+                             VerticalAlignment="Center"/>
+                </Border>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
