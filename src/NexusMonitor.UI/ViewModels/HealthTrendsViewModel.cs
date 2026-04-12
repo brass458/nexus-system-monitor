@@ -4,13 +4,16 @@ using System.Linq;
 using System.Reactive.Linq;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using Microsoft.Extensions.Logging;
 using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
 using NexusMonitor.Core.Storage;
+using NexusMonitor.UI.Messages;
 using ReactiveUI;
 using SkiaSharp;
 
@@ -19,9 +22,11 @@ namespace NexusMonitor.UI.ViewModels;
 public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
 {
     private readonly IMetricsReader       _reader;
+    private readonly ILogger<HealthTrendsViewModel> _logger;
     private readonly DateTimeAxis         _xAxis;
     private readonly ObservableCollection<DateTimePoint> _pts = new();
     private IDisposable?                  _liveSubscription;
+    private CancellationTokenSource?      _loadCts;
 
     [ObservableProperty] private string _selectedRange  = "24h";
     [ObservableProperty] private string _summaryText    = "Loading\u2026";
@@ -36,10 +41,15 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
     public HealthTrendsViewModel(
         IMetricsReader reader,
         SystemHealthService healthService,
-        AppSettings settings)
+        AppSettings settings,
+        ILogger<HealthTrendsViewModel> logger)
     {
         _reader        = reader;
+        _logger        = logger;
         MetricsEnabled = settings.MetricsEnabled;
+
+        WeakReferenceMessenger.Default.Register<MetricsEnabledChangedMessage>(this, (_, msg) =>
+            Dispatcher.UIThread.Post(() => MetricsEnabled = msg.Enabled));
 
         // ── X axis with crash-guard labeler ──────────────────────────────────
         // DateTimeAxis's constructor Labeler = (v) => labeler(new DateTime((long)(v-0.5)))
@@ -86,11 +96,10 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
 
     private async Task LoadAsync()
     {
-        if (!MetricsEnabled)
-        {
-            SummaryText = "Metrics collection is disabled \u2014 enable it in Settings to see trends.";
-            return;
-        }
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        var ct = _loadCts.Token;
 
         var span = SelectedRange switch
         {
@@ -104,8 +113,14 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var pts     = await _reader.GetHealthHistoryAsync(from, to);
-            var prevPts = await _reader.GetHealthHistoryAsync(from - span, from);
+            if (!MetricsEnabled)
+            {
+                SummaryText = "Metrics collection is disabled \u2014 enable it in Settings to see trends.";
+                return;
+            }
+
+            var pts     = await _reader.GetHealthHistoryAsync(from, to, ct);
+            var prevPts = await _reader.GetHealthHistoryAsync(from - span, from, ct);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -126,26 +141,29 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
                 SummaryText = $"Avg health: {avg:F0}  |  vs prior period: {sign}{delta:F0}";
             });
         }
+        catch (OperationCanceledException)
+        {
+            // stale load cancelled — ignore
+        }
         catch (Exception ex)
         {
-            SummaryText = $"Error loading health data: {ex.Message}";
+            _logger.LogError(ex, "Failed to load health history");
+            SummaryText = "Failed to load health data.";
         }
     }
 
     // ── Live append ──────────────────────────────────────────────────────────
 
-    private void AppendLive(SystemHealthSnapshot snap)
+    private void AppendLive(SystemHealthSnapshot snapshot)
     {
-        // Only live-append for the 24h range; other ranges load on demand
         if (SelectedRange != "24h") return;
-
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-
-        // Prune stale points from the start of the collection
-        while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
-            _pts.RemoveAt(0);
-
-        _pts.Add(new DateTimePoint(DateTime.UtcNow, snap.OverallScore));
+        Dispatcher.UIThread.Post(() =>
+        {
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+            while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
+                _pts.RemoveAt(0);
+            _pts.Add(new DateTimePoint(DateTime.UtcNow, snapshot.OverallScore));
+        });
     }
 
     // ── Factory helpers ──────────────────────────────────────────────────────
@@ -180,5 +198,6 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _liveSubscription?.Dispose();
+        _loadCts?.Dispose();
     }
 }
