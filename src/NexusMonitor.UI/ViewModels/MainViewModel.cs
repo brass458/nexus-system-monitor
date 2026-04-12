@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.Messages;
 
@@ -26,8 +27,10 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     public ObservableCollection<NavItem> NavItems { get; } = new();
 
     private readonly SettingsService _settings;
+    private readonly IDisposable? _quietHoursSubscription;
 
-    public MainViewModel(IServiceProvider services, SettingsService settings)
+    public MainViewModel(IServiceProvider services, SettingsService settings,
+        QuietHoursService? quietHoursService = null)
     {
         _settings = settings;
 
@@ -111,6 +114,21 @@ public partial class MainViewModel : ViewModelBase, IDisposable
                 CurrentPage     = nav.GetOrCreate();
             });
         });
+
+        if (quietHoursService != null)
+        {
+            UpdateAutomationBadge(quietHoursService.IsActive);
+            _quietHoursSubscription = quietHoursService.IsActiveChanged
+                .Subscribe(active => Avalonia.Threading.Dispatcher.UIThread.Post(
+                    () => UpdateAutomationBadge(active)));
+        }
+    }
+
+    private void UpdateAutomationBadge(bool active)
+    {
+        var automationNav = NavItems.FirstOrDefault(n => n.Label == "Automation");
+        if (automationNav is null) return;
+        automationNav.StatusBadge = active ? "🌙" : string.Empty;
     }
 
     private static List<NavItem> BuildNavItemsWithSeparators(List<NavItem> items)
@@ -161,6 +179,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     /// </summary>
     public void Dispose()
     {
+        _quietHoursSubscription?.Dispose();
         WeakReferenceMessenger.Default.UnregisterAll(this);
         foreach (var item in NavItems)
             item.DisposeViewModel();
@@ -195,6 +214,20 @@ public sealed class NavItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObj
         get => _isDragging;
         internal set => SetProperty(ref _isDragging, value);
     }
+
+    private string _statusBadge = string.Empty;
+    /// <summary>Short badge text shown next to the nav label (e.g., "🌙" for Quiet Hours).</summary>
+    public string StatusBadge
+    {
+        get => _statusBadge;
+        internal set
+        {
+            if (SetProperty(ref _statusBadge, value))
+                OnPropertyChanged(nameof(HasStatusBadge));
+        }
+    }
+
+    public bool HasStatusBadge => !string.IsNullOrEmpty(StatusBadge);
 
     private readonly Func<ViewModelBase>? _factory;
     private ViewModelBase? _cached;

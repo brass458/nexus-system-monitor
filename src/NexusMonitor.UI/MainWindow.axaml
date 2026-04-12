@@ -236,6 +236,13 @@
                           <TextBlock Text="{Binding Label}"
                                      FontSize="{DynamicResource NxFont13}"
                                      VerticalAlignment="Center"/>
+                          <!-- Status badge (e.g. 🌙 for Quiet Hours) -->
+                          <TextBlock Text="{Binding StatusBadge}"
+                                     IsVisible="{Binding HasStatusBadge}"
+                                     FontSize="10"
+                                     Margin="4,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Foreground="{DynamicResource AccentBrush}"/>
                         </StackPanel>
                       </Button>
                     </Grid>
