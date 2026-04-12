@@ -56,21 +56,7 @@ public sealed class WebhookNotificationService : IDisposable
 
         try
         {
-            var json    = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, _settings.WebhookUrl)
-            {
-                Content = content
-            };
-
-            if (!string.IsNullOrEmpty(_settings.WebhookSecret))
-                request.Headers.TryAddWithoutValidation("X-Webhook-Secret", _settings.WebhookSecret);
-
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-                _logger.LogWarning("Webhook POST returned {StatusCode}", (int)response.StatusCode);
+            await PostAsync(payload).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -88,34 +74,48 @@ public sealed class WebhookNotificationService : IDisposable
         if (!_settings.WebhookEnabled || string.IsNullOrWhiteSpace(_settings.WebhookUrl))
             return false;
 
+        var testPayload = new WebhookPayload(
+            "Test notification from Nexus Monitor",
+            "info",
+            DateTimeOffset.UtcNow.ToString("O"),
+            Environment.MachineName,
+            null);
+
         try
         {
-            var payload = new WebhookPayload(
-                "Test notification from Nexus Monitor",
-                "info",
-                DateTimeOffset.UtcNow.ToString("O"),
-                Environment.MachineName,
-                null);
-
-            var json    = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, _settings.WebhookUrl)
-            {
-                Content = content
-            };
-
-            if (!string.IsNullOrEmpty(_settings.WebhookSecret))
-                request.Headers.TryAddWithoutValidation("X-Webhook-Secret", _settings.WebhookSecret);
-
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
-            return response.IsSuccessStatusCode;
+            return await PostAsync(testPayload).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Webhook test POST failed");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Serializes <paramref name="payload"/>, builds and sends the HTTP POST request.
+    /// Does not perform guard checks — callers are responsible for those.
+    /// Returns <see langword="true"/> if the response indicates success (HTTP 2xx).
+    /// </summary>
+    private async Task<bool> PostAsync(WebhookPayload payload)
+    {
+        var json    = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, _settings.WebhookUrl)
+        {
+            Content = content
+        };
+
+        if (!string.IsNullOrEmpty(_settings.WebhookSecret))
+            request.Headers.TryAddWithoutValidation("X-Webhook-Secret", _settings.WebhookSecret);
+
+        var response = await _http.SendAsync(request).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            _logger.LogWarning("Webhook POST returned {StatusCode}", (int)response.StatusCode);
+
+        return response.IsSuccessStatusCode;
     }
 
     public void Dispose() => _http.Dispose();

@@ -145,7 +145,11 @@ public class AppSettings
     public bool         WebhookEnabled { get; set; } = false;
     public string       WebhookUrl     { get; set; } = "";
     public string       WebhookSecret  { get; set; } = "";
-    /// <summary>Which event types to forward: "alerts", "anomalies"</summary>
+    /// <summary>
+    /// Which event types to forward: "alerts", "anomalies".
+    /// Filtering is applied by App.axaml.cs Rx wiring — WebhookNotificationService
+    /// itself forwards all payloads unconditionally when called.
+    /// </summary>
     public List<string> WebhookEvents  { get; set; } = new();
 
     // ── Session persistence ─────────────────────────────────────────────────────
