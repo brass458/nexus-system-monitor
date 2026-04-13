@@ -368,6 +368,7 @@ public partial class BottleneckCardViewModel : ObservableObject
         ShowThermalWarning = r.CpuIsThrottling || r.CpuTempCelsius > 95 || r.GpuTempCelsius > 90;
 
         // Show HVCI hint only when CPU temp is unavailable and Memory Integrity is on
+#if WINDOWS
         if (r.CpuTempCelsius < 1)
         {
             try
@@ -384,12 +385,14 @@ public partial class BottleneckCardViewModel : ObservableObject
             }
             catch { }
         }
+#endif
         ShowCpuTempHint = false;
     }
 
     [RelayCommand]
     private void DisableMemoryIntegrity()
     {
+#if WINDOWS
         try
         {
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
@@ -402,6 +405,7 @@ public partial class BottleneckCardViewModel : ObservableObject
         {
             CpuTempHintText = "Registry update failed — ensure the app is running as Administrator.";
         }
+#endif
     }
 }
 
