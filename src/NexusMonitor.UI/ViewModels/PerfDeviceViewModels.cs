@@ -122,7 +122,7 @@ public sealed partial class CpuDeviceViewModel : PerfDeviceViewModel
             new LineSeries<ObservableValue>
             {
                 Values = History, GeometrySize = 0, LineSmoothness = 0.6,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(10, 132, 255), 2),
                 Fill   = new LinearGradientPaint(
                     new SKColor(10, 132, 255, 80), new SKColor(10, 132, 255, 0),
@@ -230,7 +230,7 @@ public sealed partial class MemoryDeviceViewModel : PerfDeviceViewModel
             new LineSeries<ObservableValue>
             {
                 Values = History, GeometrySize = 0, LineSmoothness = 0.6,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(52, 199, 89), 2),
                 Fill   = new LinearGradientPaint(
                     new SKColor(52, 199, 89, 80), new SKColor(52, 199, 89, 0),
@@ -313,14 +313,14 @@ public sealed partial class DiskDeviceViewModel : PerfDeviceViewModel
             new LineSeries<ObservableValue>
             {
                 Values = ReadHistory, GeometrySize = 0, LineSmoothness = 0.5,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(100, 210, 255), 2),
                 Fill = null, Name = "Read"
             },
             new LineSeries<ObservableValue>
             {
                 Values = WriteHistory, GeometrySize = 0, LineSmoothness = 0.5,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(255, 159, 10), 2),
                 Fill = null, Name = "Write"
             },
@@ -421,14 +421,14 @@ public sealed partial class NetworkDeviceViewModel : PerfDeviceViewModel
             new LineSeries<ObservableValue>
             {
                 Values = RecvHistory, GeometrySize = 0, LineSmoothness = 0.5,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(191, 90, 242), 2),
                 Fill = null, Name = "Download"
             },
             new LineSeries<ObservableValue>
             {
                 Values = SendHistory, GeometrySize = 0, LineSmoothness = 0.5,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(255, 69, 58), 2),
                 Fill = null, Name = "Upload"
             },
@@ -514,7 +514,7 @@ public sealed partial class GpuDeviceViewModel : PerfDeviceViewModel
             new LineSeries<ObservableValue>
             {
                 Values = History, GeometrySize = 0, LineSmoothness = 0.6,
-                AnimationsSpeed = TimeSpan.FromMilliseconds(300),
+                AnimationsSpeed = TimeSpan.Zero,
                 Stroke = new SolidColorPaint(new SKColor(255, 159, 10), 2),
                 Fill   = new LinearGradientPaint(
                     new SKColor(255, 159, 10, 80), new SKColor(255, 159, 10, 0),

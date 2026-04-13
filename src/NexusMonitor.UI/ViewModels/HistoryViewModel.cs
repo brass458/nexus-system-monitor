@@ -289,15 +289,16 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
     private static LineSeries<DateTimePoint> Line(
         ObservableCollection<DateTimePoint> values, SKColor color, string name) => new()
     {
-        Values        = values,
-        Name          = name,
-        Fill          = new LinearGradientPaint(
+        Values          = values,
+        Name            = name,
+        Fill            = new LinearGradientPaint(
             new SKColor(color.Red, color.Green, color.Blue, 45),
             new SKColor(color.Red, color.Green, color.Blue, 0),
             new SKPoint(0.5f, 0f), new SKPoint(0.5f, 1f)),
-        Stroke        = new SolidColorPaint(color, 1.5f),
-        GeometrySize   = 0,
-        LineSmoothness = 0.2,
+        Stroke          = new SolidColorPaint(color, 1.5f),
+        GeometrySize    = 0,
+        LineSmoothness  = 0.2,
+        AnimationsSpeed = TimeSpan.Zero,
     };
 
     private static Axis YAxis(double min, double? max, Func<double, string> labeler) => new()

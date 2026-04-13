@@ -44,6 +44,7 @@ public sealed class AnomalyDetectionService : IDisposable
     private readonly object _cooldownLock = new();
     private readonly object _statsLock = new();
     private bool _running;
+    private int _procStatsTrimCounter;
 
     // ── Subscriptions ──────────────────────────────────────────────────────
     private IDisposable? _metricsSub;
@@ -213,6 +214,21 @@ public sealed class AnomalyDetectionService : IDisposable
                     .Select(kv => kv.Key)
                     .ToList();
                 foreach (var k in toDrop) _procStats.Remove(k);
+            }
+        }
+
+        // Evict entries for processes that have been gone for >5 minutes (~every 5 min at 2s tick)
+        if (++_procStatsTrimCounter % 150 == 0)
+        {
+            lock (_statsLock)
+            {
+                var cutoff = DateTime.UtcNow.AddMinutes(-5);
+                var stale  = _procStats
+                    .Where(kv => kv.Value.LastUpdated < cutoff)
+                    .Select(kv => kv.Key)
+                    .ToList();
+                foreach (var key in stale)
+                    _procStats.Remove(key);
             }
         }
 

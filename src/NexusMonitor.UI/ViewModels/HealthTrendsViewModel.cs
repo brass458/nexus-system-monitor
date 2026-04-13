@@ -183,6 +183,7 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
             GeometryFill    = null,
             GeometryStroke  = null,
             LineSmoothness  = 0,
+            AnimationsSpeed = TimeSpan.Zero,
         };
 
     private static Axis YAxis(double min, double? max, Func<double, string> labeler) =>
