@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Automation;
 using NexusMonitor.Core.Services;
 using NexusMonitor.UI.Messages;
@@ -41,8 +42,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             new NavItem("Dashboard",    "\uF481", () => services.GetRequiredService<DashboardViewModel>(),    NavGroup.Pinned,   eager: true),
             // Monitor — alphabetical
             new NavItem("Network",      "\uF45B", () => services.GetRequiredService<NetworkViewModel>(),      NavGroup.Monitor,  eager: false),
-            new NavItem("Performance",  "\uE2DE", () => services.GetRequiredService<PerformanceViewModel>(),  NavGroup.Monitor,  eager: true),
-            new NavItem("Processes",    "\uF134", () => services.GetRequiredService<ProcessesViewModel>(),    NavGroup.Monitor,  eager: true),
+            new NavItem("Performance",  "\uE2DE", () => services.GetRequiredService<PerformanceViewModel>(),  NavGroup.Monitor,  eager: false),
+            new NavItem("Processes",    "\uF134", () => services.GetRequiredService<ProcessesViewModel>(),    NavGroup.Monitor,  eager: false),
             new NavItem("Services",     "\uF76C", () => services.GetRequiredService<ServicesViewModel>(),     NavGroup.Monitor,  eager: false),
             new NavItem("Startup",      "\uF678", () => services.GetRequiredService<StartupViewModel>(),      NavGroup.Monitor,  eager: false),
             new NavItem("System Info",  "\uF35A", () => services.GetRequiredService<SystemInfoViewModel>(),   NavGroup.Monitor,  eager: false),
@@ -100,6 +101,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             ?? NavItems.First(n => !n.IsSeparator);
         _selectedNavItem.IsActive = true;
         _currentPage = _selectedNavItem.GetOrCreate();
+        if (_selectedNavItem.VM is IActivatable initialActivatable)
+            initialActivatable.Activate();
         Title = "Nexus Monitor";
 
         WeakReferenceMessenger.Default.Register<NavigateToProcessMessage>(this, (_, _) =>
@@ -108,10 +111,16 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             {
                 var nav = NavItems.First(n => !n.IsSeparator && n.Label == "Processes");
                 if (SelectedNavItem is not null)
+                {
                     SelectedNavItem.IsActive = false;
+                    if (SelectedNavItem.VM is IActivatable leaving)
+                        leaving.Deactivate();
+                }
                 SelectedNavItem = nav;
                 nav.IsActive    = true;
                 CurrentPage     = nav.GetOrCreate();
+                if (nav.VM is IActivatable entering)
+                    entering.Activate();
             });
         });
 
@@ -156,11 +165,18 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         if (item == SelectedNavItem) return;
 
         if (SelectedNavItem is not null)
+        {
             SelectedNavItem.IsActive = false;
+            if (SelectedNavItem.VM is IActivatable leaving)
+                leaving.Deactivate();
+        }
 
         SelectedNavItem = item;
         item.IsActive   = true;
         CurrentPage     = item.GetOrCreate();
+
+        if (item.VM is IActivatable entering)
+            entering.Activate();
     }
 
     /// <summary>Persists the current sidebar order (real items only) to settings.</summary>
@@ -261,6 +277,9 @@ public sealed class NavItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObj
     /// Subsequent calls always return the same instance.
     /// </summary>
     public ViewModelBase GetOrCreate() => _cached ??= _factory!();
+
+    /// <summary>Returns the cached ViewModel if already created, or null if never navigated to.</summary>
+    public ViewModelBase? VM => _cached;
 
     /// <summary>Disposes the cached ViewModel if it was created and implements IDisposable.</summary>
     public void DisposeViewModel() => (_cached as IDisposable)?.Dispose();

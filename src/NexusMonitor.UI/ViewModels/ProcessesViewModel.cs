@@ -22,7 +22,7 @@ using NexusMonitor.UI.Views;
 
 namespace NexusMonitor.UI.ViewModels;
 
-public partial class ProcessesViewModel : ViewModelBase, IDisposable
+public partial class ProcessesViewModel : ViewModelBase, IActivatable, IDisposable
 {
     private readonly IProcessProvider            _processProvider;
     private readonly AppSettings                 _appSettings;
@@ -198,10 +198,25 @@ public partial class ProcessesViewModel : ViewModelBase, IDisposable
     private void StartMonitoring(int intervalMs)
     {
         _subscription?.Dispose();
+        _subscription = null;
         _subscription = _processProvider
             .GetProcessStream(TimeSpan.FromMilliseconds(intervalMs))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(UpdateProcessList);
+    }
+
+    /// <inheritdoc/>
+    public void Activate()
+    {
+        if (_subscription is not null) return;  // idempotent guard
+        StartMonitoring(_appSettings.UpdateIntervalMs);
+    }
+
+    /// <inheritdoc/>
+    public void Deactivate()
+    {
+        _subscription?.Dispose();
+        _subscription = null;
     }
 
     // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.

@@ -28,7 +28,7 @@ public record DriveRowViewModel(
     double FreeGb,
     double UsedPercent);
 
-public partial class PerformanceViewModel : ViewModelBase, IDisposable
+public partial class PerformanceViewModel : ViewModelBase, IActivatable, IDisposable
 {
     private readonly ISystemMetricsProvider _metricsProvider;
     private IDisposable? _subscription;
@@ -393,10 +393,25 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable
     private void StartMetricsStream(TimeSpan interval)
     {
         _subscription?.Dispose();
+        _subscription = null;
         _subscription = _metricsProvider
             .GetMetricsStream(interval)
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(Update);
+    }
+
+    /// <inheritdoc/>
+    public void Activate()
+    {
+        if (_subscription is not null) return;  // idempotent guard
+        StartMetricsStream(TimeSpan.FromMilliseconds(_initialIntervalMs));
+    }
+
+    /// <inheritdoc/>
+    public void Deactivate()
+    {
+        _subscription?.Dispose();
+        _subscription = null;
     }
 
     public void Dispose()
