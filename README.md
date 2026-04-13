@@ -177,7 +177,7 @@ All tabs show real data on all three platforms. Windows has the deepest detail l
 
 **Platform notes:**
 - **Windows:** SmartScreen may warn on first launch (the app is not yet code-signed). Click "More info" → "Run anyway."
-- **macOS:** Gatekeeper will block an unsigned binary. Right-click → **Open** to bypass, or: `xattr -d com.apple.quarantine NexusMonitor.app`
+- **macOS:** Gatekeeper will block an unsigned binary. Right-click → **Open** to bypass, or run the command below. **macOS Tahoe (macOS 26) users:** the standard quarantine removal is not sufficient — use `xattr -cr` instead (see note in Pre-Built Releases below).
 - **Linux AppImage:** Requires FUSE. On Ubuntu 22.04+: `sudo apt install libfuse2`. Or run with `--appimage-extract-and-run`.
 - **Elevated access:** Some features (IO priority, certain service operations) need admin/root. On Windows, run as Administrator. On macOS/Linux, launch with `sudo` if specific features don't work.
 
@@ -214,6 +214,10 @@ dotnet run --project src/NexusMonitor.UI/NexusMonitor.UI.csproj --framework net8
 > **Gatekeeper:** If macOS blocks an unsigned binary, right-click → Open, or run:
 > ```bash
 > xattr -d com.apple.quarantine path/to/NexusMonitor
+> ```
+> **macOS Tahoe (macOS 26):** The quarantine flag alone is not enough — Gatekeeper applies additional security checks on Tahoe that block unlaunched unsigned apps even after quarantine removal. Clear all extended attributes recursively instead:
+> ```bash
+> xattr -cr path/to/NexusMonitor.app
 > ```
 
 > **Gaming Mode / power plans:** Switching power profiles uses `pmset`, which may require `sudo` on some machines. Process throttling (ProBalance, Gaming Mode process priority) works without elevation.
@@ -284,6 +288,11 @@ Download the latest release for your platform from the [**Releases**](https://gi
 > ```bash
 > xattr -d com.apple.quarantine NexusMonitor.app
 > ```
+> **macOS Tahoe (macOS 26) — additional step required:** Gatekeeper on Tahoe enforces stricter checks that quarantine removal alone does not satisfy. After dragging the app from the DMG to `/Applications`, run:
+> ```bash
+> xattr -cr /Applications/NexusMonitor.app
+> ```
+> This clears all extended attributes recursively from the app bundle. The app will then launch normally.
 >
 > **Linux note:** AppImages require FUSE. If your distribution ships FUSE3 (Ubuntu 22.04+), install FUSE2:
 > ```bash
