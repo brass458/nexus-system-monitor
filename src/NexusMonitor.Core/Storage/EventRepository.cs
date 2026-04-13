@@ -36,7 +36,7 @@ public sealed class EventRepository : IResourceEventWriter, IResourceEventReader
         _readConn = new SqliteConnection($"Data Source={_db.Connection.DataSource}");
         _readConn.Open();
         using var pragma = _readConn.CreateCommand();
-        pragma.CommandText = "PRAGMA query_only = ON; PRAGMA journal_mode = WAL;";
+        pragma.CommandText = "PRAGMA query_only = ON; PRAGMA journal_mode = WAL; PRAGMA cache_size = -200;";
         pragma.ExecuteNonQuery();
     }
 

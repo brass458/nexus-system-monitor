@@ -209,6 +209,10 @@ public partial class ProcessesViewModel : ViewModelBase, IActivatable, IDisposab
     public void Activate()
     {
         if (_subscription is not null) return;  // idempotent guard
+        // Clear stale row cache so the GC can reclaim ProcessRowViewModels that
+        // accumulated while the tab was visible. DataGrid repopulates on first tick (~2s).
+        _allRows.Clear();
+        Processes.Clear();
         StartMonitoring(_appSettings.UpdateIntervalMs);
     }
 

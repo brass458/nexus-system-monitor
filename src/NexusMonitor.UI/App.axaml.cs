@@ -308,10 +308,10 @@ public class App : Application
                 {
                     try
                     {
-                        // Gentle gen2 collect — returns empty heap segments to OS without
-                        // compacting (compacting touches every live object, making all pages
-                        // hot and defeating the subsequent EmptyWorkingSet call).
-                        GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: false);
+                        // Blocking gen2 collect — waits for sweep to finish so the GC can
+                        // return empty heap segments to the OS before EmptyWorkingSet runs.
+                        // Non-compacting: objects stay in place (no page-touching side effect).
+                        GC.Collect(2, GCCollectionMode.Optimized, blocking: true, compacting: false);
                         GC.WaitForPendingFinalizers();
                         System.Threading.Thread.Sleep(200); // let GC finish returning segments
                         EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle());
