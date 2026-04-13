@@ -2,8 +2,14 @@
 type: note
 date: 2026-03-05
 project: NexusSystemMonitor
-tags: [nexus, roadmap, planning]
+tags: [nexus, roadmap, planning, deprecated]
+status: deprecated
 ---
+
+> [!warning] DEPRECATED — Reference Only
+> This roadmap was written in early March 2026 and reflects planning through v0.1.7.
+> It has been **superseded by [[v1.0-roadmap]]** (approved 2026-03-24), which is the authoritative plan for all work from v0.2.0 through v1.0.0.
+> **Do not use this file to determine what work is left to do.** Use it only to understand decisions and priorities that shaped earlier versions.
 
 # Roadmap
 

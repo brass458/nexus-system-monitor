@@ -2,8 +2,17 @@
 type: note
 date: 2026-03-05
 project: NexusSystemMonitor
-tags: [nexus, gap-analysis, roadmap, process-lasso, wiztree]
+tags: [nexus, gap-analysis, roadmap, process-lasso, wiztree, deprecated]
+status: deprecated
 ---
+
+> [!warning] DEPRECATED — Reference Only
+> This gap analysis was last updated at v0.1.7. Several items it lists as missing have since been implemented or reclassified:
+> - **IdleSaver** and **SmartTrim** exist in the codebase (`IdleSaverService.cs`, `SmartTrimService.cs`)
+> - **Disk Analyzer** is being enabled in v0.3.0 (no longer "currently disabled")
+> - The approved v1.0 plan adds 10 new features not in this document
+>
+> **Do not use this file to determine what features are missing.** Use it only as a historical reference for the competitive analysis that shaped the original feature set. See [[v1.0-roadmap]] for the current plan.
 
 # Gap Analysis
 

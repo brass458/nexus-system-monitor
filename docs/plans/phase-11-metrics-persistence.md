@@ -1,3 +1,6 @@
+> [!warning] DEPRECATED — Reference Only
+> This plan was executed in early March 2026 (Phase 11, pre-v0.1.5). The `MetricsStore` service described here has been fully implemented and has been through multiple rounds of bug fixes since. Do not use this as a guide for current work. It exists as historical context for the SQLite storage architecture decisions.
+
 # Phase 11 — Metrics Persistence Engine
 
 **Goal:** Store time-series system metrics locally so they can be viewed historically, queried for events, and exported to external observability tools (Telegraf, Grafana) in future phases.

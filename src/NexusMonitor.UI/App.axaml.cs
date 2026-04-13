@@ -298,15 +298,24 @@ public class App : Application
             if (saved.Current.MinimizeToTray)
                 SetupTrayIcon(desktop);
 
-            // 1A: Periodic working-set trim — release pages the GC hasn't returned to the OS yet
+            // 1A: Periodic GC collect + working-set trim — collect managed heap then release
+            //     OS-cached pages. GC.Collect must come first so the GC returns segments to the
+            //     OS before we trim the working set.
             if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
                     System.Runtime.InteropServices.OSPlatform.Windows))
             {
                 _memTrimTimer = new System.Threading.Timer(_ =>
                 {
-                    try { EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle()); }
+                    try
+                    {
+                        System.Runtime.GCSettings.LargeObjectHeapCompactionMode =
+                            System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                        GC.WaitForPendingFinalizers();
+                        EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle());
+                    }
                     catch { /* non-fatal */ }
-                }, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
+                }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60));
             }
         }
 

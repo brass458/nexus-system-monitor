@@ -217,6 +217,10 @@ public partial class ProcessesViewModel : ViewModelBase, IActivatable, IDisposab
     {
         _subscription?.Dispose();
         _subscription = null;
+        // Release row cache so GC can collect ~300 ProcessRowViewModels (each holds double[60])
+        Processes.Clear();
+        _allRows.Clear();
+        SelectedProcess = null;
     }
 
     // Already on UI thread via ObserveOn(RxApp.MainThreadScheduler) — no inner Post needed.

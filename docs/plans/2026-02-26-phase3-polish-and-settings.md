@@ -1,3 +1,6 @@
+> [!warning] DEPRECATED — Reference Only
+> This plan was executed in February 2026 (Phase 3, pre-v0.1.0). All tasks described here are long since complete. Do not use this as a guide for current work. It exists as historical context for decisions made during the foundation phase.
+
 # Phase 3 — Polish & Settings Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
