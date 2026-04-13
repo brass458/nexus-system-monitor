@@ -308,10 +308,12 @@ public class App : Application
                 {
                     try
                     {
-                        System.Runtime.GCSettings.LargeObjectHeapCompactionMode =
-                            System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
-                        GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                        // Gentle gen2 collect — returns empty heap segments to OS without
+                        // compacting (compacting touches every live object, making all pages
+                        // hot and defeating the subsequent EmptyWorkingSet call).
+                        GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: false);
                         GC.WaitForPendingFinalizers();
+                        System.Threading.Thread.Sleep(200); // let GC finish returning segments
                         EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle());
                     }
                     catch { /* non-fatal */ }

@@ -29,8 +29,8 @@ public sealed class MetricsDatabase : IDisposable
         cmd.CommandText = @"
             PRAGMA journal_mode  = WAL;
             PRAGMA synchronous   = NORMAL;
-            PRAGMA cache_size    = -8000;
-            PRAGMA temp_store    = MEMORY;
+            PRAGMA cache_size    = -1000;
+            PRAGMA temp_store    = FILE;
             PRAGMA busy_timeout  = 5000;
             PRAGMA foreign_keys  = OFF;";
         cmd.ExecuteNonQuery();
