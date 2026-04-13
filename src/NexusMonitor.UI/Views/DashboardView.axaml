@@ -217,23 +217,35 @@
           <StackPanel Spacing="12">
 
             <!-- Header row -->
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="{Binding BottleneckIcon}"
-                         FontSize="{DynamicResource NxFont20}" VerticalAlignment="Center"/>
-              <StackPanel Spacing="2">
-                <TextBlock Text="Performance Bottleneck Analysis"
-                           FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsIdle}">
-                  <TextBlock Text="{Binding WorkloadLabel}"
-                             FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
-                             Foreground="{DynamicResource AccentBrush}"/>
-                  <TextBlock Text="{Binding WorkloadProcess}"
-                             FontSize="{DynamicResource NxFont11}"
-                             Foreground="{DynamicResource TextTertiaryBrush}"/>
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding BottleneckIcon}"
+                           FontSize="{DynamicResource NxFont20}" VerticalAlignment="Center"/>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Performance Bottleneck Analysis"
+                             FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}"/>
+                  <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsIdle}">
+                    <TextBlock Text="{Binding WorkloadLabel}"
+                               FontSize="{DynamicResource NxFont11}" FontWeight="Medium"
+                               Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="{Binding WorkloadProcess}"
+                               FontSize="{DynamicResource NxFont11}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"/>
+                  </StackPanel>
                 </StackPanel>
               </StackPanel>
-            </StackPanel>
+              <Button Grid.Column="1"
+                      Content="Run Analysis"
+                      Command="{Binding $parent[UserControl].DataContext.RunAnalysisCommand}"
+                      FontSize="{DynamicResource NxFont11}"
+                      Padding="12,5"
+                      Background="{DynamicResource AccentBrush}"
+                      Foreground="White"
+                      CornerRadius="{StaticResource CornerSM}"
+                      VerticalAlignment="Center"
+                      Cursor="Hand"/>
+            </Grid>
 
             <!-- Verdict headline -->
             <TextBlock Text="{Binding Headline}"
@@ -245,11 +257,10 @@
             <TextBlock Text="{Binding Explanation}"
                        FontSize="{DynamicResource NxFont12}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding !IsIdle}"/>
+                       TextWrapping="Wrap"/>
 
-            <!-- Utilisation bars (hidden at idle) -->
-            <StackPanel Spacing="6" IsVisible="{Binding !IsIdle}">
+            <!-- Utilisation bars -->
+            <StackPanel Spacing="6">
               <TextBlock Text="Current Utilisation"
                          FontSize="{DynamicResource NxFont11}" FontWeight="SemiBold"
                          Foreground="{DynamicResource TextTertiaryBrush}"/>
@@ -364,6 +375,32 @@
                            Foreground="{DynamicResource DangerTextBrush}"
                            TextWrapping="Wrap"/>
               </Border>
+
+              <!-- CPU temp unavailable — HVCI info + fix button -->
+              <Border Padding="10,8" CornerRadius="{StaticResource CornerSM}"
+                      Background="{DynamicResource BgPrimaryBrush}"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}"
+                      BorderThickness="1"
+                      IsVisible="{Binding ShowCpuTempHint}"
+                      Margin="0,4,0,0">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{Binding CpuTempHintText}"
+                             FontSize="{DynamicResource NxFont11}"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             TextWrapping="Wrap"/>
+                  <Button Content="Disable Memory Integrity"
+                          Command="{Binding DisableMemoryIntegrityCommand}"
+                          FontSize="{DynamicResource NxFont11}"
+                          Padding="12,5"
+                          Background="Transparent"
+                          Foreground="{DynamicResource AccentBrush}"
+                          BorderBrush="{DynamicResource AccentBrush}"
+                          BorderThickness="1"
+                          CornerRadius="{StaticResource CornerSM}"
+                          Cursor="Hand"
+                          HorizontalAlignment="Left"/>
+                </StackPanel>
+              </Border>
             </StackPanel>
 
             <!-- Upgrade / tuning advice (shown only when relevant) -->
@@ -393,12 +430,28 @@
                 BorderThickness="1"
                 CornerRadius="{StaticResource CornerLG}">
           <StackPanel Spacing="10">
-            <TextBlock Text="Top Resource Consumers"
-                       FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="Apps having the biggest impact on your system right now"
-                       FontSize="{DynamicResource NxFont12}"
-                       Foreground="{DynamicResource TextTertiaryBrush}"/>
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="Top Resource Consumers"
+                           FontSize="{DynamicResource NxFont14}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Text="Apps having the biggest impact on your system"
+                           FontSize="{DynamicResource NxFont12}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"/>
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="↻ Refresh"
+                      Command="{Binding RefreshConsumersCommand}"
+                      FontSize="{DynamicResource NxFont11}"
+                      Padding="12,5"
+                      Background="Transparent"
+                      Foreground="{DynamicResource TextSecondaryBrush}"
+                      BorderBrush="{DynamicResource BorderSubtleBrush}"
+                      BorderThickness="1"
+                      CornerRadius="{StaticResource CornerSM}"
+                      VerticalAlignment="Center"
+                      Cursor="Hand"/>
+            </Grid>
 
             <ItemsControl ItemsSource="{Binding TopConsumers}">
               <ItemsControl.ItemTemplate>

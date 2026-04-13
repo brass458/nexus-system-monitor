@@ -3,6 +3,8 @@ using System.Linq;
 using System.Reactive.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using CommunityToolkit.Mvvm.Messaging;
 using NexusMonitor.Core.Health;
 using NexusMonitor.Core.Models;
@@ -19,6 +21,8 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     private IDisposable?                        _subscription;
     private IDisposable?                        _predictionsSubscription;
     private readonly HashSet<string>            _dismissedResources = new();
+    private SystemHealthSnapshot?               _latestSnapshot;
+    private int                                 _consumerTickCounter;
 
     // ── Overall health ────────────────────────────────────────────────────────
 
@@ -124,15 +128,15 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
         UpdateCard(DiskCard,   snapshot.Disk);
         UpdateCard(GpuCard,    snapshot.Gpu);
 
-        // Top consumers — rebuild only when process set changes (avoids per-tick flicker)
-        var newConsumers = snapshot.TopConsumers;
-        bool consumersChanged = TopConsumers.Count != newConsumers.Count ||
-            newConsumers.Where((c, i) => i < TopConsumers.Count && TopConsumers[i].Name != c.Name).Any();
-        if (consumersChanged)
+        // Cache latest snapshot for on-demand use by RunAnalysisCommand and RefreshConsumersCommand
+        _latestSnapshot = snapshot;
+
+        // Top consumers — throttled to every 5th tick (~15s at 3s interval)
+        _consumerTickCounter++;
+        if (_consumerTickCounter >= 5)
         {
-            TopConsumers.Clear();
-            foreach (var c in newConsumers)
-                TopConsumers.Add(new ProcessImpactViewModel(c));
+            _consumerTickCounter = 0;
+            UpdateTopConsumers(snapshot.TopConsumers);
         }
 
         // Automation status
@@ -141,9 +145,7 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
             ? "No automations active"
             : $"{snapshot.ActiveAutomations} automation{(snapshot.ActiveAutomations > 1 ? "s" : "")} active";
 
-        // Bottleneck analysis
-        if (snapshot.Bottleneck is not null)
-            BottleneckCard.Apply(snapshot.Bottleneck);
+        // Bottleneck analysis — NOT auto-updated; user triggers via RunAnalysisCommand
 
         // Recommendations — only rebuild when content changes (recommendations are stable tick-to-tick)
         var recs = RecommendationEngine.Evaluate(snapshot, _settings, _leakService.CurrentSuspects);
@@ -154,6 +156,35 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
             Recommendations.Clear();
             foreach (var r in recs)
                 Recommendations.Add(new RecommendationViewModel(r));
+        }
+    }
+
+    [RelayCommand]
+    private void RunAnalysis()
+    {
+        if (_latestSnapshot?.Bottleneck is not null)
+            BottleneckCard.Apply(_latestSnapshot.Bottleneck);
+    }
+
+    [RelayCommand]
+    private void RefreshConsumers()
+    {
+        if (_latestSnapshot is not null)
+        {
+            _consumerTickCounter = 0;
+            UpdateTopConsumers(_latestSnapshot.TopConsumers);
+        }
+    }
+
+    private void UpdateTopConsumers(IReadOnlyList<ProcessImpact> newConsumers)
+    {
+        bool consumersChanged = TopConsumers.Count != newConsumers.Count ||
+            newConsumers.Where((c, i) => i < TopConsumers.Count && TopConsumers[i].Name != c.Name).Any();
+        if (consumersChanged)
+        {
+            TopConsumers.Clear();
+            foreach (var c in newConsumers)
+                TopConsumers.Add(new ProcessImpactViewModel(c));
         }
     }
 
@@ -267,7 +298,7 @@ public partial class BottleneckCardViewModel : ObservableObject
     private static readonly IBrush _severityModerate = new SolidColorBrush(Color.Parse("#FF6B35"));
     private static readonly IBrush _severitySevere   = new SolidColorBrush(Color.Parse("#FF3B30"));
 
-    [ObservableProperty] private string _headline       = "Gathering data…";
+    [ObservableProperty] private string _headline       = "Click Run Analysis to check for bottlenecks";
     [ObservableProperty] private string _explanation    = string.Empty;
     [ObservableProperty] private string _upgradeAdvice  = string.Empty;
     [ObservableProperty] private string _workloadLabel  = string.Empty;
@@ -286,6 +317,10 @@ public partial class BottleneckCardViewModel : ObservableObject
     [ObservableProperty] private string _cpuTempLabel  = string.Empty;
     [ObservableProperty] private string _gpuTempLabel  = string.Empty;
     [ObservableProperty] private bool   _showThermalWarning;
+
+    // HVCI / Memory Integrity hint
+    [ObservableProperty] private bool   _showCpuTempHint;
+    [ObservableProperty] private string _cpuTempHintText = string.Empty;
 
     public void Apply(BottleneckReport r)
     {
@@ -331,6 +366,42 @@ public partial class BottleneckCardViewModel : ObservableObject
         CpuTempLabel = r.CpuTempCelsius > 0 ? $"{r.CpuTempCelsius:F0}°C" : "—";
         GpuTempLabel = r.GpuTempCelsius > 0 ? $"{r.GpuTempCelsius:F0}°C" : "—";
         ShowThermalWarning = r.CpuIsThrottling || r.CpuTempCelsius > 95 || r.GpuTempCelsius > 90;
+
+        // Show HVCI hint only when CPU temp is unavailable and Memory Integrity is on
+        if (r.CpuTempCelsius < 1)
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
+                if (key?.GetValue("Enabled") is int enabled && enabled == 1)
+                {
+                    ShowCpuTempHint = true;
+                    if (string.IsNullOrEmpty(CpuTempHintText) || CpuTempHintText.StartsWith("CPU temperature"))
+                        CpuTempHintText = "CPU temperature requires a kernel-mode sensor driver. Windows Memory Integrity (Core Isolation) is currently blocking it. Disabling Memory Integrity allows the driver to load — a restart is required to take effect.";
+                    return;
+                }
+            }
+            catch { }
+        }
+        ShowCpuTempHint = false;
+    }
+
+    [RelayCommand]
+    private void DisableMemoryIntegrity()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity",
+                writable: true);
+            key?.SetValue("Enabled", 0, Microsoft.Win32.RegistryValueKind.DWord);
+            CpuTempHintText = "Memory Integrity disabled. Restart your PC to enable CPU temperature monitoring.";
+        }
+        catch
+        {
+            CpuTempHintText = "Registry update failed — ensure the app is running as Administrator.";
+        }
     }
 }
 
