@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
+using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 using NexusMonitor.Core.Abstractions;
 using NexusMonitor.Core.Models;
@@ -36,10 +37,14 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     private long   _cpuL2CacheBytes;
     private long   _cpuL3CacheBytes;
 
-    // CPU temperature — WMI query is expensive; cache it for 5 s
-    private double   _lastTempC;
-    private DateTime _lastTempSample = DateTime.MinValue;
+    // Hardware sensors (LibreHardwareMonitor) — CPU + GPU temperatures
+    private Computer? _lhm;
+    private readonly object _lhmLock = new();
+    private double   _lastCpuTempC;
+    private double   _lastGpuTempC;
+    private DateTime _lastTempSample    = DateTime.MinValue;
     private static readonly TimeSpan TempCacheDuration = TimeSpan.FromSeconds(5);
+
 
     // CPU frequency — registry read; cache for 2 s (Windows updates ~every 1 s anyway)
     private double   _lastFreqMhz;
@@ -158,12 +163,15 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
         for (int i = 0; i < _cpuCores.Length; i++)
             try { corePercents[i] = SanitizeCounter(_cpuCores[i]?.NextValue() ?? 0); } catch { }
 
+        // Update temperature cache (shared by SampleGpu via _lastGpuTempC)
+        SampleTemperatures();
+
         return new CpuMetrics
         {
             TotalPercent          = Math.Round(total, 1),
             CorePercents          = corePercents,
             FrequencyMhz          = SampleCpuFrequencyMhz(),
-            TemperatureCelsius    = SampleCpuTemperatureC(),
+            TemperatureCelsius    = _lastCpuTempC,
             LogicalCores          = _logicalCores,
             PhysicalCores         = _physicalCores,
             ModelName             = _cpuModel,
@@ -517,6 +525,11 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
 
         // ── GPU ───────────────────────────────────────────────────────────────
         InitGpu();
+
+        // ── Hardware sensors (LibreHardwareMonitor) ───────────────────────────
+        // Must come after InitGpu so _gpuName is set for matching.
+        // Runs on a background thread to avoid blocking the first Sample() call.
+        System.Threading.ThreadPool.QueueUserWorkItem(_ => InitLhm());
     }
 
     private void InitGpu()
@@ -631,41 +644,97 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     }
 
     /// <summary>
-    /// Reads CPU temperature from ACPI thermal zones via WMI root\wmi.
-    /// Returns the maximum zone temperature in Celsius, or 0 if unavailable.
-    /// Result is cached for <see cref="TempCacheDuration"/> to avoid a WMI
-    /// round-trip on every metrics tick.
+    /// Opens the LibreHardwareMonitor Computer object on a background thread.
+    /// Safe to call before _lhm is ready — SampleTemperatures() returns cached 0
+    /// until the first successful update completes.
     /// </summary>
-    private double SampleCpuTemperatureC()
+    private void InitLhm()
     {
-        var now = DateTime.UtcNow;
-        if ((now - _lastTempSample) < TempCacheDuration)
-            return _lastTempC;
-
         try
         {
-            using var searcher = new ManagementObjectSearcher(
-                @"root\wmi",
-                "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
-            double max = 0;
-            using var results = searcher.Get();
-            foreach (ManagementObject obj in results)
-            using (obj)
+            var computer = new Computer
             {
-                // CurrentTemperature is in tenths of Kelvin
-                double tempK = Convert.ToDouble(obj["CurrentTemperature"]);
-                double tempC = (tempK - 2732.0) / 10.0;
-                if (tempC > max) max = tempC;
-            }
-            _lastTempC      = max < 1.0 ? 0 : Math.Round(max, 1);
-            _lastTempSample = now;
-            return _lastTempC;
+                IsCpuEnabled = true,
+                IsGpuEnabled = true,
+            };
+            computer.Open();
+            lock (_lhmLock)
+                _lhm = computer;
         }
-        catch
+        catch { /* sensors unavailable — fall through to 0 */ }
+    }
+
+    /// <summary>
+    /// Reads CPU and GPU temperatures from LibreHardwareMonitor sensors.
+    /// Caches results for <see cref="TempCacheDuration"/> to avoid polling on every tick.
+    /// Falls back to 0 if LHM is not yet initialised or sensors are unavailable.
+    /// </summary>
+    private void SampleTemperatures()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastTempSample) < TempCacheDuration) return;
+        _lastTempSample = now;
+
+        Computer? lhm;
+        lock (_lhmLock) lhm = _lhm;
+        if (lhm is null) return;
+
+        double cpuMax = 0, gpuMax = 0;
+        try
         {
-            _lastTempSample = now;   // don't hammer WMI on failure either
-            return _lastTempC;
+            foreach (var hw in lhm.Hardware)
+            {
+                hw.Update();
+                if (hw.HardwareType == HardwareType.Cpu)
+                {
+                    foreach (var sensor in hw.Sensors)
+                    {
+                        if (sensor.SensorType == SensorType.Temperature && sensor.Value.HasValue)
+                        {
+                            // Prefer the aggregate "CPU Package" / "Core Max" sensor
+                            bool isPackage = sensor.Name.Contains("Package",   StringComparison.OrdinalIgnoreCase)
+                                          || sensor.Name.Contains("Core Max",  StringComparison.OrdinalIgnoreCase)
+                                          || sensor.Name.Contains("CCD",       StringComparison.OrdinalIgnoreCase);
+                            double v = sensor.Value.Value;
+                            if (isPackage)
+                            {
+                                cpuMax = v;   // prefer package/CCD sensor — stop checking others
+                                break;
+                            }
+                            if (v > cpuMax) cpuMax = v;
+                        }
+                    }
+                    // Walk sub-hardware (e.g. chiplets on multi-CCD Ryzen)
+                    foreach (var sub in hw.SubHardware)
+                    {
+                        sub.Update();
+                        foreach (var sensor in sub.Sensors)
+                        {
+                            if (sensor.SensorType == SensorType.Temperature && sensor.Value.HasValue)
+                            {
+                                double v = sensor.Value.Value;
+                                if (v > cpuMax) cpuMax = v;
+                            }
+                        }
+                    }
+                }
+                else if (hw.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
+                {
+                    foreach (var sensor in hw.Sensors)
+                    {
+                        if (sensor.SensorType == SensorType.Temperature && sensor.Value.HasValue)
+                        {
+                            double v = sensor.Value.Value;
+                            if (v > gpuMax) gpuMax = v;
+                        }
+                    }
+                }
+            }
         }
+        catch { /* keep previous cached values */ }
+
+        if (cpuMax > 1) _lastCpuTempC = Math.Round(cpuMax, 1);
+        if (gpuMax > 1) _lastGpuTempC = Math.Round(gpuMax, 1);
     }
 
     // ─── One-shot WMI cache helpers ────────────────────────────────────────────
@@ -893,7 +962,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
                 DedicatedMemoryUsedBytes  = dedicatedUsed,
                 SharedMemoryUsedBytes     = sharedUsed,
                 SharedMemoryTotalBytes    = _gpuSharedTotalBytes,
-                TemperatureCelsius        = 0,
+                TemperatureCelsius        = _lastGpuTempC,
                 Engine3DPercent           = Math.Round(usage3D,     1),
                 EngineCopyPercent         = Math.Round(usageCopy,   1),
                 EngineVideoDecodePercent  = Math.Round(usageDecode, 1),
@@ -967,6 +1036,7 @@ public sealed class WindowsSystemMetricsProvider : ISystemMetricsProvider, IDisp
     public void Dispose()
     {
         lock (_sharedLock) { _connection?.Dispose(); }
+        lock (_lhmLock) { try { _lhm?.Close(); } catch { } _lhm = null; }
         _cpuTotal?.Dispose();
         foreach (var c in _cpuCores) c?.Dispose();
         foreach (var (_, r, w, a, ar) in _diskCounters) { r?.Dispose(); w?.Dispose(); a?.Dispose(); ar?.Dispose(); }

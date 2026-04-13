@@ -11,8 +11,9 @@
 
   <!-- Windows-specific packages — only restore on Windows where they're supported -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows'))">
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
-    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.2" />
   </ItemGroup>
 
   <!-- On non-Windows runners: exclude all Windows implementation files,
