@@ -31,7 +31,7 @@ public class AppSettings
     public double FontSizeMultiplier { get; set; } = 1.0;   // 1.0 = default size
 
     // Performance
-    public int    UpdateIntervalMs   { get; set; } = 2000;   // 500 | 1000 | 2000 | 5000
+    public int    UpdateIntervalMs   { get; set; } = 3000;   // 500 | 1000 | 2000 | 3000 | 5000
 
     // Tray / window close behaviour
     /// <summary>"" = always ask, "Tray" = minimize to tray, "Exit" = close application.</summary>

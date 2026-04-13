@@ -10,6 +10,12 @@ internal sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // ── Cap ThreadPool — default min = ProcessorCount (16 on Ryzen 5700X3D) which
+        //    pre-commits 16 thread stacks unnecessarily. The shared multicast Rx pattern
+        //    means the app never needs more than 4 concurrent workers at steady state.
+        System.Threading.ThreadPool.SetMinThreads(4, 4);
+        System.Threading.ThreadPool.SetMaxThreads(32, 16);
+
         // ── Initialize Serilog before anything else ─────────────────────────
         LoggingBootstrap.Initialize();
 

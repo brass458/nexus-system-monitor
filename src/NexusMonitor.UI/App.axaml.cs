@@ -38,10 +38,7 @@ public class App : Application
     // 4F: Rx subscriptions that must be disposed on shutdown
     private readonly CompositeDisposable _subscriptions = new();
 
-    // 1A: Periodic working-set self-trim (Windows only)
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool EmptyWorkingSet(nint hProcess);
-
+    // Periodic GC collect + memory diagnostics
     private System.Threading.Timer? _memTrimTimer;
 
     public override void Initialize()
@@ -298,27 +295,27 @@ public class App : Application
             if (saved.Current.MinimizeToTray)
                 SetupTrayIcon(desktop);
 
-            // 1A: Periodic GC collect + working-set trim — collect managed heap then release
-            //     OS-cached pages. GC.Collect must come first so the GC returns segments to the
-            //     OS before we trim the working set.
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
-                    System.Runtime.InteropServices.OSPlatform.Windows))
+            // Periodic gen2 GC to return empty segments to the OS + diagnostic logging.
+            // EmptyWorkingSet is NOT used — the 3s metric ticks re-fault all pages immediately
+            // after any trim, making it a no-op that only adds CPU overhead.
+            _memTrimTimer = new System.Threading.Timer(_ =>
             {
-                _memTrimTimer = new System.Threading.Timer(_ =>
+                try
                 {
-                    try
-                    {
-                        // Blocking gen2 collect — waits for sweep to finish so the GC can
-                        // return empty heap segments to the OS before EmptyWorkingSet runs.
-                        // Non-compacting: objects stay in place (no page-touching side effect).
-                        GC.Collect(2, GCCollectionMode.Optimized, blocking: true, compacting: false);
-                        GC.WaitForPendingFinalizers();
-                        System.Threading.Thread.Sleep(200); // let GC finish returning segments
-                        EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle());
-                    }
-                    catch { /* non-fatal */ }
-                }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60));
-            }
+                    GC.Collect(2, GCCollectionMode.Optimized, blocking: true, compacting: false);
+                    GC.WaitForPendingFinalizers();
+                    var gcInfo = GC.GetGCMemoryInfo();
+                    var proc   = System.Diagnostics.Process.GetCurrentProcess();
+                    Log.Information(
+                        "MEM: managed={Managed:F1}MB gcCommitted={Committed:F1}MB private={Private:F1}MB ws={WS:F1}MB threads={Threads}",
+                        GC.GetTotalMemory(false) / 1048576.0,
+                        gcInfo.TotalCommittedBytes / 1048576.0,
+                        proc.PrivateMemorySize64 / 1048576.0,
+                        proc.WorkingSet64 / 1048576.0,
+                        proc.Threads.Count);
+                }
+                catch { /* non-fatal */ }
+            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60));
         }
 
         base.OnFrameworkInitializationCompleted();
