@@ -49,8 +49,9 @@ public sealed class MemoryLeakDetectionService : IDisposable
 
         _logger.LogInformation("MemoryLeakDetectionService starting");
 
-        int bufferSize = Math.Max(30,
-            _settings.LeakObservationWindowMinutes * 60 / TickIntervalSeconds);
+        int bufferSize = Math.Clamp(
+            _settings.LeakObservationWindowMinutes * 60 / TickIntervalSeconds,
+            30, 120);
 
         _subscription = _processProvider.GetProcessStream(TimeSpan.FromSeconds(TickIntervalSeconds))
             .Subscribe(processes => OnTick(processes, bufferSize),

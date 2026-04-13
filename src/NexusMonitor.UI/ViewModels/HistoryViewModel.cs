@@ -259,19 +259,24 @@ public partial class HistoryViewModel : ViewModelBase, IDisposable
 
     private void PopulateCharts(IReadOnlyList<MetricsDataPoint> pts)
     {
-        static void Fill(ObservableCollection<DateTimePoint> col, IEnumerable<DateTimePoint> src)
+        int step = Math.Max(1, pts.Count / 2000);
+
+        static void Fill(ObservableCollection<DateTimePoint> col,
+                         IReadOnlyList<MetricsDataPoint> src, int step,
+                         Func<MetricsDataPoint, double> getValue)
         {
             col.Clear();
-            foreach (var p in src) col.Add(p);
+            for (int i = 0; i < src.Count; i += step)
+                col.Add(new DateTimePoint(src[i].Timestamp.LocalDateTime, getValue(src[i])));
         }
 
-        Fill(_cpuPts,   pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.CpuPercent)));
-        Fill(_memPts,   pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.MemUsedBytes / 1_073_741_824.0)));
-        Fill(_diskRPts, pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.DiskReadBps  / 1_048_576.0)));
-        Fill(_diskWPts, pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.DiskWriteBps / 1_048_576.0)));
-        Fill(_netSPts,  pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.NetSendBps   / 1_048_576.0)));
-        Fill(_netRPts,  pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.NetRecvBps   / 1_048_576.0)));
-        Fill(_gpuPts,   pts.Select(p => new DateTimePoint(p.Timestamp.LocalDateTime, p.GpuPercent)));
+        Fill(_cpuPts,   pts, step, p => p.CpuPercent);
+        Fill(_memPts,   pts, step, p => p.MemUsedBytes / 1_073_741_824.0);
+        Fill(_diskRPts, pts, step, p => p.DiskReadBps  / 1_048_576.0);
+        Fill(_diskWPts, pts, step, p => p.DiskWriteBps / 1_048_576.0);
+        Fill(_netSPts,  pts, step, p => p.NetSendBps   / 1_048_576.0);
+        Fill(_netRPts,  pts, step, p => p.NetRecvBps   / 1_048_576.0);
+        Fill(_gpuPts,   pts, step, p => p.GpuPercent);
     }
 
     private void RefreshDbInfo()

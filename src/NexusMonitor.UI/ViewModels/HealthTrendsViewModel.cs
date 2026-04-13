@@ -125,8 +125,9 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _pts.Clear();
-                foreach (var pt in pts)
-                    _pts.Add(new DateTimePoint(pt.Timestamp.DateTime, pt.Overall));
+                int step = Math.Max(1, pts.Count / 2000);
+                for (int i = 0; i < pts.Count; i += step)
+                    _pts.Add(new DateTimePoint(pts[i].Timestamp.DateTime, pts[i].Overall));
 
                 if (_pts.Count == 0)
                 {
@@ -158,10 +159,14 @@ public partial class HealthTrendsViewModel : ViewModelBase, IDisposable
     {
         if (SelectedRange != "24h") return;
         // Already on the UI thread via .ObserveOn(RxApp.MainThreadScheduler) in the subscription
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-        while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
-            _pts.RemoveAt(0);
         _pts.Add(new DateTimePoint(DateTime.UtcNow, snapshot.OverallScore));
+        // Trim in batches to avoid O(n) RemoveAt on every tick
+        if (_pts.Count > 2200)
+        {
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+            while (_pts.Count > 0 && _pts[0].DateTime < cutoff)
+                _pts.RemoveAt(0);
+        }
     }
 
     // ── Factory helpers ──────────────────────────────────────────────────────

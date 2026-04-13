@@ -38,6 +38,12 @@ public class App : Application
     // 4F: Rx subscriptions that must be disposed on shutdown
     private readonly CompositeDisposable _subscriptions = new();
 
+    // 1A: Periodic working-set self-trim (Windows only)
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool EmptyWorkingSet(nint hProcess);
+
+    private System.Threading.Timer? _memTrimTimer;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -189,6 +195,7 @@ public class App : Application
                 Services.GetService<GlassAdaptiveService>()?.Stop();
                 Services.GetService<PrometheusExporter>()?.Stop();
                 _subscriptions.Dispose();
+                _memTrimTimer?.Dispose();
                 (Services.GetService<WebhookNotificationService>() as IDisposable)?.Dispose();
                 (Services as IDisposable)?.Dispose();
             };
@@ -290,6 +297,17 @@ public class App : Application
             // System-tray icon (only if enabled)
             if (saved.Current.MinimizeToTray)
                 SetupTrayIcon(desktop);
+
+            // 1A: Periodic working-set trim — release pages the GC hasn't returned to the OS yet
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                    System.Runtime.InteropServices.OSPlatform.Windows))
+            {
+                _memTrimTimer = new System.Threading.Timer(_ =>
+                {
+                    try { EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().SafeHandle.DangerousGetHandle()); }
+                    catch { /* non-fatal */ }
+                }, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -30,7 +30,7 @@ public sealed class AnomalyDetectionConfig
     public int NewConnectionGracePeriodSeconds { get; set; } = 120;
 
     /// <summary>Maximum distinct remote endpoints tracked in the seen-endpoints set.</summary>
-    public int NewConnectionMaxTracked { get; set; } = 10_000;
+    public int NewConnectionMaxTracked { get; set; } = 2_000;
 
     /// <summary>Minimum per-process CPU delta above its sliding baseline to flag as a spike.</summary>
     public double ProcessSpikeMinDeltaCpu { get; set; } = 20.0;
