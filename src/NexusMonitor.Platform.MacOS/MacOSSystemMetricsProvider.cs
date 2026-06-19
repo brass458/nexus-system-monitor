@@ -207,6 +207,7 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider, IDispos
     private readonly object _sharedLock = new();
     private readonly object _metricsLock = new();
     private IDisposable? _connection;
+    private bool _disposed;
 
     // ── ISystemMetricsProvider ─────────────────────────────────────────────────
     public IObservable<SystemMetrics> GetMetricsStream(TimeSpan interval)
@@ -239,7 +240,12 @@ public sealed class MacOSSystemMetricsProvider : ISystemMetricsProvider, IDispos
 
     public void Dispose()
     {
-        lock (_sharedLock) { _connection?.Dispose(); }
+        lock (_sharedLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _connection?.Dispose();
+        }
     }
 
     // ── Snapshot ───────────────────────────────────────────────────────────────

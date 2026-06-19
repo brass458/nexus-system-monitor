@@ -188,6 +188,11 @@ public class App : Application
                 Services.GetRequiredService<MetricsStore>().Stop();
                 Services.GetRequiredService<SystemHealthService>().Stop();
 
+                // Stop the metrics provider's upstream Observable.Timer before tearing down
+                // subscribers, so a late tick can't fire into a half-disposed system.
+                try { (Services.GetService(typeof(ISystemMetricsProvider)) as IDisposable)?.Dispose(); }
+                catch (Exception ex) { Log.Error(ex, "Error disposing ISystemMetricsProvider during shutdown"); }
+
                 // Infrastructure
                 Services.GetService<GlassAdaptiveService>()?.Stop();
                 Services.GetService<PrometheusExporter>()?.Stop();

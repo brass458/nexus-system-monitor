@@ -1,7 +1,9 @@
 using Avalonia;
 using Avalonia.Fonts.Inter;
 using Avalonia.ReactiveUI;
+using ReactiveUI;
 using Serilog;
+using System.Reactive;
 
 namespace NexusMonitor.UI;
 
@@ -38,6 +40,16 @@ internal sealed class Program
             e.SetObserved();   // prevents process termination for non-fatal async faults
         };
 
+        // ── Central Rx safety net: swallow any exception that escapes a .Subscribe()
+        //    without an onError handler; prevents the error from reaching the CLR's
+        //    unhandled-exception path and triggering abort() on close.
+        RxApp.DefaultExceptionHandler = Observer.Create<Exception>(ex =>
+        {
+            Log.Error(ex, "Unhandled Rx exception (suppressed by DefaultExceptionHandler)");
+            CrashLogger.Write(ex, "RxApp.DefaultExceptionHandler");
+            // do NOT rethrow — swallowing here prevents the error from aborting the process
+        });
+
         // ── Wrap the entire Avalonia lifetime so startup failures are logged ─
         try
         {
@@ -47,7 +59,11 @@ internal sealed class Program
         {
             Log.Fatal(ex, "Fatal error during startup");
             CrashLogger.Write(ex, "Startup — BuildAvaloniaApp / StartWithClassicDesktopLifetime");
-            throw;   // re-throw so the OS / debugger still sees it
+#if DEBUG
+            throw;   // re-throw so the debugger still sees it in debug builds
+#else
+            Environment.Exit(1);   // clean exit in release — avoids SIGABRT / crash dialog
+#endif
         }
         finally
         {
